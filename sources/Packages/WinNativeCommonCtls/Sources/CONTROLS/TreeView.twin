@@ -1,0 +1,749 @@
+[ WindowsControl ("/miscellaneous/ICONS??/TreeView??.png") ]
+[ ClassId ("606188C0-9C81-493B-8BDE-02BD49B918C5") ]
+[ InterfaceId ("6972C56F-914E-41E5-87A7-1E671D646103") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class TreeView
+
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbTreeView)
+        
+    #End Region
+            
+    #Region "STATE"
+    
+        [ Description ("Determines the border style of the treeview") ]
+            Public BorderStyle As TreeBorderStyleConstants = TreeBorderStyleConstants.ccFixedSingle
+        [ Description ("Determines if each tree node of the treeview has a checkbox associated with it") ]
+            Public CheckBoxes As Boolean = False
+        [ Description ("Determines if each tree node of the tree occupies the whole row, or just the text area") ]
+            Public FullRowSelect As Boolean = False
+        [ Description ("Determines if the selected node is visible even when the treeview does not have the focus") ]
+            Public HideSelection As Boolean = True
+        [ Description ("Determines whether tree nodes are highlighted as the mouse pointer hovers over them") ]
+            Public HotTracking As Boolean = False
+        [ Description ("Determines whether tree nodes can be edited inline at runtime.  If set to Manual, you must call StartLabelEdit manually") ]
+            Public LabelEdit As TreeLabelEditConstants = TreeLabelEditConstants.tvwAutomatic
+        [ Description ("Determines whether the root tree nodes also have visible association lines") ]
+            Public LineStyle As TreeLineStyleConstants = TreeLineStyleConstants.tvwRootLines
+        [ Description ("The string set here is the delimiter used in the Node.FullPath property") ]
+            Public PathSeparator As String = "\"
+        [ Description ("Determines whether the treeview has scrollbars") ]
+            Public Scroll As Boolean = True
+        [ Description ("Determines whether only a single tree node can be expanded at any one time") ]
+            Public SingleSel As Boolean = False
+        [ Description ("Determines if the root tree nodes are sorted when displayed on screen") ]
+            Public Sorted As Boolean = False
+        [ Description ("Determines the alphabetical sort order when Sorted=True") ]
+            Public SortOrder As TreeSortOrderConstants = TreeSortOrderConstants.tvwAscending
+        [ Description ("Determines if the comparison algorithm uses Text (case-insensitive) or Binary (case-sensitive) matching") ]
+            Public SortType As TreeSortTypeConstants = TreeSortTypeConstants.tvwText
+        [ Description ("Determines the visual style of the treeview") ]
+            Public Style As TreeStyleConstants = TreeStyleConstants.tvwTreelinesPlusMinusPictureText
+        [ Description ("Set this to True to generate Scroll events in response to mouse-wheel notifications") ]
+            Public WheelScrollEvent As Boolean = True
+
+        [ Description ("Determines the number of horizontal pixels to indent each level of tree nodes") ]
+        [ Serialize (True, "Indentation") ]
+            Public Indentation_INIT As Double = 20
+
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        Public OLEDropMode As VBRUN.OLEDropConstants
+        Public CausesValidation As Boolean = True
+
+        Private InternalNodes As Nodes
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private IndentationScale As Double
+        Private IsDesignMode As Boolean
+        Private IsClicked As Boolean
+        Private IsEdittingNodeText As Boolean
+        Private MouseButtonDown As Long
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+        Private CachedTopHandle As LongPtr = -1
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("This event is the first event to fire on this control, as soon as the control is created") ]
+            Event Initialize()
+        [ DefaultDesignerEvent ]
+        [ Description ("This event is fired when the user clicks anywhere within the treeview window area") ]
+            Event Click()
+        [ Description ("This event is fired when the user double-clicks anywhere within the treeview window area") ]
+            Event DblClick()
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyDown(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("This event fires when the user releases a key") ]
+            Event KeyUp(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("This event fires when the user presses a mouse button down within the treeview window area") ]
+            Event MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires when the user moves the mouse over the treeview window area") ]
+            Event MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires when the user releases a mouse button within the treeview window area") ]
+            Event MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires when the user clicks on a tree node") ]
+            Event NodeClick(ByVal Node As Node)
+        [ Description ("This event fires when the checked state of a tree node changes") ]
+            Event NodeCheck(ByVal Node As Node)
+        [ Description ("This event fires when a tree node is selected") ]
+            Event NodeSelect(ByVal Node As Node)
+        [ Description ("This event fires when a tree node is collapsed") ]
+            Event Collapse(ByVal Node As Node)
+        [ Description ("This event fires when a tree node is expanded") ]
+            Event Expand(ByVal Node As Node)
+        [ Description ("This event fires before a tree node is collapsed, providing a chance to cancel the operation") ]
+            Event BeforeCollapse(ByVal Node As Node, ByRef Cancel As Boolean)
+        [ Description ("This event fires before a tree node is expanded, providing a chance to cancel the operation") ]
+            Event BeforeExpand(ByVal Node As Node, ByRef Cancel As Boolean)
+        [ Description ("This event fires before a label-edit operation starts, providing a chance to cancel the operation") ]
+            Event BeforeLabelEdit(Cancel As Boolean)
+        [ Description ("This event fires after a label-edit operation ends, providing a chance to validate and/or cancel the operation") ]
+            Event AfterLabelEdit(Cancel As Boolean, NewString As String)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event Validate(Cancel As Boolean)
+
+        Event Scroll()      ' new to tB
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                ' InitializeDefaultValues
+            End If
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+            
+            If Me.Appearance = vbAppear3d Then
+                extendedStyles += WinNativeFormsBASE.WS_EX_CLIENTEDGE
+            Else
+                If Me.BorderStyle = TreeBorderStyleConstants.ccFixedSingle Then
+                    styles += WinNativeFormsBASE.WS_BORDER
+                End If
+            End If
+            styles += If(Me.FullRowSelect, TreeViewConsts.Styles.TVS_FULLROWSELECT, 0)
+            styles += If(Me.HideSelection, 0, TreeViewConsts.Styles.TVS_SHOWSELALWAYS)
+            styles += If(Me.HotTracking, TVS_TRACKSELECT, 0)
+            styles += If(Me.LabelEdit <> TreeLabelEditConstants.tvwDisabled, TreeViewConsts.Styles.TVS_EDITLABELS, 0)
+            styles += If(Me.LineStyle = TreeLineStyleConstants.tvwRootLines, TreeViewConsts.Styles.TVS_LINESATROOT, 0)
+            styles += If(Me.Scroll, 0, TreeViewConsts.Styles.TVS_NOSCROLL)
+            styles += If(Me.SingleSel, TreeViewConsts.Styles.TVS_SINGLEEXPAND, 0)
+            styles += StyleToWin32Styles(Me.Style)
+            
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderTreeView", vbNullString, styles, extendedStyles)
+        End Sub
+        
+        Private Function StyleToWin32Styles(Style As TreeStyleConstants) As Long
+            Dim dwStyle As Long
+        	Select Case Style
+                Case TreeStyleConstants.tvwPlusMinusText, _
+                        TreeStyleConstants.tvwPlusMinusPictureText
+                    dwStyle += TreeViewConsts.Styles.TVS_HASBUTTONS
+                    
+                Case TreeStyleConstants.tvwTreelinesText, _
+                        TreeStyleConstants.tvwTreelinesPictureText
+                    dwStyle += TreeViewConsts.Styles.TVS_HASLINES
+                
+                Case TreeStyleConstants.tvwTreelinesPlusMinusText, _
+                        TreeStyleConstants.tvwTreelinesPlusMinusPictureText
+                    dwStyle += TreeViewConsts.Styles.TVS_HASLINES
+                    dwStyle += TreeViewConsts.Styles.TVS_HASBUTTONS
+            End Select
+            Return dwStyle
+        End Function
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean) _
+                Handles RootWindowElement.PreMouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+            Me.IsClicked = True
+            Me.MouseButtonDown = Button
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+            
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            If Me.IsClicked Then RaiseEvent Click()
+            Me.IsClicked = False
+        End Sub
+        
+        Private Sub HandleKeyDown(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyDown
+            
+            RaiseEvent KeyDown(CInt(KeyCode), CInt(ShiftState))
+            
+            If KeyCode = vbKeySpace And Me.CheckBoxes Then
+                Me.ScheduleCallback New TreeViewNodeCheckState(Me, SelectedItem, False, 0, 0, 0, 0)
+            End If
+        End Sub
+        
+        Private Sub HandleKeyPress(KeyCode As Integer) _
+                Handles RootWindowElement.KeyPress
+            
+            RaiseEvent KeyPress(CInt(KeyCode))
+        End Sub
+        
+        Private Sub HandleKeyUp(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyUp
+            
+            RaiseEvent KeyUp(CInt(KeyCode), CInt(ShiftState))
+        End Sub
+
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If Me.InternalNodes IsNot Nothing Then
+                Me.InternalNodes.Clear()
+                Set Me.InternalNodes = Nothing
+            End If
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            Me.IndentationScale = Me.RootWindowElement.UnitPixelScale
+
+            ' has to be set AFTER the window is created according to MSDN:
+            ' If you want to use this style, you must set the TVS_CHECKBOXES style with SetWindowLong after you create the treeview control, and before you populate the tree. Otherwise, the checkboxes might appear unchecked, depending on timing issues
+            If Me.CheckBoxes Then
+                WinNativeFormsBASE.USER32_SetStyleFlag(Me.RootWindowElement, TreeViewConsts.Styles.TVS_CHECKBOXES, True)
+            End If
+            
+            If Me.Indentation_INIT <> 0 Then
+            	Me.Indentation = Me.Indentation_INIT
+            End If
+
+            If Me.IsDesignMode Then CreateSampleNodes
+
+            SyncOLEDropMode()
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleTreeExpanding(ByRef tvInfo As NMTREEVIEW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+        	With tvInfo
+                If .ItemNew.lParam <> 0 Then
+                    Dim Node As Node = WinNativeFormsBASE.ObjPtrToObject(.ItemNew.lParam)
+                    
+                    If Notification.Code = TreeViewConsts.Notifications.TVN_ITEMEXPANDING Then
+                        Dim Cancel As Boolean
+                        Select Case .Action
+                            Case TreeViewConsts.Misc.TVE_COLLAPSE, TreeViewConsts.Misc.TVE_COLLAPSERESET
+                                RaiseEvent BeforeCollapse(Node, Cancel)
+                            Case TreeViewConsts.Misc.TVE_EXPAND, TreeViewConsts.Misc.TVE_EXPANDPARTIAL
+                                RaiseEvent BeforeExpand(Node, Cancel)
+                        End Select
+                        
+                        If Cancel Then
+                            MutedReturnValue = 1
+                        Else
+                            MutedReturnValue = 0
+                        End If
+                    Else
+                        Select Case .Action
+                            Case TreeViewConsts.Misc.TVE_COLLAPSE, TreeViewConsts.Misc.TVE_COLLAPSERESET
+                                RaiseEvent Collapse(Node)
+                            Case TreeViewConsts.Misc.TVE_EXPAND, TreeViewConsts.Misc.TVE_EXPANDPARTIAL
+                                RaiseEvent Expand(Node)
+                        End Select
+                    End If
+                End If
+            End With
+        End Sub
+        
+        Private Sub HandleTreeLabelEdit(tvItemInfo As NMTVDISPINFO, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+            Dim Cancel As Boolean
+
+            Select Case Notification.Code
+                Case TreeViewConsts.Notifications.TVN_BEGINLABELEDIT
+                    If Me.LabelEdit = TreeLabelEditConstants.tvwManual And IsEdittingNodeText = False Then
+                        MutedReturnValue = 1
+                    Else
+                        RaiseEvent BeforeLabelEdit(Cancel)
+                        If Cancel Then
+                            MutedReturnValue = 1
+                        Else
+                            MutedReturnValue = 0
+                            IsEdittingNodeText = True
+                        End If
+                    End If
+                    
+                Case TreeViewConsts.Notifications.TVN_ENDLABELEDIT
+                    With tvItemInfo.Item
+                        If .pszText <> 0 Then
+                            RaiseEvent AfterLabelEdit(Cancel, WinNativeFormsBASE.OLEAUT32_SysAllocString(.pszText))
+                            If Cancel Then
+                                MutedReturnValue = 0
+                            Else
+                                MutedReturnValue = 1
+                            End If
+                        Else
+                            MutedReturnValue = 0
+                        End If
+                    End With
+                    IsEdittingNodeText = False
+                    
+            End Select
+        End Sub
+        
+        Private Sub HandleTreeSelectionChanged(ByRef tvInfo As NMTREEVIEW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+
+            With tvInfo
+                If .ItemNew.lParam <> 0 Then
+                    RaiseEvent NodeSelect(WinNativeFormsBASE.ObjPtrToObject(.ItemNew.lParam))
+                End If
+            End With
+        End Sub
+        
+        Private Sub HandleTreeCustomDraw(ByRef customDrawInfo As NMTVCUSTOMDRAW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+        	
+            Dim Node As Node
+            
+            With customDrawInfo
+                Select Case .NMCD.dwDrawStage
+                    Case CommonCustomDrawState.CDDS_PREPAINT
+                        MutedReturnValue = CDRF_NOTIFYITEMDRAW
+
+                    Case CommonCustomDrawState.CDDS_ITEMPREPAINT
+                        Set Node = WinNativeFormsBASE.ObjPtrToObject(.NMCD.lItemlParam)
+                        If Node IsNot Nothing Then
+                            Dim isFocused As Boolean = (.NMCD.uItemState And CDIS_FOCUS) <> 0
+                            Dim isSelected As Boolean = (.NMCD.uItemState And CDIS_SELECTED) <> 0
+                            If (isFocused = False) And (isSelected = False) Then
+                                Dim dropItemHandle As LongPtr = WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TVGN_DROPHILITE, TVI_ROOT)
+                                If dropItemHandle <> .NMCD.dwItemSpec Then
+                                    .ClrText = TranslateColor(Node.ForeColor)
+                                    .ClrTextBk = TranslateColor(Node.BackColor)
+                                End If
+                            End If
+                        End If
+                        MutedReturnValue = CDRF_DODEFAULT
+                        
+                End Select
+            End With
+        End Sub
+        
+        Private Sub CommonControlsNotification(ByRef Notification As NMHDR, MutedReturnValue As Variant) _
+                Handles RootWindowElement.Notify
+
+            Select Case Notification.Code
+            
+                Case CommonNotifications.NM_CLICK, CommonNotifications.NM_RCLICK
+                    ' If a mouse down occurs ON a node area, then this event doesn't fire until the MouseUp occurs
+                    ' If a mouse down occurs OUTSIDE a node area, then this event fires immediately, so we wait for a real MouseUp message
+                    Dim clickIsOnNode As Boolean
+                    Dim clickIsOnButton As Boolean
+                    Dim clickIsOnIcon As Boolean
+                    Dim hitTestInfo As TVHITTESTINFO
+                    With hitTestInfo
+                        WinNativeFormsBASE.GetCursorPos(.PT)
+                        WinNativeFormsBASE.ScreenToClient(Me.RootWindowElement.Handle, .PT)
+                        WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_HITTEST, 0, VarPtr(hitTestInfo))
+                        clickIsOnNode = (.hItem <> 0) And ((.Flags And TreeViewConsts.Misc.TVHT_ONITEMINDENT) = 0) And ((.Flags And TreeViewConsts.Misc.TVHT_ONITEMRIGHT) = 0)
+                        clickIsOnButton = (.Flags And TreeViewConsts.Misc.TVHT_ONITEMBUTTON) <> 0
+                        clickIsOnIcon = (.Flags And TreeViewConsts.Misc.TVHT_ONITEMSTATEICON) <> 0
+                        'Debug.Print "CommonNotifications.NM_CLICK flags: " & Hex(.Flags)
+                    End With
+                    
+                    If clickIsOnNode Then
+                        If clickIsOnIcon And Me.CheckBoxes Then
+                            ' We can't yet RaiseEvent NodeCheck because the state hasn't been updated, so we schedule it so that it will fire via the message pump
+                    	    ' See https://docs.microsoft.com/en-us/troubleshoot/developer/visualstudio/cpp/libraries/click-check-box-treeview
+                            ' In addition, because we want the MouseUp/Click events to fire AFTER the NodeCheck event, we also postpone them into the scheduled callback
+                            Me.ScheduleCallback(New TreeViewNodeCheckState(Me, GetNodeFromHandle(hitTestInfo.hItem), IsClicked, CInt(MouseButtonDown), GetShiftState(), CDbl(hitTestInfo.PT.X), CDbl(hitTestInfo.PT.Y)))
+                        Else
+                            If (clickIsOnButton = False) And (clickIsOnIcon = False) Then
+                                ' Can't raise NodeClick directly here as SelectItem wouldn't be updated yet.
+                                Me.ScheduleCallback(New TreeViewNodeClick(Me, GetNodeFromHandle(hitTestInfo.hItem), IsClicked, CInt(MouseButtonDown), GetShiftState(), CDbl(hitTestInfo.PT.X), CDbl(hitTestInfo.PT.Y)))
+                            End If
+                        End If
+                        Me.IsClicked = False
+                    End If
+                
+                Case CommonNotifications.NM_DBLCLK
+                    RaiseEvent DblClick()
+                    
+                Case TreeViewConsts.Notifications.TVN_ITEMEXPANDING, TreeViewConsts.Notifications.TVN_ITEMEXPANDED
+                    HandleTreeExpanding(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+                Case TreeViewConsts.Notifications.TVN_BEGINLABELEDIT, TreeViewConsts.Notifications.TVN_ENDLABELEDIT
+                    HandleTreeLabelEdit(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+                Case TreeViewConsts.Notifications.TVN_SELCHANGED
+                    HandleTreeSelectionChanged(VarPtr(Notification), Notification, MutedReturnValue)
+
+                Case CommonNotifications.NM_CUSTOMDRAW
+                    HandleTreeCustomDraw(VarPtr(Notification), Notification, MutedReturnValue)
+            End Select
+        End Sub
+        
+        Private Sub CreateSampleNodes()
+        	Dim firstSampleNode As Node = Me.Nodes.Add(Nothing, TreeRelationshipConstants.tvwFirst, , "Sample Node", 0, 0)
+            Me.Nodes.Add(firstSampleNode, TreeRelationshipConstants.tvwChild, , "Sample Node", 0, 0)
+            Me.Nodes.Add(firstSampleNode, TreeRelationshipConstants.tvwChild, , "Sample Node", 0, 0)
+            Me.Nodes.Add(Nothing, TreeRelationshipConstants.tvwNext, , "Sample Node", 0, 0)
+            firstSampleNode.Expanded = True
+        End Sub
+        
+        Friend Function GetObjPtrFromHandle(ByVal Handle As LongPtr) As LongPtr
+            If Handle <> 0 Then
+                Dim tvItem As TVITEM
+                With tvItem
+                    .Mask = TreeViewConsts.Misc.TVIF_HANDLE Or TreeViewConsts.Misc.TVIF_PARAM
+                    .hItem = Handle
+                    WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETITEM, 0, VarPtr(tvItem))
+                    Return .lParam
+                End With
+            End If
+        End Function
+        
+        Friend Function GetNodeFromHandle(ByVal Handle As LongPtr) As Node
+            If Handle <> 0 Then
+            	Return WinNativeFormsBASE.ObjPtrToObject(GetObjPtrFromHandle(Handle))
+            End If
+        End Function
+
+        Private Sub OnTouchedFormProperties() _
+                'Handles BackColor.OnPropertyGet, _
+                        ForeColor.OnPropertyGet
+                            
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+
+        [ Serialize (False) ]
+        [ Description ("Determines the number of horizontal pixels to indent each level of tree nodes") ]
+        Public Property Get Indentation() As Double
+            Return WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETINDENT, 0, 0) / Me.IndentationScale
+        End Property
+        
+        [ Serialize (False) ]
+        [ Description ("Determines the number of horizontal pixels to indent each level of tree nodes") ]
+        Public Property Let Indentation(Value As Double)
+            WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SETINDENT, CLng(Value * Me.IndentationScale), 0)
+        End Property
+        
+        [ Serialize (False) ]
+        [ Description ("Returns the raw HWND handle associated with the treeview") ]
+        Public Property Get hWnd() As LongPtr
+            Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.RootWindowElement.Handle
+        End Property
+        
+        Friend Sub SortNowInternal(ByVal parentNode As LongPtr, ByVal SortType As TreeSortTypeConstants)
+            Dim tvSortCallbackInfo As TVSORTCB
+            With tvSortCallbackInfo
+                .hParent = parentNode
+                Select Case SortType
+                    Case TreeSortTypeConstants.tvwBinary
+                        .lpfnCompare = AddressOf SortTreeViewNodeBinaryCallback
+                    Case TreeSortTypeConstants.tvwText
+                        .lpfnCompare = AddressOf SortTreeViewNodeTextCallback
+                End Select
+                .lParam = ObjPtr(Me)
+                WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SORTCHILDRENCB, 0, VarPtr(tvSortCallbackInfo))
+            End With
+        End Sub
+
+        [ Description ("Returns the maximum number of visible treenodes in the treeview window area") ]
+        Public Function GetVisibleCount() As Long
+            Return CLng(WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETVISIBLECOUNT, 0, 0))
+        End Function
+        
+        Private Function GetSelectedItemHandle() As LongPtr
+        	Return WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_CARET, 0)
+        End Function
+        
+        [ Description ("Returns or sets an object representing the selected tree node, or Nothing if there is no currently selected node") ]
+        [ Serialize (False) ]
+        Public Property Get SelectedItem() As Node
+            Return GetNodeFromHandle(GetSelectedItemHandle())
+        End Property
+        
+        [ Description ("Returns or sets an object representing the selected tree node, or Nothing if there is no currently selected node") ]
+        [ Serialize (False) ]
+        Public Property Let SelectedItem(Value As Node)
+            WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_CARET, If(Value Is Nothing, 0, Value.Handle))
+        End Property
+        
+        [ Description ("Returns or sets an object representing the selected tree node, or Nothing if there is no currently selected node") ]
+        [ Serialize (False) ]
+        Public Property Set SelectedItem(Value As Node)
+            WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_CARET, If(Value Is Nothing, 0, Value.Handle))
+        End Property
+        
+        Private Function GetSelectedItemHandleDrop() As LongPtr
+        	Return WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_DROPHILITE, 0)
+        End Function
+        
+        [ Description ("Returns or sets an object representing a node being drag/dropped, or Nothing if there is no current drag/drop node") ]
+        [ Serialize (False) ]
+        Public Property Get DropHighlight() As Node
+            Return GetNodeFromHandle(GetSelectedItemHandleDrop())
+        End Property
+        
+        [ Description ("Returns or sets an object representing a node being drag/dropped, or Nothing if there is no current drag/drop node") ]
+        [ Serialize (False) ]
+        Public Property Let DropHighlight(Value As Node)
+            WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_DROPHILITE, If(Value Is Nothing, 0, Value.Handle))
+        End Property
+        
+        [ Description ("Returns or sets an object representing a node being drag/dropped, or Nothing if there is no current drag/drop node") ]
+        [ Serialize (False) ]
+        Public Property Set DropHighlight(Value As Node)
+            WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_DROPHILITE, If(Value Is Nothing, 0, Value.Handle))
+        End Property
+        
+        [ Description ("Allows inline editing of a tree node label at runtime.  See LabelEdit property") ]
+        Public Sub StartLabelEdit()
+        	Dim hItem As LongPtr = GetSelectedItemHandle()
+            If hItem <> 0 Then
+                WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_EDITLABEL, 0, hItem)
+            End If
+        End Sub
+        
+        [ Description ("Returns an object representing the node at the specified co-ordinates, or Nothing if there is no matching node") ]
+        Public Function HitTest(x As Single, y As Single) As Node
+        	Dim tvHitTestInfo As TVHITTESTINFO
+            With tvHitTestInfo
+                .PT.X = x * Me.RootWindowElement.UnitPixelScale
+                .PT.Y = y * Me.RootWindowElement.UnitPixelScale
+                If WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_HITTEST, 0, VarPtr(tvHitTestInfo)) <> 0 Then
+                    Dim hitTestOnItem As Boolean = (.Flags And TreeViewConsts.Misc.TVHT_ONITEM) <> 0
+                    If hitTestOnItem Then
+                        Return GetNodeFromHandle(.hItem)
+                    End If
+                End If
+            End With
+        End Function
+                        
+        [ Description ("Returns the raw HWND of the currently editing tree node label") ]
+        [ Serialize (False) ]
+        Public Property Get hWndLabelEdit() As LongPtr
+            Return WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETEDITCONTROL, 0, 0)
+        End Property
+        
+        Private Sub ChangeWindowStyleFlag(ByVal flag As Long, ByVal Value As Boolean)
+        	Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE)
+            Dim hasValueFlagSet As Boolean = dwStyle And flag
+            
+            If Value <> hasValueFlagSet Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE, If(Value, dwStyle Or flag, dwStyle And Not flag))
+            End If
+        End Sub
+
+        Private Sub RefreshWindowsCachedStyles()
+            'this is needed to ensure windows cached stuff is updated after changing GWL_STYLE
+            WinNativeFormsBASE.SetWindowPos(Me.RootWindowElement.Handle, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED)
+        End Sub
+
+        Private Sub BorderStyleChanged() _  
+        	    Handles BorderStyle.OnPropertyLet
+                
+            SyncBorderStyle(Me)
+        End Sub
+
+        Private Sub ChangedCheckBoxes() _
+                Handles CheckBoxes.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_CHECKBOXES, Me.CheckBoxes)
+        	
+            If Me.CheckBoxes = False Then
+                Dim hImageList As LongPtr
+                hImageList = WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_GETIMAGELIST, TreeViewConsts.Misc.TVSIL_STATE, 0)
+                If hImageList <> 0 Then
+                    WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, TreeViewConsts.Messages.TVM_SETIMAGELIST, TreeViewConsts.Misc.TVSIL_STATE, 0)
+                    COMCTL32_ImageList_Destroy(hImageList)
+                End If
+            End If
+        End Sub
+        
+        Private Sub ChangedFullRowSelect() _
+                Handles FullRowSelect.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_FULLROWSELECT, Me.FullRowSelect)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedHideSelection() _
+                Handles HideSelection.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_SHOWSELALWAYS, Not Me.HideSelection)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedHotTracking() _
+                Handles HotTracking.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_TRACKSELECT, Me.HotTracking)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedScroll() _
+                Handles Scroll.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_NOSCROLL, Not Me.Scroll)
+            ChangeWindowStyleFlag(WinNativeFormsBASE.WS_VSCROLL, Me.Scroll)
+            ChangeWindowStyleFlag(WinNativeFormsBASE.WS_HSCROLL, Me.Scroll)
+            RefreshWindowsCachedStyles()
+        End Sub
+        
+        Private Sub ChangedSingleSel() _
+                Handles SingleSel.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_SINGLEEXPAND, Me.SingleSel)
+        End Sub
+        
+        Private Sub ChangedSorted() _
+                Handles Sorted.OnPropertyLet, SortOrder.OnPropertyLet, SortType.OnPropertyLet
+            
+            If Me.Sorted Then SortNowInternal(TreeViewConsts.Misc.TVI_ROOT, Me.SortType)
+        End Sub
+        
+        Private Sub ChangedStyle() _
+                 Handles Style.OnPropertyLet
+            
+            Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE)
+            Dim dwStyleOld As Long = dwStyle
+            dwStyle = dwStyle And Not TreeViewConsts.Styles.TVS_HASBUTTONS
+            dwStyle = dwStyle And Not TreeViewConsts.Styles.TVS_HASLINES
+            
+            dwStyle += StyleToWin32Styles(Me.Style)
+            
+            If dwStyle <> dwStyleOld Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE, dwStyle)
+            End If
+        End Sub
+        
+        Private Sub ChangedLabelEdit() _
+                 Handles LabelEdit.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_EDITLABELS, Me.LabelEdit <> TreeLabelEditConstants.tvwDisabled)
+        End Sub
+    
+        Private Sub ChangedLineStyle() _
+                 Handles LineStyle.OnPropertyLet
+            
+            ChangeWindowStyleFlag(TreeViewConsts.Styles.TVS_LINESATROOT, Me.LineStyle = TreeLineStyleConstants.tvwRootLines)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Nodes() As Nodes
+        	Me.ControlContext.EnsureFormIsLoaded
+            If Me.InternalNodes Is Nothing Then Set Me.InternalNodes = New Nodes(Me)
+            Return Me.InternalNodes
+        End Property
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode(Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+        
+        Private Function CheckTopIndexChanged() As Boolean
+            ' FIXME this is shit.
+            Dim topVisibleHandle As LongPtr = WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, TVI_ROOT)
+                                
+            If CachedTopHandle <> topVisibleHandle Then
+                CachedTopHandle = topVisibleHandle
+                RaiseEvent Scroll
+                Return True
+            End If
+            Return False
+        End Function
+        
+        Private Sub HandleWheel(ByVal Delta As Integer, ByVal Horizontal As Boolean) _
+                Handles RootWindowElement.MouseWheel
+                
+            If Horizontal = False Then
+                If WheelScrollEvent Then CheckTopIndexChanged()
+            Else
+                If WheelScrollEvent Then RaiseEvent Scroll
+            End If
+        End Sub
+        
+        Private Sub HandleScroll(ByVal ScrollType As WinNativeFormsBASE.SCROLLNOTIFY, ByVal IsHorizontal As Boolean) _
+                Handles RootWindowElement.Scroll
+            
+            CachedTopHandle = WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, TVI_ROOT)
+            RaiseEvent Scroll()
+
+        End Sub
+
+    #End Region
+	
+End Class

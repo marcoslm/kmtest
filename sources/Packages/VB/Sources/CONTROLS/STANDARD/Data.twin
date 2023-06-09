@@ -1,0 +1,217 @@
+[ Description ("A Win32 native DATA control") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Data??.png") ]
+[ ClassId ("33AD4FF8-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("038D7327-C7AB-4A20-8800-C0D1E569343D") ]    ' FIXME implement {33AD4FF9-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Data
+    
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbDataControl)
+
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Unimplemented ]
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowBackground
+        [ Unimplemented ]
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowText
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+
+        [ Unimplemented ]
+            Public BOFAction As VBRUN.DataBOFconstants
+        [ Serialize (True, "Caption") ]
+            Private Caption_INIT As String
+        [ Unimplemented ]
+            Public Connect As String = "Access"
+        [ Unimplemented ]
+            Public DatabaseName As String
+        [ Unimplemented ]
+            Public DefaultCursorType As VBRUN.DefaultCursorTypeConstants
+        [ Unimplemented ]
+            Public DefaultType As VBRUN.DatabaseTypeConstants = VBRUN.DatabaseTypeConstants.vbUseJet
+        [ Unimplemented ]
+            Public EOFAction As VBRUN.DataEOFConstants
+        [ Unimplemented ]
+            Public Exclusive As Boolean
+        [ Unimplemented ]
+            Public Negotiate As Boolean
+        [ Unimplemented ]
+            Public Options As Long
+        [ Unimplemented ]
+            Public [ReadOnly] As Boolean
+        [ Unimplemented ]
+            Public RecordsetType As VBRUN.RecordsetTypeConstants = VBRUN.RecordsetTypeConstants.vbRSTypeDynaset
+        [ Unimplemented ]
+            Public RecordSource As String
+            
+        [ Unimplemented ]
+            Public WhatsThisHelpID As Long
+
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        [ Unimplemented ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+        [ Unimplemented ]
+            Public RightToLeft As Boolean
+            
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Align As VBRUN.AlignConstants        ' FIXME needs to reflect/update the Dock value
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public _Default As String
+            Attribute _Default.VB_VarUserMemId = 0
+
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Database As Object       ' FIXME should be DAO.Database
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Recordset As Object      ' FIXME should be DAO.Recordset
+
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+        
+        [ Unimplemented ]
+            Public Sub ShowWhatsThis()
+            End Sub
+        [ Unimplemented ]
+            Public Sub UpdateControls()
+            End Sub
+        [ Unimplemented ]
+            Public Sub UpdateRecord()
+            End Sub
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Unimplemented ] Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ] Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ] Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ] Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        [ Unimplemented ] Event Error(DataErr As Integer, Response As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        [ Unimplemented ] Event Reposition()
+        [ Unimplemented ] Event Resize()
+        Event Validate(Cancel As Boolean)
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+            Me.Caption_INIT = "Data"
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+                extendedStyles += If(ControlContext.IsPlacedOnUserControl, 0, WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_NOPARENTNOTIFY)
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderLabel", Me.Caption_INIT, styles, extendedStyles)
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+                
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+
+    #End Region
+    
+End Class

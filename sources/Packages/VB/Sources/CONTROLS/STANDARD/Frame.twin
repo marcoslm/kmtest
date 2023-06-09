@@ -1,0 +1,380 @@
+[ Description ("A Win32 native Frame") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Frame??.png") ]
+[ ClassId ("33AD4EE8-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("DD008396-4554-4880-8D73-5EC498665905") ]    ' FIXME implement {33AD4EE9-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Frame
+    
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlNotFocusable2 Via _BaseControl = New WinNativeFormsBase.BaseControlNotFocusable2(ControlTypeConstants.vbFrame)
+        Implements ITwinBasicDesignerExtensions
+        
+    #End Region
+        
+    #Region "STATE"
+    
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vb3DFace   ' FIXME this is linked to Appearance
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonText   ' FIXME this is linked to Appearance
+        [ Description ("") ]
+            Public ReadOnly ClipControls As Boolean = True              ' FIXME shouldn't be read-only
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = VBRUN.ControlBorderStyleConstants.vbFixedSingleBorder
+
+        [ Serialize (True, "Caption") ]
+            Private Caption_INIT As String
+        
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            Private IsRegisteredItselfForOLEDragDrop As Boolean = False
+            Private RegisteredChildOLEDropCount As Long = 0
+            Private IsDesignMode As Boolean
+
+            Public HelpContextID As Long
+        
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+        [ Unimplemented ]
+            Public RightToLeft As Boolean
+        [ Unimplemented ]
+            Public WhatsThisHelpID As Long
+            
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+                        
+            Public Sub ShowWhatsThis()
+                HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+            End Sub
+    # End Region
+
+    #Region "EVENTS"
+    
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Click()
+        [ Description ("") ]
+            Event DblClick()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	Caption_INIT = "Frame"
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+                extendedStyles += If(ControlContext.IsPlacedOnUserControl, 0, WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_NOPARENTNOTIFY)
+                styles += ButtonStyles.BS_GROUPBOX
+                styles += If(Me.Appearance = AppearanceConstants.vbAppearFlat, ButtonStyles.BS_FLAT, 0)
+                styles += If(Me.ClipControls = True, WinNativeFormsBASE.WS_CLIPCHILDREN, 0)
+
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderFrame", Me.Caption_INIT, styles, extendedStyles)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+
+            ' disconnect anything that causes a circular reference here
+            If IsRegisteredItselfForOLEDragDrop = True Then
+                On Error Resume Next
+                Me.RegisterOLEDragDrop(False)
+                IsRegisteredItselfForOLEDragDrop = False
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+            
+            SyncOLEDropMode()
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleEraseBackground(ByVal hdc As LongPtr, ByRef Handled As Boolean) _
+                Handles RootWindowElement.EraseBackground
+                
+'            Debug.Print "Frame.EraseBackground"
+            WinNativeFormsBASE.WindowsAPI.USER32_FillWithBrush(Me.RootWindowElement, hdc, CreateBackBrush(BackColor))
+            Handled = True     ' swallow up the event
+        End Sub
+
+        Private DeclareWide PtrSafe Function GetDC Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+        Private DeclareWide PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr) As Long
+    
+        Private Sub HandlePaint() _
+                Handles RootWindowElement.AfterPaint
+                
+            Dim hwnd As LongPtr = Me.RootWindowElement.Handle
+            Dim hdc As LongPtr = GetDC(hwnd)
+'            Debug.Print "Frame.HandlePaint"
+            RootWindowElement.PaintContainedWindowlessElements(hdc)
+            
+            If Me.ClipControls = True And IsDesignMode = False Then
+                ' FIXME need better method.
+                Dim Ctrl As Control
+                For Each Ctrl In Me.Parent.Controls
+                    On Error Resume Next
+                        Dim isContainedByUs As Boolean = False
+                        isContainedByUs = Ctrl.Container Is Me
+                        If isContainedByUs Then
+                            WinNativeFormsBASE.WindowsAPI.RedrawWindow(Ctrl.Hwnd, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE Or WinNativeFormsBASE.RDW_ERASENOW Or WinNativeFormsBASE.RDW_UPDATENOW Or WinNativeFormsBASE.RDW_FRAME)
+                        End If
+                Next
+                On Error GoTo 0
+            End If
+            
+            ReleaseDC(hwnd, hdc)
+        End Sub
+        
+        Private Sub HandleGetColors(ByVal hdc As LongPtr, ByRef BackBrushOut As LongPtr, ByVal ControlType As ControlTypeConstants) _
+                Handles RootWindowElement.GetColors
+                
+            WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(hdc, WinNativeFormsBASE.GDI32_TranslateColorFromHDC(Me.ForeColor, hdc))
+            WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(hdc, WinNativeFormsBASE.BackgroundModes.TRANSPARENT)
+            BackBrushOut = Me.CreateBackBrush(Me.BackColor)
+        End Sub
+        
+        Private Sub HandleCommand(ByVal NotificationCode As ButtonNotifications, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+                
+            Select Case NotificationCode
+                Case ButtonNotifications.BN_CLICKED
+                    'RaiseEvent Click()
+            End Select
+        End Sub
+
+        Private Sub HandleMouseDoubleClick(ByVal Button As VBRUN.MouseButtonConstants, _
+                                            ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDoubleClick
+                
+            RaiseEvent DblClick()
+        End Sub
+
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+            BeginMouseCapture(Me.RootWindowElement)
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            Dim WasCaptured As Boolean = EndMouseCapture()
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            If WasCaptured And IsInRect(X / Me.ControlContext.GetScaleModePixelsMultiplierX, Y / Me.ControlContext.GetScaleModePixelsMultiplierY) Then RaiseEvent Click
+        End Sub
+
+        Private Sub ITwinBasicDesignerExtensions_GetPropertyExtensions(ByRef out() As String) _
+                Implements ITwinBasicDesignerExtensions.GetPropertyExtensions
+
+        End Sub
+
+        Private Sub ITwinBasicDesignerExtensions_InvokePropertyExtension(ByVal Name As String) _
+                Implements ITwinBasicDesignerExtensions.InvokePropertyExtension
+
+        End Sub
+
+        Private Function ITwinBasicDesignerExtensions_GetClientObject() As Object _
+                Implements ITwinBasicDesignerExtensions.GetClientObject
+
+        End Function
+
+        Private Sub DesignerClick(ByVal X As Long, ByVal Y As Long) _
+                Implements ITwinBasicDesignerExtensions.DesignerClick
+
+        End Sub
+
+        Private Function IsFrame() As Boolean _
+                Implements ITwinBasicDesignerExtensions.IsFrame
+
+     	    Return True
+        End Function
+
+        Private Sub ITwinBasicDesignerExtensions_DesignTimePrepareSnapshot() _
+                Implements ITwinBasicDesignerExtensions.DesignTimePrepareSnapshot
+
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Caption() As String
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_GetWindowText(Me.RootWindowElement)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Caption(ByVal Value As String)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, WinNativeFormsBASE.WM_SETTEXT, 0, StrPtrSafe(Value))
+        End Property
+        
+        Private Sub ColorsChanged() _
+                Handles BackColor.OnPropertyLet, _
+                        ForeColor.OnPropertyLet
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.Refresh
+        End Sub
+    
+        Private Sub OnTouchedFormProperties() _
+                Handles BackColor.OnPropertyGet, _
+        	            ForeColor.OnPropertyGet
+                        
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        Private Sub RootWindowElement_Paint(Handled As Boolean) _
+                Handles RootWindowElement.Paint
+            
+            If Me.BorderStyle = VBRUN.ControlBorderStyleConstants.vbNoBorder Then
+                Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+                Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API 
+                        
+                    Dim hwnd As LongPtr = Me.RootWindowElement.Handle
+                    Dim hdc As LongPtr = GetDC(hwnd)
+                    RootWindowElement.PaintContainedWindowlessElements(hdc)
+                    ReleaseDC(hwnd, hdc)
+
+                Me.RootWindowElement.EndPaint(ps)
+                Handled = True     ' swallow up the event
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As String
+            Return Me.Caption
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As String)
+            Me.Caption = Value
+        End Property
+
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            If Me.OLEDropMode = OLEDropConstants.vbOLEDropManual Then
+            	If IsRegisteredItselfForOLEDragDrop = False Then
+                	Me.RegisterOLEDragDrop(True)
+                    IsRegisteredItselfForOLEDragDrop = True
+            	End If
+            ElseIf Me.OLEDropMode = OLEDropConstants.vbOLEDropNone Then
+            	If IsRegisteredItselfForOLEDragDrop = True Then
+                	Me.RegisterOLEDragDrop(False)
+                    IsRegisteredItselfForOLEDragDrop = False
+            	End If
+            Else
+                Err.Raise 5
+            End If
+        End Sub
+        
+        Friend Sub RegisterOLEDragDrop(Register As Boolean)
+        	If Register = True Then
+            	RegisteredChildOLEDropCount += 1
+                If RegisteredChildOLEDropCount = 1 Then
+                	BaseSyncOLEDropMode(Me, OLEDropConstants.vbOLEDropManual, Me.OLEDragDropHandler, True, False)
+                End If
+            Else
+                RegisteredChildOLEDropCount -= 1
+                If RegisteredChildOLEDropCount = 0 Then
+                	If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+                End If
+        	End If
+        End Sub
+        
+    #End Region
+
+End Class

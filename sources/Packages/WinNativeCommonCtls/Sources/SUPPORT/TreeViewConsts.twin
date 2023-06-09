@@ -1,0 +1,373 @@
+Private Module TreeViewConsts
+	    
+    Public Enum Notifications
+        TVN_FIRST = (-400)
+        TVN_SELCHANGINGA = (TVN_FIRST - 1)
+        TVN_SELCHANGINGW = (TVN_FIRST - 50)
+        TVN_SELCHANGING = TVN_SELCHANGINGW
+        TVN_SELCHANGEDA = (TVN_FIRST - 2)
+        TVN_SELCHANGEDW = (TVN_FIRST - 51)
+        TVN_SELCHANGED = TVN_SELCHANGEDW
+        TVN_GETDISPINFOA = (TVN_FIRST - 3)
+        TVN_GETDISPINFOW = (TVN_FIRST - 52)
+        TVN_GETDISPINFO = TVN_GETDISPINFOW
+        TVN_SETDISPINFOA = (TVN_FIRST - 4)
+        TVN_SETDISPINFOW = (TVN_FIRST - 53)
+        TVN_SETDISPINFO = TVN_SETDISPINFOW
+        TVN_ITEMEXPANDINGA = (TVN_FIRST - 5)
+        TVN_ITEMEXPANDINGW = (TVN_FIRST - 54)
+        TVN_ITEMEXPANDING = TVN_ITEMEXPANDINGW
+        TVN_ITEMEXPANDEDA = (TVN_FIRST - 6)
+        TVN_ITEMEXPANDEDW = (TVN_FIRST - 55)
+        TVN_ITEMEXPANDED = TVN_ITEMEXPANDEDW
+        TVN_BEGINDRAGA = (TVN_FIRST - 7)
+        TVN_BEGINDRAGW = (TVN_FIRST - 56)
+        TVN_BEGINDRAG = TVN_BEGINDRAGW
+        TVN_BEGINRDRAGA = (TVN_FIRST - 8)
+        TVN_BEGINRDRAGW = (TVN_FIRST - 57)
+        TVN_BEGINRDRAG = TVN_BEGINRDRAGW
+        TVN_DELETEITEMA = (TVN_FIRST - 9)
+        TVN_DELETEITEMW = (TVN_FIRST - 58)
+        TVN_DELETEITEM = TVN_DELETEITEMW
+        TVN_BEGINLABELEDITA = (TVN_FIRST - 10)
+        TVN_BEGINLABELEDITW = (TVN_FIRST - 59)
+        TVN_BEGINLABELEDIT = TVN_BEGINLABELEDITW
+        TVN_ENDLABELEDITA = (TVN_FIRST - 11)
+        TVN_ENDLABELEDITW = (TVN_FIRST - 60)
+        TVN_ENDLABELEDIT = TVN_ENDLABELEDITW
+        TVN_KEYDOWN = (TVN_FIRST - 12)
+        TVN_GETINFOTIPA = (TVN_FIRST - 13)
+        TVN_GETINFOTIPW = (TVN_FIRST - 14)
+        TVN_GETINFOTIP = TVN_GETINFOTIPW
+        TVN_SINGLEEXPAND = (TVN_FIRST - 15)
+    End Enum
+    
+    Public Enum Messages
+        TVM_FIRST = &H1100
+        TVM_INSERTITEMA = (TVM_FIRST + 0)
+        TVM_INSERTITEMW = (TVM_FIRST + 50)
+        TVM_INSERTITEM = TVM_INSERTITEMW
+        TVM_DELETEITEM = (TVM_FIRST + 1)
+        TVM_EXPAND = (TVM_FIRST + 2)
+        TVM_GETITEMRECT = (TVM_FIRST + 4)
+        TVM_GETCOUNT = (TVM_FIRST + 5)
+        TVM_GETINDENT = (TVM_FIRST + 6)
+        TVM_SETINDENT = (TVM_FIRST + 7)
+        TVM_GETIMAGELIST = (TVM_FIRST + 8)
+        TVM_SETIMAGELIST = (TVM_FIRST + 9)
+        TVM_GETNEXTITEM = (TVM_FIRST + 10)
+        TVM_SELECTITEM = (TVM_FIRST + 11)
+        TVM_GETITEMA = (TVM_FIRST + 12)
+        TVM_GETITEMW = (TVM_FIRST + 62)
+        TVM_GETITEM = TVM_GETITEMW
+        TVM_SETITEMA = (TVM_FIRST + 13)
+        TVM_SETITEMW = (TVM_FIRST + 63)
+        TVM_SETITEM = TVM_SETITEMW
+        TVM_EDITLABELA = (TVM_FIRST + 14)
+        TVM_EDITLABELW = (TVM_FIRST + 65)
+        TVM_EDITLABEL = TVM_EDITLABELW
+        TVM_GETEDITCONTROL = (TVM_FIRST + 15)
+        TVM_GETVISIBLECOUNT = (TVM_FIRST + 16)
+        TVM_HITTEST = (TVM_FIRST + 17)
+        TVM_CREATEDRAGIMAGE = (TVM_FIRST + 18)
+        TVM_SORTCHILDREN = (TVM_FIRST + 19)
+        TVM_ENSUREVISIBLE = (TVM_FIRST + 20)
+        TVM_SORTCHILDRENCB = (TVM_FIRST + 21)
+        TVM_ENDEDITLABELNOW = (TVM_FIRST + 22)
+        TVM_GETISEARCHSTRINGA = (TVM_FIRST + 23)
+        TVM_GETISEARCHSTRINGW = (TVM_FIRST + 64)
+        TVM_GETISEARCHSTRING = TVM_GETISEARCHSTRINGW
+        TVM_SETTOOLTIPS = (TVM_FIRST + 24)
+        TVM_GETTOOLTIPS = (TVM_FIRST + 25)
+        TVM_SETINSERTMARK = (TVM_FIRST + 26)
+        TVM_SETITEMHEIGHT = (TVM_FIRST + 27)
+        TVM_GETITEMHEIGHT = (TVM_FIRST + 28)
+        TVM_SETBKCOLOR = (TVM_FIRST + 29)
+        TVM_SETTEXTCOLOR = (TVM_FIRST + 30)
+        TVM_SETINSERTMARKCOLOR = (TVM_FIRST + 37)
+        TVM_GETINSERTMARKCOLOR = (TVM_FIRST + 38)
+        TVM_GETITEMSTATE = (TVM_FIRST + 39)
+        TVM_SETLINECOLOR = (TVM_FIRST + 40)
+        TVM_GETLINECOLOR = (TVM_FIRST + 41)
+        TVM_SETEXTENDEDSTYLE = (TVM_FIRST + 44)
+        TVM_GETEXTENDEDSTYLE = (TVM_FIRST + 45)
+    End Enum
+    
+    Public Enum Misc
+        TVSIL_NORMAL = 0
+        TVSIL_STATE = 2
+        
+        TVIF_TEXT = &H1
+        TVIF_IMAGE = &H2
+        TVIF_PARAM = &H4
+        TVIF_STATE = &H8
+        TVIF_HANDLE = &H10
+        TVIF_SELECTEDIMAGE = &H20
+        TVIF_CHILDREN = &H40
+        TVIF_INTEGRAL = &H80
+        TVIF_STATEEX = &H100
+        
+        TVI_ROOT = &HFFFF0000
+        TVI_FIRST = &HFFFF0001
+        TVI_LAST = &HFFFF0002
+        TVI_SORT = &HFFFF0003
+        
+        TVC_UNKNOWN = &H0
+        TVC_BYMOUSE = &H1
+        TVC_BYKEYBOARD = &H2
+        
+        TVIS_FOCUSED = &H1
+        TVIS_SELECTED = &H2
+        TVIS_CUT = &H4
+        TVIS_DROPHILITED = &H8
+        TVIS_BOLD = &H10
+        TVIS_EXPANDED = &H20
+        TVIS_EXPANDEDONCE = &H40
+        TVIS_OVERLAYMASK = &HF00
+        TVIS_STATEIMAGEMASK = &HF000&
+        TVIS_EX_DISABLED = &H2
+        
+        TVHT_NOWHERE = &H1
+        TVHT_ONITEMICON = &H2
+        TVHT_ONITEMLABEL = &H4
+        TVHT_ONITEMINDENT = &H8
+        TVHT_ONITEMBUTTON = &H10
+        TVHT_ONITEMRIGHT = &H20
+        TVHT_ONITEMSTATEICON = &H40
+        TVHT_ONITEM = TVHT_ONITEMSTATEICON Or TVHT_ONITEMICON Or TVHT_ONITEMLABEL
+        TVHT_ABOVE = &H100
+        TVHT_BELOW = &H200
+        TVHT_TORIGHT = &H400
+        TVHT_TOLEFT = &H800
+    
+        TVE_COLLAPSE = &H1
+        TVE_EXPAND = &H2
+        TVE_TOGGLE = &H3
+        TVE_EXPANDPARTIAL = &H4000
+        TVE_COLLAPSERESET = &H8000&
+
+        TVNRET_DEFAULT = 0
+        TVNRET_SKIPOLD = 1
+        TVNRET_SKIPNEW = 2
+
+        TVGN_ROOT = &H0
+        TVGN_NEXT = &H1
+        TVGN_PREVIOUS = &H2
+        TVGN_PARENT = &H3
+        TVGN_CHILD = &H4
+        TVGN_FIRSTVISIBLE = &H5
+        TVGN_NEXTVISIBLE = &H6
+        TVGN_PREVIOUSVISIBLE = &H7
+        TVGN_DROPHILITE = &H8
+        TVGN_CARET = &H9
+        TVGN_LASTVISIBLE = &HA
+    End Enum
+    
+    Public Enum Other
+        IIL_UNCHECKED = 1
+        IIL_CHECKED = 2
+        I_IMAGECALLBACK = (-1)
+    End Enum
+    
+    Public Enum Styles
+        TVS_EX_DOUBLEBUFFER = &H4
+        TVS_HASBUTTONS = &H1
+        TVS_HASLINES = &H2
+        TVS_LINESATROOT = &H4
+        TVS_EDITLABELS = &H8
+        TVS_DISABLEDRAGDROP = &H10
+        TVS_SHOWSELALWAYS = &H20
+        TVS_RTLREADING = &H40
+        TVS_NOTOOLTIPS = &H80
+        TVS_CHECKBOXES = &H100
+        TVS_TRACKSELECT = &H200
+        TVS_SINGLEEXPAND = &H400
+        TVS_INFOTIP = &H800
+        TVS_FULLROWSELECT = &H1000
+        TVS_NOSCROLL = &H2000
+        TVS_NONEVENHEIGHT = &H4000
+        TVS_NOHSCROLL = &H8000&
+    End Enum
+    
+    Public Type TVITEM
+        Mask As Long
+        hItem As LongPtr
+        State As Long
+        StateMask As Long
+        pszText As LongPtr
+        cchTextMax As Long
+        iImage As Long
+        iSelectedImage As Long
+        cChildren As Long
+        lParam As LongPtr
+    End Type
+    
+    Public Type TVITEMEX
+        TVI As TVITEM
+        iIntegral As Long
+    End Type
+    
+    Public Type TVINSERTSTRUCT
+        hParent As LongPtr
+        hInsertAfter As LongPtr
+        Item As TVITEMEX
+    End Type
+    
+    Public Type TVHITTESTINFO
+        PT As WinNativeFormsBase.POINT
+        Flags As Long
+        hItem As LongPtr
+    End Type
+        
+    Public Type TVSORTCB
+        hParent As LongPtr
+        lpfnCompare As LongPtr
+        lParam As LongPtr
+    End Type
+    
+    Public Type NMHDR
+        hWndFrom As LongPtr
+        IDFrom As LongPtr
+        Code As Long
+    End Type
+    
+    Public Type NMTREEVIEW
+        hdr As NMHDR
+        Action As Long
+        ItemOld As TVITEM
+        ItemNew As TVITEM
+        PTDrag As WinNativeFormsBase.POINT
+    End Type
+    
+    Public Type NMTVDISPINFO
+        hdr As NMHDR
+        Item As TVITEM
+    End Type
+    
+    Private Type NMCUSTOMDRAW
+        hdr As NMHDR
+        dwDrawStage As Long
+        hDC As LongPtr
+        RC As WinNativeFormsBase.RECT
+        dwItemSpec As LongPtr
+        uItemState As Long
+        lItemlParam As LongPtr
+    End Type
+
+    Public Type NMTVCUSTOMDRAW
+        NMCD As NMCUSTOMDRAW
+        ClrText As Long
+        ClrTextBk As Long
+        iLevel As Long
+    End Type
+    
+    Public Function SortTreeViewNodeTextCallback(ByVal Node1 As Node, ByVal Node2 As Node, ByVal tv As TreeView) As Long
+        Dim retVal As Long = WinNativeFormsBASE.lstrcmpiW(Node1.Text, Node2.Text)
+        Dim sortOrder As TreeSortOrderConstants = If(Node1.Parent Is Nothing, tv.SortOrder, Node1.Parent.SortOrder)
+        If sortOrder = TreeSortOrderConstants.tvwDescending Then retVal = -retVal
+        Return retVal
+    End Function
+    
+    Public Function SortTreeViewNodeBinaryCallback(ByVal Node1 As Node, ByVal Node2 As Node, ByVal tv As TreeView) As Long
+        Dim retVal As Long = WinNativeFormsBASE.lstrcmpW(Node1.Text, Node2.Text)
+        Dim sortOrder As TreeSortOrderConstants = If(Node1.Parent Is Nothing, tv.SortOrder, Node1.Parent.SortOrder)
+        If sortOrder = TreeSortOrderConstants.tvwDescending Then retVal = -retVal
+        Return retVal
+    End Function
+    
+    Public Function GetShiftState() As ShiftConstants
+        If IsKeyPressed(vbKeyShift) Then GetShiftState += vbShiftMask
+        If IsKeyPressed(vbKeyMenu) Then GetShiftState += vbAltMask
+        If IsKeyPressed(vbKeyControl) Then GetShiftState += vbCtrlMask
+    End Function
+        
+    Public Function IsKeyPressed(ByVal KeyCode As KeyCodeConstants) As Boolean
+        Return WinNativeFormsBASE.GetAsyncKeyState(KeyCode) And &H8000&
+    End Function
+    
+    Public Function StateImageMaskToIndex(ByVal State As Long) As Long
+        Return State >> 12
+    End Function
+    
+    Public Function IndexToStateImageMask(ByVal Index As Long) As Long
+        Return Index << 12
+    End Function
+    
+    
+    
+    
+    Public Enum CommonNotifications
+        NM_FIRST = 0
+        NM_CLICK = (NM_FIRST - 2)
+        NM_DBLCLK = (NM_FIRST - 3)
+        NM_RCLICK = (NM_FIRST - 5)
+        NM_RDBLCLK = (NM_FIRST - 6)
+        NM_CUSTOMDRAW = (NM_FIRST - 12)
+    End Enum
+    
+    Public Enum CommonCustomDrawState
+        CDDS_PREPAINT = &H1
+        CDDS_ITEM = &H10000
+        CDDS_ITEMPREPAINT = (CDDS_ITEM + 1)
+        CDDS_SUBITEM = &H00020000
+        CDIS_SELECTED = &H1
+        CDIS_FOCUS = &H10
+        CDRF_DODEFAULT = &H0
+        CDRF_NEWFONT = &H2
+        CDRF_NOTIFYITEMDRAW = &H20
+        CDRF_NOTIFYSUBITEMDRAW = &H20 ' flags are the same, we can distinguish by context
+        TVCDRF_NOIMAGES = &H10000
+    End Enum
+    
+    Public DeclareWide PtrSafe Function COMCTL32_ImageList_Destroy Lib "comctl32" Alias "ImageList_Destroy" (ByVal hImageList As LongPtr) As Long
+
+End Module
+
+Public Module TreeViewPublic
+	
+    Public Enum TreeBorderStyleConstants
+        ccNone = 0
+        ccFixedSingle = 1
+    End Enum
+    
+    Public Enum TreeLabelEditConstants
+        tvwAutomatic = 0
+        tvwManual = 1
+        tvwDisabled = 2
+    End Enum
+    
+    Public Enum TreeLineStyleConstants
+        tvwTreeLines = 0
+        tvwRootLines = 1
+    End Enum
+    
+    Public Enum TreeStyleConstants
+        tvwTextOnly
+        tvwPictureText
+        tvwPlusMinusText
+        tvwPlusMinusPictureText
+        tvwTreelinesText
+        tvwTreelinesPictureText
+        tvwTreelinesPlusMinusText
+        tvwTreelinesPlusMinusPictureText
+    End Enum
+    
+    Public Enum TreeRelationshipConstants
+        tvwFirst = 0
+        tvwLast = 1
+        tvwNext = 2
+        tvwPrevious = 3
+        tvwChild = 4
+    End Enum
+    
+    Public Enum TreeSortOrderConstants
+        tvwAscending = 0
+        tvwDescending = 1
+    End Enum
+    
+    Public Enum TreeSortTypeConstants
+        tvwBinary = 0
+        tvwText = 1
+    End Enum
+    
+End Module

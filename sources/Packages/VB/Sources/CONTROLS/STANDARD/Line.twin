@@ -1,0 +1,237 @@
+[ Description ("A Win32 native Line") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Line??.png") ]
+[ ClassId ("33AD4F88-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("769C0185-5C1E-4D3B-B37B-DB794FCAD227") ]    ' FIXME implement {33AD4F89-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Line
+
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlWindowlessPoints Via _BaseControl = New WinNativeFormsBase.BaseControlWindowlessPoints(ControlTypeConstants.vbShape)
+
+    #End Region
+        
+    #Region "STATE"
+    
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BorderColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowText
+        [ Description ("") ]
+            Public BorderStyle As BorderStyleConstants = BorderStyleConstants.vbBSSolid
+        [ Description ("") ]
+            Public BorderWidth As Long = 1
+        [ Description ("") ]
+            Public DrawMode As DrawModeConstants = DrawModeConstants.vbCopyPen
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Event Initialize()
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            Me.IsDesignMode = Serializer.IsDesignMode
+            If Not Serializer.Deserialize(Me) Then
+                'InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                               
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext)
+            Me.RootWindowElement.RequiresWindowlessPainting(False)
+            Me.RootWindowElement.NotRectangular()
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            RaiseEvent Initialize()
+        End Sub
+
+        Private Sub HandleEraseBackground(ByVal hdc As LongPtr, ByRef Handled As Boolean) _
+            Handles RootWindowElement.EraseBackground
+                
+            Handled = True
+        End Sub
+
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+
+            If Visible = False And Me.IsDesignMode = False Then Exit Sub
+
+            Dim borderColor As Long = TranslateColor(Me.BorderColor)
+            Dim pen As LongPtr
+            Select Case Me.BorderStyle
+            	Case vbTransparent: pen = GDI32_CreatePen(PS_NULL, Me.BorderWidth, borderColor)
+            	Case vbBSSolid: pen = GDI32_CreatePen(PS_SOLID, Me.BorderWidth, borderColor)
+            	Case vbBSDot: pen = GDI32_CreatePen(PS_DOT, Me.BorderWidth, borderColor)
+            	Case vbBSDash: pen = GDI32_CreatePen(PS_DASH, Me.BorderWidth, borderColor)
+            	Case vbBSDashDot: pen = GDI32_CreatePen(PS_DASHDOT, Me.BorderWidth, borderColor)
+            	Case vbBSDashDotDot: pen = GDI32_CreatePen(PS_DASHDOTDOT, Me.BorderWidth, borderColor)
+            	Case vbBSInsideSolid: pen = GDI32_CreatePen(PS_INSIDEFRAME, Me.BorderWidth, borderColor)
+            End Select
+
+            Dim backBrush As LongPtr = GDI32_GetStockObject(NULL_BRUSH)
+
+            'Debug.Print "***LINE*** Paint - X1: " & (PixelsX1 * RootWindowElement.UnitPixelScale) & ", width: " & ((PixelsX2 * RootWindowElement.UnitPixelScale) - (PixelsX1 * RootWindowElement.UnitPixelScale))
+            'Debug.Print "***LINE*** Paint - Y1: " & (PixelsY1 * RootWindowElement.UnitPixelScale) & ", height: " & ((PixelsY2 * RootWindowElement.UnitPixelScale) - (PixelsY1 * RootWindowElement.UnitPixelScale))
+
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API directly
+    
+                ' Dim rect As WinNativeFormsBASE.RECT
+                ' Static PaintCount As Long = 0
+                ' rect.Left = PixelsX1 * RootWindowElement.UnitPixelScale
+                ' rect.Top = PixelsY1 * RootWindowElement.UnitPixelScale
+                ' rect.Right = (PixelsX2 * RootWindowElement.UnitPixelScale)
+                ' rect.Bottom = (PixelsY2 * RootWindowElement.UnitPixelScale)
+                ' Dim brush As LongPtr = WinNativeFormsBASE.WindowsAPI.CreateSolidBrush(If(PaintCount = 0, vbRed, vbGreen))
+                ' PaintCount += 1
+                ' WinNativeFormsBASE.WindowsAPI.FillRect(ps.hdc, rect, brush)
+                ' WinNativeFormsBASE.WindowsAPI.DeleteObject(brush)
+                
+                Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, WinNativeFormsBASE.BackgroundModes.OPAQUE)
+
+                Dim oldBrush As LongPtr
+                Dim oldPen As LongPtr
+            
+                If backBrush <> 0 Then
+                    oldBrush = WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, backBrush)
+                End If
+
+                If pen <> 0 Then
+                    oldPen = WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, pen)
+                End If
+
+                GDI32_SetROP2(ps.hdc, Me.DrawMode)
+                GDI32_MoveToEx(ps.hdc, PixelsX1 * RootWindowElement.UnitPixelScale, PixelsY1 * RootWindowElement.UnitPixelScale, 0)
+                Dim LineToY As Long = PixelsY2 * RootWindowElement.UnitPixelScale
+                'Debug.Print "***LINE*** Paint - LineToY: " & LineToY
+
+                GDI32_LineTo(ps.hdc, PixelsX2 * RootWindowElement.UnitPixelScale, LineToY)
+            
+                If pen <> 0 Then
+                    WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, oldPen)
+                End If
+
+                If backBrush <> 0 Then
+                    WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, oldBrush)
+                End If
+
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, oldBkMode)
+
+            Me.RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+
+            If pen <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(pen)
+
+        End Sub
+        
+        Private Sub OnChangeProp() _
+                Handles BorderColor.OnPropertyLet, _
+                        BorderStyle.OnPropertyLet, _
+                        BorderWidth.OnPropertyLet, _
+                        DrawMode.OnPropertyLet
+                        
+            Me.ControlContext.EnsureFormIsLoaded()
+        	Me.ControlContext.WindowlessRefresh()
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BorderColor.OnPropertyGet, _
+        	            BorderStyle.OnPropertyGet, _
+        	            BorderWidth.OnPropertyGet, _
+                        DrawMode.OnPropertyGet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Boolean
+            Return Me.Visible
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As Boolean)
+            Me.Visible = Value
+        End Property
+        
+        Private Sub HandleResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, _
+                                               ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long) _
+                Handles RootWindowElement.ResizeWindowless
+                
+            Dim containerHwnd As LongPtr = Me.Container.hwnd
+            If containerHwnd = 0 Then
+                ' Windowless UC container...  FIXME need to pass on the RECTs to refine the InvalidateRect passed to the UC site
+                On Error Resume Next
+                Me.Container.InternalRaiseViewChanged()
+                Exit Sub
+            End If
+            
+            Dim strokeWidthAreaAdjust As Long = Round(BorderWidth / 2) + 1
+            Dim rect As WinNativeFormsBASE.RECT
+            If oldWidth <> 0 And oldHeight <> 0 Then
+                rect.Left = oldLeft - strokeWidthAreaAdjust
+                rect.Top = oldTop - strokeWidthAreaAdjust
+                rect.Right = oldLeft + oldWidth + strokeWidthAreaAdjust
+                rect.Bottom = oldTop + oldHeight + strokeWidthAreaAdjust
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+
+            If newWidth <> 0 And newHeight <> 0 Then
+                rect.Left = newLeft - strokeWidthAreaAdjust
+                rect.Top = newTop - strokeWidthAreaAdjust
+                rect.Right = newLeft + newWidth + strokeWidthAreaAdjust
+                rect.Bottom = newTop + newHeight + strokeWidthAreaAdjust
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+            
+            'Debug.Print "***LINE*** HandleResizeWindowless - newLeft: " & newLeft & ", newWidth: " & newWidth
+            'Debug.Print "***LINE*** HandleResizeWindowless - newTop: " & newTop & ", newHeight: " & newHeight
+
+        End Sub
+                
+    #End Region
+    
+End Class

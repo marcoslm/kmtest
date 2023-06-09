@@ -1,0 +1,50 @@
+Private Module MenuConsts
+
+	Public DeclareWide PtrSafe Function CreateMenu Lib "user32" () As LongPtr
+    Public DeclareWide PtrSafe Function GetMenu Lib "user32" (ByVal hwnd As LongPtr) As LongPtr
+    Public DeclareWide PtrSafe Function DestroyMenu Lib "user32" (ByVal hMenu As LongPtr) As Long
+    Public DeclareWide PtrSafe Function CreatePopupMenu Lib "user32" () As LongPtr
+    Public DeclareWide PtrSafe Function SetMenu Lib "user32" (ByVal hwnd As LongPtr, ByVal hMenu As LongPtr) As Long
+    Public DeclareWide PtrSafe Function InsertMenuItemW Lib "user32" (ByVal hMenu As LongPtr, ByVal item As Long, ByVal fByPosition As Long, ByRef lpmi As MENUITEMINFO) As Long
+    Public DeclareWide PtrSafe Function SetMenuItemInfoW Lib "user32" (ByVal hMenu As LongPtr, ByVal item As Long, ByVal fByPosition As Long, ByRef lpmi As MENUITEMINFO) As Long
+    Public DeclareWide PtrSafe Function TrackPopupMenu Lib "user32" (ByVal hMenu As LongPtr, ByVal uFlags As Long, ByVal x As Long, ByVal y As Long, ByVal nReserved As Long, ByVal hWnd As LongPtr, ByVal prcRect As LongPtr) As Long
+    Public DeclareWide PtrSafe Function SetForegroundWindow Lib "user32" (ByVal hWnd As LongPtr) As Long
+    Public DeclareWide PtrSafe Function PostMessageW Lib "user32" (ByVal hWnd As LongPtr, ByVal msg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+    Public DeclareWide PtrSafe Function DrawMenuBar Lib "user32" (ByVal hWnd As LongPtr) As Long
+    Public DeclareWide PtrSafe Function GetMenuBarInfo Lib "user32" (ByVal hWnd As LongPtr, ByVal idObject As Long, ByVal idItem As Long, ByRef pmbi As MENUBARINFO) As Long
+    
+    Public Const MIIM_STRING As Long = &H40
+    Public Const MIIM_SUBMENU As Long = &H4
+    Public Const MIIM_STATE As Long = &H1
+    Public Const MIIM_ID As Long = &H2
+    Public Const MIIM_BITMAP As Long = &H80
+    Public Const MIIM_FTYPE As Long = &H100
+    Public Const MFS_CHECKED As Long = &H8
+    Public Const MFS_DISABLED As Long = &H3
+    Public Const MFS_DEFAULT As Long = &H1000
+    Public Const MFT_SEPARATOR As Long = &H800
+    
+    Public Type MENUBARINFO
+    	cbSize As Long
+        rcBar As WinNativeFormsBASE.RECT
+        hMenu As LongPtr
+        hwndMenu As LongPtr
+        Flags As Long
+    End Type
+    
+    Public Type MENUITEMINFO
+        cbSize As Long
+        fMask As Long
+        fType As Long
+        fState As Long
+        wID As Long
+        hSubMenu As LongPtr
+        hbmpChecked As LongPtr
+        hbmpUnchecked As LongPtr
+        dwItemData As LongPtr
+        dwTypeData As String
+        cch  As Long
+        hbmpItem As LongPtr
+    End Type
+
+End Module

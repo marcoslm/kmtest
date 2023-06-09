@@ -1,0 +1,320 @@
+[ WindowsControl ("/miscellaneous/ICONS??/UpDown??.png") ]
+[ ClassId ("98E78A9F-2720-4A7F-A320-905436924746") ]
+[ InterfaceId ("AC9BAD81-6AE9-4ADE-93F2-A5369C2AD729") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+Class UpDown
+	
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBase.BaseControlFocusableNoFont(ControlTypeConstants.vbUpDown)
+        
+    #End Region
+            
+    #Region "STATE"
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+            
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+
+        [ Serialize (True, "Min") ]
+            Private Min_INIT As Long = 0
+        [ Serialize (True, "Max") ]
+            Private Max_INIT As Long = 10
+        [ Serialize (True, "Value") ]
+            Private Value_INIT As Long = 0
+        [ Serialize (True, "Increment") ]
+            Private Increment_INIT As Long = 1
+            
+            Private IsInitialized As Boolean = False
+        
+            Public Orientation As OrientationConstants = OrientationConstants.ccOrientationHorizontal
+            Public ReadOnly VisualStyles As Boolean = True
+            Public CausesValidation As Boolean = True
+
+        Private Type UDACCEL
+            nSec As Long
+            nInc As Long
+        End Type
+        
+        Private Type NMUPDOWN
+            hdr As NMHDR
+            iPos As Long
+            iDelta As Long
+        End Type
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Event Change()
+        [ Description ("") ]
+            Event UpClick()
+        [ Description ("") ]
+            Event DownClick()
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        Event Validate(Cancel As Boolean)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	If Me.PixelsHeight > Me.PixelsWidth Then
+                Me.Orientation = OrientationConstants.ccOrientationVertical
+            End If
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long = GetStyles()
+            Dim extendedStyles As Long
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "msctls_updown32", vbNullString, styles, extendedStyles, True)
+        End Sub
+        
+        Private Function GetStyles() As Long
+            Dim Styles As Long
+        	Styles += If (Orientation = OrientationConstants.ccOrientationHorizontal, UDS_HORZ, 0)
+            Return Styles
+        End Function
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+		
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            ' NOTE: changing the property assignments here often means changes to SyncRecreate() too
+            Me.Min = Min_INIT
+            Me.Max = Max_INIT
+            Me.Value = Value_INIT
+            Me.Increment = Increment_INIT
+
+            SyncOLEDropMode ()
+            RaiseEvent Initialize()
+            
+            IsInitialized = True
+        End Sub
+        
+        Private Sub SyncRecreate() _
+                Handles Orientation.OnPropertyLet
+                        
+            Dim Min As Long = Me.Min
+            Dim Max As Long = Me.Max
+            Dim Value As Long = Me.Value
+            Dim Increment As Long = Me.Increment
+            
+            ' changing these flags in the GWL_STYLE has no effect at runtime, so we have to recreate the control
+            RootWindowElement.RecreateWindow(GetStyles())
+            
+            Me.Min = Min
+            Me.Max = Max
+            Me.Value = Value
+            Me.Increment = Increment
+
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Min() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Dim MinValue As Long
+            Dim MaxValue As Long
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_GETRANGE32, VarPtr(MinValue), VarPtr(MaxValue))
+            Return MinValue
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Min(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_SETRANGE32, Value, Me.Max)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Max() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Dim MinValue As Long
+            Dim MaxValue As Long
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_GETRANGE32, VarPtr(MinValue), VarPtr(MaxValue))
+            Return MaxValue
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Max(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_SETRANGE32, Me.Min, Value)
+        End Property
+                
+        [ Serialize (False) ]
+        Public Property Get Value() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Value = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_GETPOS32, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Value(ByVal NewValue As Long)
+            If Me.Value <> NewValue Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, UDM_SETPOS32, 0, NewValue)
+                If IsInitialized Then RaiseEvent Change
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+                
+        [ Serialize (False) ]
+        Public Property Get Increment() As Long
+            Dim Accel As UDACCEL
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, UDM_GETACCEL, 1, VarPtr(Accel))
+            Return Accel.nInc
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Increment(ByVal Value As Long)
+            Dim Accel As UDACCEL
+            Accel.nSec = 0
+            Accel.nInc = Value
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, UDM_SETACCEL, 1, VarPtr(Accel))
+        End Property
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag (Me)
+        End Sub
+
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode (Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        Private Sub HandleUpDownNotification(ByRef Notification As NMUPDOWN, ByRef MutedReturnValue As Variant)
+            Select Case Notification.iDelta
+                Case 0
+                    MutedReturnValue = 1
+                Case Is < 0
+                    RaiseEvent DownClick
+                Case Is > 0
+                    RaiseEvent UpClick
+            End Select
+        End Sub
+        
+        Private Sub RootWindowElement_Notify(ByRef Notification As NMHDR, MutedReturnValue As Variant)
+            Const UDN_FIRST As Long = (-721)
+            Const UDN_DELTAPOS As Long = (UDN_FIRST - 1)
+            If Notification.Code = UDN_DELTAPOS Then
+                HandleUpDownNotification(VarPtr(Notification), MutedReturnValue)
+            End If
+        End Sub
+        
+        Private Sub RootWindowElement_Scroll(ByVal ScrollType As Long, ByVal IsHorizontal As Boolean)
+           	RaiseEvent Change
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+                
+    #End Region
+	
+End Class

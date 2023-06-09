@@ -1,0 +1,367 @@
+[ Description ("A Win32 native OLE control") ]
+[ WindowsControl ("/miscellaneous/ICONS??/OLE??.png") ]
+[ ClassId ("33AD5000-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("038D7327-C7AB-4A20-8800-C0D1E569343D") ]    ' FIXME implement {33AD5001-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class OLE
+    
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBase.BaseControlFocusableNoFont(ControlTypeConstants.vbOLEControl)
+
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Unimplemented ]
+        [ Description ("") ]
+            Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+        [ Unimplemented ]
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowBackground
+        [ Unimplemented ]
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbFixedSingleBorder
+        [ Unimplemented ]
+            Public BackStyle As BackFillStyleConstants = BackFillStyleConstants.vbBFOpaque
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+
+        [ Unimplemented ]
+            Public AutoActivate As VBRUN.OLEContainerActivateConstants = VBRUN.OLEContainerActivateConstants.vbOLE_ActivateDoubleclick
+        [ Unimplemented ]
+            Public AutoVerbMenu As Boolean = True
+        [ Unimplemented ]
+            Public Class As String
+        [ Unimplemented ]
+            Public DisplayType As VBRUN.OLEContainerDisplayTypeConstants
+        [ Unimplemented ]
+            Public HostName As String
+        [ Unimplemented ]
+            Public MiscFlags As Long
+        [ Unimplemented ]
+            Public OLEDropAllowed As Boolean
+        [ Unimplemented ]
+            Public OLETypeAllowed As VBRUN.OLEContainerTypesAllowedConstants = VBRUN.OLEContainerTypesAllowedConstants.vbOLE_Either
+        [ Unimplemented ]
+            Public SizeMode As VBRUN.OLEContainerSizeModeConstants
+        [ Unimplemented ]
+            Public SourceDoc As String
+        [ Unimplemented ]
+            Public SourceItem As String
+        [ Unimplemented ]
+            Public UpdateOptions As VBRUN.OLEContainerUpdateOptionsConstants
+        [ Unimplemented ]
+            Public Verb As Long
+                
+            Public CausesValidation As Boolean = True
+        [ Unimplemented ]
+            Public DataField As String
+        [ Unimplemented ]
+        [ Serialize (True, "DataSource") ]          ' Any string value is allowed, gets resolved at runtime to a Form.Controls(DataSourceName)
+            Public DataSourceINIT As String
+        [ Unimplemented ]
+            Public HelpContextID As Long
+
+            Public WhatsThisHelpID As Long
+            
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataChanged As Boolean
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataSource As DataSource         ' See DataSourceINIT
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public _Default As Integer
+            Attribute _Default.VB_VarUserMemId = 0
+
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Action As Integer
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public AppIsRunning As Boolean
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Data As Long
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataText As String
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public FileNumber As Integer
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Format As String
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public LpOleObject As LongPtr
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public object As object
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectAcceptFormats() As String      ' FIXME not really an array, but an indexed prop-get
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectAcceptFormatsCount As Integer
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectGetFormats() As String     ' FIXME not really an array, but an indexed prop-get
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectGetFormatsCount As Integer
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectVerbFlags() As Long     ' FIXME not really an array, but an indexed prop-get
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectVerbs() As String      ' FIXME not really an array, but an indexed prop-get
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ObjectVerbsCount As Long
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public OLEType As Integer
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public PasteOK  As Boolean
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public Picture As IPictureDisp
+
+        [ Unimplemented ]
+            Public Sub Close()
+            End Sub
+        [ Unimplemented ]
+            Public Sub Copy()
+            End Sub
+        [ Unimplemented ]
+            Public Sub CreateEmbed(ByVal SourceDoc As String, Optional ByVal Class As Variant)
+            End Sub
+        [ Unimplemented ]
+            Public Sub CreateLink(ByVal SourceDoc As String, Optional ByVal SourceItem As Variant)
+            End Sub
+        [ Unimplemented ]
+            Public Sub Delete()
+            End Sub
+        [ Unimplemented ]
+            Public Sub DoVerb(Optional ByVal Verb As Variant)
+            End Sub
+        [ Unimplemented ]
+            Public Sub FetchVerbs()
+            End Sub
+        [ Unimplemented ]
+            Public Sub InsertObjDlg()
+            End Sub
+        [ Unimplemented ]
+            Public Sub Paste()
+            End Sub
+        [ Unimplemented ]
+            Public Sub PasteSpecialDlg()
+            End Sub
+        [ Unimplemented ]
+            Public Sub ReadFromFile(ByVal FileNum As Integer)
+            End Sub
+        [ Unimplemented ]
+            Public Sub SaveToFile(ByVal FileNum As Integer)
+            End Sub
+        [ Unimplemented ]
+            Public Sub SaveToOle1File(ByVal FileNum As Integer)
+            End Sub
+        [ Unimplemented ]
+            Public Sub ShowWhatsThis()
+            End Sub
+        [ Unimplemented ]
+            Public Sub Update()
+            End Sub
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Unimplemented ]
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Click()
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event DblClick()
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event GotFocus()
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event KeyDown(KeyCode As Integer, Shift As Integer)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event KeyUp(KeyCode As Integer, Shift As Integer)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event LostFocus()
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Unimplemented ]
+        [ Description ("") ]
+            Event Initialize()
+
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        [ Unimplemented ] Event ObjectMove(Left As Single, Top As Single, Width As Single, Height As Single)
+        [ Unimplemented ] Event Resize(HeightNew As Single, WidthNew As Single)
+        [ Unimplemented ] Event Updated(Code As Integer)
+        Event Validate(Cancel As Boolean)
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+                extendedStyles += If(ControlContext.IsPlacedOnUserControl, 0, WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_NOPARENTNOTIFY)
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderGeneric", "", styles, extendedStyles)
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+
+    #End Region
+    
+End Class

@@ -1,0 +1,439 @@
+Private Class ButtonBase
+
+    [ CustomDesigner ("designer_SpectrumWindows") ]
+    [ Description ("") ]
+        Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vb3DFace   ' FIXME this is linked to Appearance
+    [ CustomDesigner ("designer_SpectrumWindows") ]
+    [ Description ("") ]
+        Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonText   ' FIXME this is linked to Appearance
+    [ Description ("") ]
+        Public PictureDpiScaling As Boolean = False
+    [ Description ("Only applicable to Graphical style buttons") ]
+        Public PictureAlignment As VBRUN.AlignConstants = VBRUN.AlignConstants.vbAlignTop
+    [ Description ("Only applicable to Graphical style buttons.  When PictureAlignment is Left/Right, this affects the padding between the elements.  When PictureAlignment is Top/Bottom, this affects the padding between the text and the corresponding edge") ]
+        Public Padding As Long = 2      ' the default padding between the text and the bottom edge
+
+    [ Serialize (True, "DisabledPicture") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+        Private ReadOnly DisabledPictureINIT() As Byte
+    
+    
+    [ Serialize (False) ]
+    Private InternalDisabledPicture As StdPicture
+    
+    [ Serialize (False) ]
+    Public Property Get DisabledPicture() As StdPicture
+        Return InternalDisabledPicture
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set DisabledPicture(Value As StdPicture)
+        Set InternalDisabledPicture = Value
+        'PictureChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let DisabledPicture(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+        Set InternalDisabledPicture = Value
+        'PictureChanged()
+    End Property
+    
+    [ Serialize (True, "DownPicture") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+        Private ReadOnly DownPictureINIT() As Byte
+    
+    [ Serialize (False) ]
+    Private InternalDownPicture As StdPicture
+    
+    [ Serialize (False) ]
+    Public Property Get DownPicture() As StdPicture
+        Return InternalDownPicture
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set DownPicture(Value As StdPicture)
+        Set InternalDownPicture = Value
+        'PictureChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let DownPicture(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+        Set InternalDownPicture = Value
+        'PictureChanged()
+    End Property
+
+
+    [ Serialize (True, "Picture") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+       Private ReadOnly PictureINIT() As Byte
+
+    [ Serialize (False) ]
+    Private InternalPicture As StdPicture
+    
+    [ Serialize (False) ]
+    Public Property Get Picture() As StdPicture
+        Return InternalPicture
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set Picture(Value As StdPicture)
+        Set InternalPicture = Value
+        'PictureChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let Picture(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+        Set InternalPicture = Value
+        'PictureChanged()
+    End Property
+
+        
+    [ CustomDesigner ("designer_SpectrumWindows") ]
+    [ Unimplemented ]
+        Public MaskColor As OLE_COLOR = &H00C0C0C0
+    [ Unimplemented ]
+        Public UseMaskColor As Boolean
+
+
+        Public Style As VBRUN.ButtonConstants
+
+    Private FontHandle As LongPtr
+    Private InternalFont As StdFont
+
+    Private RootWindowElement As WindowsControls.WindowElement
+    Private ControlContext As WindowsControls.WindowsControlContext
+    Private OuterOwner As Object
+    
+    Friend Sub InitializeBASE(ByRef RootWindowElement As WindowsControls.WindowElement, _
+                                   ByRef ControlContext As WindowsControls.WindowsControlContext, _
+                                   ByRef OuterOwner As Object)
+
+    	Set Me.RootWindowElement = RootWindowElement
+        Set Me.ControlContext = ControlContext
+        Set Me.OuterOwner = OuterOwner
+
+    	If IsArrayInitialized(Me.PictureINIT) AndAlso (UBound(Me.PictureINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set Me.Picture = Global.LoadPicture(Me.PictureINIT)
+        End If
+        
+        If IsArrayInitialized(Me.DownPictureINIT) AndAlso (UBound(Me.DownPictureINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set Me.DownPicture = Global.LoadPicture(Me.DownPictureINIT)
+        End If
+        
+        If IsArrayInitialized(Me.DisabledPictureINIT) AndAlso (UBound(Me.DisabledPictureINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set Me.DisabledPicture = Global.LoadPicture(Me.DisabledPictureINIT)
+        End If
+    End Sub
+    
+    Private Sub SyncOLEFontHandle()
+        If Me.InternalFont IsNot Me.OuterOwner.Font Then
+            Set Me.InternalFont = Me.OuterOwner.Font
+        
+            Dim ifont As IFont = Me.InternalFont
+            Dim LF As WinNativeFormsBASE.LOGFONT
+            WinNativeFormsBASE.GetObjectW(ifont.hFont, LenB(LF), LF)
+            LF.LFQuality = WinNativeFormsBASE.CLEARTYPE_QUALITY
+            
+            If Me.FontHandle <> 0 Then WinNativeFormsBASE.GDI32_DeleteObject(Me.FontHandle)
+            Me.FontHandle = WinNativeFormsBASE.CreateFontIndirectW(LF)
+        End If
+    End Sub
+    
+    Private Function GetFontMetrics() As WinNativeFormsBASE.TEXTMETRIC
+        Dim font As IFont = Me.OuterOwner.Font
+        Dim hdc As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_CreateCompatibleDC()
+        font.SetRatio(RootWindowElement.DPI, 2540)
+        Dim oldFont As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_SelectObject(hdc, font.hFont)
+        WinNativeFormsBASE.WindowsAPI.GDI32_GetTextMetrics(hdc, GetFontMetrics)
+        WinNativeFormsBASE.WindowsAPI.GDI32_SelectObject(hdc, oldFont)
+        WinNativeFormsBASE.WindowsAPI.GDI32_DeleteDC(hdc)
+    End Function
+    
+    Friend Sub HandleDrawItem_BASE(ByRef Info As WinNativeFormsBASE.DRAWITEMSTRUCT, Handled As Boolean, _
+                                    ByVal IsChecked As Boolean, ByVal IsCommandButton As Boolean)
+            
+        'Debug.Print Me.Name & ":" & CurrentProcedureName, "Info.ItemState: " & Hex(Info.ItemState)
+        
+        Dim backColor As Long = TranslateColor(Me.BackColor)
+        Dim brush As LongPtr
+                                
+            Dim IsSelected As Boolean = Info.ItemState And OwnerDrawState.ODS_SELECTED
+
+            If IsChecked Then
+                brush = CreateCheckeredPatternBrush(Info.hDC, vbWhite, backColor)
+                IsSelected = True
+            Else
+                brush = WinNativeFormsBASE.CreateSolidBrush(backColor)
+            End If
+                        
+            Dim rect As WinNativeFormsBASE.RECT
+            rect.Left = 0
+            rect.Top = 0
+            rect.Right = rect.Left + RootWindowElement.CurrentWidth
+            rect.Bottom = rect.Top + RootWindowElement.CurrentHeight
+
+            If (rect.Right > rect.Left) And (rect.Bottom > rect.Top) Then
+                Dim _width As Long = rect.Right - rect.Left
+
+                Dim actualForeColor As Long = If(Me.OuterOwner.Enabled, TranslateColor(Me.ForeColor), TranslateColor(vbGrayText))
+                Dim oldTextColor As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, actualForeColor)
+                Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, 1)
+                                
+                Dim picture As OlePicture = Me.Picture
+                If IsSelected Then
+                    If Me.DownPicture IsNot Nothing Then Set picture = Me.DownPicture
+                ElseIf Info.ItemState And OwnerDrawState.ODS_DISABLED Then
+                    If Me.DisabledPicture IsNot Nothing Then Set picture = Me.DisabledPicture
+                End If
+                
+                Dim extraPadding As Long = Me.Padding * Me.RootWindowElement.UnitPixelScale
+                If Len(Me.OuterOwner.Caption) = 0 OrElse (picture Is Nothing) Or (Me.PictureAlignment = vbAlignNone) Then
+                    extraPadding = 0
+                End If
+                
+                If IsCommandButton = True Then
+                    If Info.ItemState And OwnerDrawState.ODS_FOCUS Then
+                        If (rect.Right > 2) And (rect.Bottom > 2) Then
+                            Dim pen As LongPtr = GDI32_CreatePen(PS_SOLID, 1, vbBlack)
+                            Dim oldPen As LongPtr = WinNativeFormsBASE.SelectObject(Info.hDC, pen)
+                            GDI32_Rectangle(Info.hDC, 0, 0, rect.Right, rect.Bottom)
+                            WinNativeFormsBASE.SelectObject(Info.hDC, oldPen)
+                            
+                            rect.Left += 1
+                            rect.Top += 1
+                            rect.Right -= 1
+                            rect.Bottom -= 1
+                        End If
+                    End If
+                End If
+                
+                Dim bfStyle As Long
+                Dim bfFlags As Long = BorderFlags.BF_RECT Or BorderFlags.BF_ADJUST
+                                    
+                If IsSelected Then
+                    bfStyle = BorderStyles.BDR_SUNKENOUTER Or BorderStyles.BDR_SUNKENINNER
+                Else
+                    bfStyle = BorderStyles.BDR_RAISEDOUTER Or BorderStyles.BDR_RAISEDINNER
+                End If
+                    
+                WinNativeFormsBASE.DrawEdge(Info.hDC, rect, bfStyle, bfFlags)
+                                                
+                If brush <> 0 Then
+                    WinNativeFormsBASE.USER32_FillRectangle(Info.hDC, rect, brush)
+                End If
+
+                ' Even if not focused, calculate positions as if we were focused so that if we do become
+                ' focused, the aligned position of text is not affected by the outer focus rectangle
+                If IsCommandButton = True Then
+                    If (Info.ItemState And OwnerDrawState.ODS_FOCUS) = 0 Then
+                        If (rect.Right - rect.Left) > 2 Then
+                            rect.Left += 1
+                            rect.Right -= 1
+                        End If
+                        If (rect.Bottom - rect.Top) > 2 Then
+                            rect.Top += 1
+                            rect.Bottom -= 1
+                        End If
+                    End If
+                End If
+                                                                    
+                SyncOLEFontHandle()
+                
+                Dim oldFont As LongPtr = WinNativeFormsBASE.SelectObject(Info.hDC, Me.FontHandle)
+                
+
+                Dim DrawWidth As Long
+                Dim DrawHeight As Long
+                Dim RecalculatedRenderPath As Boolean = False
+            ReCalcRenderPath:
+                Dim maxWidth As Long = rect.Right - rect.Left
+                Dim offsetTop As Long = 0
+                Dim offsetLeft As Long = 0
+                Dim remainingHeight As Long = (rect.Bottom - rect.Top)
+                
+                If (picture IsNot Nothing) Then
+                
+                    Const PICTYPE_METAFILE As Long = 2
+                    Const PICTYPE_ENHMETAFILE As Long = 4
+                    If (picture.Type = PICTYPE_METAFILE) Or (picture.Type = PICTYPE_ENHMETAFILE) Then
+                        ' this will size to fit later
+                    Else
+                        ScaleOLEPictureDimensionsToPixels(picture.Type, picture.Width, DrawWidth, picture.Height, DrawHeight)
+                        If PictureDpiScaling = True Then
+                            DrawWidth *= Me.RootWindowElement.UnitPixelScale
+                            DrawHeight *= Me.RootWindowElement.UnitPixelScale
+                        End If
+                    End If
+                    
+                    If (Me.PictureAlignment = vbAlignLeft) OrElse (Me.PictureAlignment = vbAlignRight) Then
+                        maxWidth -= DrawWidth + extraPadding
+                        If maxWidth < 0 Then maxWidth = 0
+                    
+                        If Me.PictureAlignment = vbAlignLeft Then
+                            offsetLeft += DrawWidth + extraPadding
+                        End If
+                    End If
+                End If
+                
+                ' FIXME we should cache the render path                             
+                Dim textRender As TextRenderPath = New TextRenderPath(Info.hDC, Me.OuterOwner.Caption, True, AlignmentConstants.vbCenter, maxWidth)
+                remainingHeight -= textRender.TotalHeight
+                
+                If (picture Is Nothing) OrElse (Me.PictureAlignment = vbAlignNone) _
+                        OrElse (Me.PictureAlignment = vbAlignLeft) _
+                        OrElse (Me.PictureAlignment = vbAlignRight) Then
+                    offsetTop = Int(remainingHeight / 2)
+                ElseIf Me.PictureAlignment = vbAlignBottom Then
+                    offsetTop = extraPadding
+                ElseIf Me.PictureAlignment = vbAlignTop Then
+                    offsetTop = ((rect.Bottom - extraPadding) - textRender.TotalHeight) - rect.Top
+                End If
+                
+                remainingHeight -= extraPadding
+                
+                ' When selected (down), the content is shifted 1x1 pixels
+                Dim picOffsetXY As Long
+                If IsSelected Then
+                    picOffsetXY = 1
+                    offsetLeft += 1
+                    offsetTop += 1
+                End If
+                            
+                If picture IsNot Nothing Then
+                    
+                    If (picture.Type = PICTYPE_METAFILE) Or (picture.Type = PICTYPE_ENHMETAFILE) Then
+                        ' size to fit (VBx doesn't do this)
+                        If (Me.PictureAlignment = vbAlignLeft) Or (Me.PictureAlignment = vbAlignRight) Then
+                            If RecalculatedRenderPath = False Then
+                                Dim remainingWidth As Long = (rect.Right - rect.Left) - (textRender.TotalWidth + extraPadding)
+                                If remainingWidth > 0 Then
+                                    DrawWidth = remainingWidth
+                                    DrawHeight = (picture.Height / picture.Width) * remainingWidth
+                                    RecalculatedRenderPath = True
+                                    GoTo ReCalcRenderPath
+                                End If
+                            End If
+                        Else
+                            If remainingHeight > 0 Then
+                                If remainingHeight > 6 Then
+                                    ' allow for some padding around the picture
+                                    remainingHeight -= 6
+                                End If
+                                DrawWidth = (picture.Width / picture.Height) * remainingHeight
+                                DrawHeight = remainingHeight
+                            End If
+                        End If
+                    End If
+                    
+                    Const STRETCH_HALFTONE = 4
+                    Dim OldStretchMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(Info.hDC, STRETCH_HALFTONE)
+                    WinNativeFormsBASE.WindowsAPI.GDI32_SetBrushOrigin(Info.hDC, 0, 0, 0)
+
+                    If (DrawWidth > 0) And (DrawHeight > 0) Then
+                                                    
+                        ' The text gets drawn OVER the image if necessary, so image must be drawn first
+                        ' Calculate the vertical mid-point of the remaining space, after taking into account the text height
+                        
+                        Dim picX As Long = picOffsetXY + rect.Left
+                        Dim picY As Long = picOffsetXY + rect.Top
+                        If Me.PictureAlignment = vbAlignLeft Then
+                            picX += Int(((rect.Right - rect.Left) - (textRender.TotalWidth + DrawWidth) - extraPadding) / 2)
+                            picY += Int(((rect.Bottom - rect.Top) - DrawHeight) / 2)
+                        ElseIf Me.PictureAlignment = vbAlignRight Then
+                            picX += Int(((rect.Right - rect.Left) - (textRender.TotalWidth + DrawWidth) - extraPadding) / 2) + extraPadding + textRender.TotalWidth
+                            picY += Int(((rect.Bottom - rect.Top) - DrawHeight) / 2)
+                        ElseIf Me.PictureAlignment = vbAlignTop Then
+                            picX += Int((rect.Right - rect.Left) / 2) - Int(DrawWidth / 2)
+                            picY += Int(remainingHeight / 2) - Int(DrawHeight / 2)
+                        ElseIf Me.PictureAlignment = vbAlignBottom Then
+                            picX += Int((rect.Right - rect.Left) / 2) - Int(DrawWidth / 2)
+                            picY += Int(remainingHeight / 2) - Int(DrawHeight / 2) + textRender.TotalHeight + extraPadding
+                        ElseIf Me.PictureAlignment = vbAlignNone Then
+                            picX += Int((rect.Right - rect.Left) / 2) - Int(DrawWidth / 2)
+                            picY += Int((rect.Bottom - rect.Top) / 2) - Int(DrawHeight / 2)
+                        End If
+                        
+                        Dim hrgn As LongPtr = WinNativeFormsBASE.CreateRectRgn(rect.Left, rect.Top, rect.Right, rect.Bottom)
+                        Dim oldClipRgn As LongPtr = WinNativeFormsBASE.SelectClipRgn(Info.hDC, hrgn)
+                        picture.Render CLngPtr(Info.hDC), picX, picY, DrawWidth, DrawHeight, 0&, picture.Height, picture.Width, -picture.Height, ByVal CLngPtr(0&)
+                        WinNativeFormsBASE.SelectClipRgn(Info.hDC, oldClipRgn)
+                    End If
+                    WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(Info.hDC, OldStretchMode)
+                End If
+            
+                If textRender.HasMnemomnics Then
+                    textRender.RenderWithMnemonics(Info.hDC, rect, offsetLeft, offsetTop, GetFontMetrics().TMAscent, RootWindowElement.UnitPixelScale)
+                Else
+                    textRender.Render(Info.hDC, rect, offsetLeft, offsetTop)
+                End If
+                
+                If (Info.ItemState And OwnerDrawState.ODS_FOCUS) And ((Info.ItemState And OwnerDrawState.ODS_NOFOCUSRECT) = 0) Then
+
+                    If IsCommandButton = True Then
+                        If (rect.Right > 2) And (rect.Bottom > 2) Then
+                            rect.Left += 1
+                            rect.Top += 1
+                            rect.Right -= 1
+                            rect.Bottom -= 1
+                            WinNativeFormsBASE.DrawFocusRect(Info.hDC, rect)
+                        End If
+                    Else
+                        If (rect.Right > 4) And (rect.Bottom > 4) Then
+                            rect.Left += 2
+                            rect.Top += 2
+                            rect.Right -= 2
+                            rect.Bottom -= 2
+                            WinNativeFormsBASE.DrawFocusRect(Info.hDC, rect)
+                        End If
+                    End If
+                End If
+                
+                                            
+                
+            ' Debug.Print "---------------------------------"
+                
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, oldBkMode)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, oldTextColor)
+                WinNativeFormsBASE.SelectObject(Info.hDC, oldFont)
+            
+            End If
+            
+        Handled = True     ' swallow up the event
+
+        If brush <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(brush)
+        
+    End Sub
+    
+    Private Sub ColorsChanged() _
+                Handles BackColor.OnPropertyLet, _
+                        ForeColor.OnPropertyLet
+        
+        Me.ControlContext.EnsureFormIsLoaded()
+        Me.OuterOwner.Refresh
+    End Sub
+    
+    Private Sub OnTouchedFormProperties() _
+            Handles BackColor.OnPropertyGet, _
+                    ForeColor.OnPropertyGet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    Private Sub Class_Terminate()
+        If Me.FontHandle <> 0 Then WinNativeFormsBASE.GDI32_DeleteObject(Me.FontHandle)
+        Me.FontHandle = 0
+    End Sub
+    
+    Private Sub SyncRecreate() _
+            Handles Style.OnPropertyLet
+            
+        Me.OuterOwner.SyncRecreate
+    End Sub
+
+End Class

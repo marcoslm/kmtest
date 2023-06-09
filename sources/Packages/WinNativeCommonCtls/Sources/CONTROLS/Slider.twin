@@ -1,0 +1,432 @@
+[ WindowsControl ("/miscellaneous/ICONS??/Slider??.png") ]
+[ ClassId ("FE755F8E-4EF9-42A4-A88B-B876EF5B4450") ]
+[ InterfaceId ("BD91F6FC-5074-4D76-B43A-502BB9D51656") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+Class Slider
+	
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBase.BaseControlFocusableNoFont(ControlTypeConstants.vbSlider)
+        
+    #End Region
+            
+    #Region "STATE"
+        Enum TickStyleConstants
+            sldBottomRight = 0
+            sldTopLeft = 1
+            sldBoth = 2
+            sldNoTicks = 3
+        End Enum
+
+        Enum TextPositionConstants
+            sldAboveLeft = 0
+            sldBelowRight = 1
+        End Enum
+        
+        Public Enum OrientationConstants
+            ccOrientationHorizontal = 0
+            ccOrientationVertical = 1
+        End Enum
+    
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbNoBorder
+        
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonFace
+
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+            
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+
+        Public CausesValidation As Boolean = True
+
+        [ Serialize (True, "Min") ]
+            Private Min_INIT As Long = 0
+        [ Serialize (True, "Max") ]
+            Private Max_INIT As Long = 10
+        [ Serialize (True, "Value") ]
+            Private Value_INIT As Long = 0
+        [ Serialize (True, "SelStart") ]
+            Private SelStart_INIT As Long = 0
+        [ Serialize (True, "SelLength") ]
+            Private SelLength_INIT As Long = 0
+        [ Serialize (True, "SmallChange") ]
+            Private SmallChange_INIT As Long = 1
+        [ Serialize (True, "LargeChange") ]
+            Private LargeChange_INIT As Long = 2
+            
+            Private IsInitialized As Boolean = False
+        
+            Public HideThumb As Boolean = False
+            Public ShowTip As Boolean = True
+            Public SelectRange As Boolean = False
+            Public TickFrequency As Long = 1
+            Public TextPosition As TextPositionConstants = TextPositionConstants.SldAboveLeft
+            Public TickStyle As TickStyleConstants = TickStyleConstants.SldBottomRight
+            Public Orientation As OrientationConstants = OrientationConstants.ccOrientationHorizontal
+            Public ReadOnly VisualStyles As Boolean = True
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Event Change()
+        [ Description ("") ]
+            Event Click()
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event KeyDown(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("") ]
+            Event KeyUp(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        [ Description ("") ]
+            Event Scroll()
+        Event Validate(Cancel As Boolean)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	If Me.PixelsHeight > Me.PixelsWidth Then
+                Me.Orientation = OrientationConstants.ccOrientationVertical
+            End If
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long = GetStyles()
+            Dim extendedStyles As Long
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "msctls_trackbar32", vbNullString, styles, extendedStyles, True)
+        End Sub
+        
+        Private Function GetStyles() As Long
+            Dim Styles As Long
+        	Styles += If(HideThumb, TBS_NOTHUMB, 0)
+            Styles += If(ShowTip, TBS_TOOLTIPS, 0)
+            Styles += If(SelectRange, TBS_ENABLESELRANGE, 0)
+            Styles += TBS_AUTOTICKS
+            Styles += If(Orientation = OrientationConstants.ccOrientationHorizontal, TBS_HORZ, TBS_VERT)
+            Styles += If(BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder, WinNativeFormsBASE.WS_BORDER, 0)
+
+            Select Case TickStyle
+                Case TickStyleConstants.sldBottomRight
+                    If Orientation = Orientation.ccOrientationHorizontal Then
+                        Styles += TBS_BOTTOM
+                    Else
+                        Styles += TBS_RIGHT
+                    End If
+                Case TickStyleConstants.sldTopLeft
+                    If Orientation = Orientation.ccOrientationHorizontal Then
+                        Styles += TBS_TOP
+                    Else
+                        Styles += TBS_LEFT
+                    End If
+                Case TickStyleConstants.sldBoth
+                    Styles += TBS_BOTH
+                Case Else
+                    Styles += TBS_NOTICKS
+            End Select
+            
+            Return Styles
+        End Function
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+		
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            Me.Min = Min_INIT
+            Me.Max = Max_INIT
+            Me.Value = Value_INIT
+            Me.SelStart = SelStart_INIT
+            Me.SelLength = SelLength_INIT
+            Me.SmallChange = SmallChange_INIT
+            Me.LargeChange = LargeChange_INIT
+
+            SyncTickFrequency ()
+            SyncTextPosition ()
+            
+            SyncOLEDropMode ()
+            RaiseEvent Initialize()
+            
+            IsInitialized = True
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            RaiseEvent Click()          ' FIXME
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+        
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+                
+        [ Serialize (False) ]
+        Public Property Get Min() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETRANGEMIN, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Min(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETRANGEMIN, 1, Value)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Max() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETRANGEMAX, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Max(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETRANGEMAX, 1, Value)
+        End Property
+                
+        [ Serialize (False) ]
+        Public Property Get Value() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETPOS, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Value(ByVal NewValue As Long)
+            If Me.Value <> NewValue Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETPOS, 1, NewValue)
+                If IsInitialized Then RaiseEvent Change
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Private Sub SyncStyles() _
+                Handles HideThumb.OnPropertyLet, _
+                        TickStyle.OnPropertyLet, _
+                        Orientation.OnPropertyLet, _
+                        ShowTip.OnPropertyLet, _
+                        SelectRange.OnPropertyLet
+            
+            Dim origStyles As Long = CLng(WinNativeFormsBASE.GetWindowLongW(RootWindowElement.Handle, WinNativeFormsBASE.WindowProperties.GWL_STYLE))
+            WinNativeFormsBASE.SetWindowLongW(RootWindowElement.Handle, WinNativeFormsBASE.WindowProperties.GWL_STYLE, (origStyles And WinNativeFormsBASE.WS_CHILD) Or (origStyles And WinNativeFormsBASE.WS_VISIBLE) Or GetStyles())
+        End Sub
+                
+        Public Property Get SelStart() As Long
+        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETSELSTART, 0, 0))
+        End Property
+        
+        Public Property Let SelStart(ByVal Value As Long)
+            Select Case Value
+                Case Me.Min To Me.Max
+                Case Else
+                    Err.Raise 380
+            End Select
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETSELSTART, 0, Value)
+        End Property
+        
+        Public Property Get SelLength() As Long
+        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETSELEND, 0, 0) - SelStart)
+        End Property
+        
+        Public Property Let SelLength(ByVal Value As Long)
+            Select Case Value
+                Case Me.Min To Me.Max
+                Case Else
+                    Err.Raise 380
+            End Select
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETSELEND, 1, SelStart + Value)
+        End Property
+        
+        Public Property Get SmallChange() As Long
+        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETLINESIZE, 0, 0))
+        End Property
+        
+        Public Property Let SmallChange(ByVal Value As Long)
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETLINESIZE, 0, Value)
+        End Property
+        
+        Public Property Get LargeChange() As Long
+        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETPAGESIZE, 0, 0))
+        End Property
+        
+        Public Property Let LargeChange(ByVal Value As Long)
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETPAGESIZE, 0, Value)
+        End Property
+        
+        Private Sub SyncTextPosition() _
+                Handles TextPosition.OnPropertyLet
+
+            Dim tipSide As Long
+            If Me.Orientation = Orientation.ccOrientationHorizontal Then
+                tipSide = If(TextPosition = TextPositionConstants.sldAboveLeft, TBTS_TOP, TBTS_BOTTOM)
+            Else
+                tipSide = If(TextPosition = TextPositionConstants.sldAboveLeft, TBTS_LEFT, TBTS_RIGHT)
+            End If
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETTIPSIDE, tipSide, 0)
+        End Sub
+        
+        Private Sub SyncTickFrequency() _
+        	    Handles TickFrequency.OnPropertyLet
+                
+            If TickFrequency < 0 Then
+                TickFrequency = 0
+            End If
+        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETTICFREQ, TickFrequency, 0)
+        End Sub
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag (Me)
+        End Sub
+
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode (Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        Private Sub RootWindowElement_Scroll(ByVal ScrollType As Long, ByVal IsHorizontal As Boolean)
+            Select Case ScrollType
+                Case TB_THUMBTRACK, TB_THUMBPOSITION
+                    RaiseEvent Scroll
+            	Case TB_ENDTRACK
+                	RaiseEvent Change
+            End Select
+        End Sub
+        
+        Private Sub RootWindowElement_GetColors(ByVal hdc As LongPtr, BackBrushOut As LongPtr, ByVal ControlType As Long)
+            BackBrushOut = Me.CreateBackBrush(Me.BackColor)
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+    #End Region
+	
+End Class

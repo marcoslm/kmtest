@@ -1,0 +1,10 @@
+
+[ InterfaceId ("FCFB3D25-A0FA-1068-A738-08002B3371B5") ]
+[ COMExtensible ]   ' turns off TYPEFLAG_FNONEXTENSIBLE, making this essentially the same as Object
+Private Interface Control
+End Interface
+
+[ InterfaceId ("F090D785-19CB-4910-A6F0-7B70CE8F0570") ]
+Private Interface IScheduledCallback Extends stdole.IUnknown
+	Sub Execute()
+End Interface

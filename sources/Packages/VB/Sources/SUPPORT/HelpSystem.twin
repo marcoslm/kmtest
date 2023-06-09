@@ -1,0 +1,197 @@
+Private Module HelpSystem
+
+	Type POINT
+        x As Long
+        y As Long
+    End Type
+    
+    Private DeclareWide PtrSafe Function HtmlHelpW Lib "hhctrl.ocx" (ByVal hwndCaller As LongPtr, ByVal pszFile As String, ByVal uCommand As Long, ByVal dwData As Any) As LongPtr
+    Private DeclareWide PtrSafe Function WinHelpW Lib "user32.dll" (ByVal hWndMain As LongPtr, ByVal pszFile As String, ByVal uCommand As Long, ByVal dwData As Any) As Long
+    Private DeclareWide PtrSafe Function USER32_GetCursorPos Lib "user32" Alias "GetCursorPos" (ByRef lpPoint As POINT) As Long
+    Private DeclareWide PtrSafe Function GetWindowRect Lib "user32" (ByVal hWnd As LongPtr, ByRef outRect As WinNativeFormsBASE.RECT) As Long
+    
+    Type HH_POPUP
+        cbStruct As Long
+        hinst As LongPtr
+        idString As Long
+        pszText As String
+        pt As POINT
+        clrForeground As Long
+        clrBackground As Long
+        rcMargins_left As Long
+        rcMargins_top As Long
+        rcMargins_right As Long
+        rcMargins_bottom As Long
+        pszFont As String
+    End Type
+
+    Private Function GetContainerOrNothing(ByRef ctl As Control) As Control
+        On Error Resume Next
+            Return ctl.Container
+    End Function
+
+    Private Function GetWhatsThisHelpIdOrZero(ByRef ctl As Control) As Long
+        On Error Resume Next
+            Return ctl.WhatsThisHelpID
+    End Function
+
+    Private Function GetHelpContextIdOrZero(ByRef ctl As Control) As Long
+        On Error Resume Next
+            Return ctl.HelpContextID
+    End Function
+    
+    Private Function IsFileFormatIsHLP(ByRef FilePath As String) As Boolean
+        On Error Resume Next
+        Dim fileNum As Long = FreeFile
+    	Open FilePath For Input Access Read As fileNum
+        Dim magicBytes(0 To 3) As Byte
+        Get fileNum,, magicBytes
+        IsFileFormatIsHLP = (magicBytes(0) = Asc("?")) And (magicBytes(1) = Asc("_")) And (magicBytes(2) = 3) And (magicBytes(3) = 0)
+        Close fileNum
+    End Function
+    
+    Private Function FileIsConsideredToBeHLPFormat(ByRef FilePath As String) As Boolean
+    	If Len(Dir(FilePath)) Then
+        	' The file exists, so read the header bytes to determine the file format
+            Return IsFileFormatIsHLP(FilePath)
+        Else
+            ' The file doesn't appear to exist.  Choose the format based on the file extension.
+            If StrComp(Right(FilePath, 4), ".HLP", vbTextCompare) = 0 Then
+            	Return True
+            End If
+    	End If
+        Return False
+    End Function
+    
+    Public Sub ShowControlHelp(ByVal Form As Form, ByVal control As Object, ByVal ManuallyInvoked As Boolean)
+            
+        Dim helpFilePath As String = App.HelpFile
+        If Len(helpFilePath) = 0 Then Exit Sub
+        
+        Dim activeControl As Control = control
+        Dim helpControl As Control = control
+        Dim ContextID As Long = 0
+        Dim container As Control = GetContainerOrNothing(activeControl)
+        Dim IsMenu As Boolean = False
+        
+        Dim WhatsThisHelp As Boolean = Form.WhatsThisHelp
+        If TypeOf control Is Menu Then
+        	WhatsThisHelp = False
+            IsMenu = True
+        End If
+        
+        ' First, determine the ContextID, from the control or through its parents
+        If WhatsThisHelp = True Then
+            ContextID = GetWhatsThisHelpIdOrZero(activeControl)
+            While (ContextID = 0) And (container IsNot Nothing)
+                ContextID = GetWhatsThisHelpIdOrZero(container)
+                If ContextID <> 0 Then Set helpControl = container
+                Set container = GetContainerOrNothing(container)
+            Wend
+        Else
+            If ManuallyInvoked = True Then
+                Exit Sub         ' Control.ShowWhatsThis is ignored if WhatsThisHelp is not set on the form
+            End If
+            
+            ContextID = GetHelpContextIdOrZero(activeControl)
+            While (ContextID = 0) And (container IsNot Nothing)
+                ContextID = GetHelpContextIdOrZero(container)
+                If ContextID <> 0 Then Set helpControl = container
+                Set container = GetContainerOrNothing(container)
+            Wend
+        End If
+        
+        If IsMenu Then
+        	Set activeControl = Form
+        ElseIf (TypeOf control Is Label) Or (TypeOf control Is Image) Then
+            Set activeControl = Form
+            ManuallyInvoked = True      ' so that the position is not obtained from the activeControl HWND
+        End If
+        
+        Dim windowPartStartPos As Long = InStr(helpFilePath, ">")
+        Dim seperatorPartStartPos As Long = InStr(helpFilePath, "::")
+        Dim helpFilePathReal As String = helpFilePath
+        
+        Dim truncatePos As Long
+        If (windowPartStartPos > 0) Then
+            truncatePos = windowPartStartPos - 1
+        End If
+        If (seperatorPartStartPos > 0) Then
+            If (seperatorPartStartPos < truncatePos) OrElse (truncatePos = 0) Then
+                truncatePos = seperatorPartStartPos - 1
+            End If
+        End If
+
+        If truncatePos > 0 Then
+        	helpFilePathReal = Left(helpFilePathReal, truncatePos)
+        End If
+        
+        If FileIsConsideredToBeHLPFormat(helpFilePathReal) Then
+            Const HELP_CONTEXTPOPUP As Long = 8
+            Const HELP_CONTEXT As Long = 1
+            Const HELP_FINDER As Long = 11
+            If windowPartStartPos = 0 Then
+                helpFilePath &= ">LangRef"
+            End If
+            If ContextID <> 0 Then
+                If WhatsThisHelp = True Then
+                    If WinHelpW(activeControl.hWnd, helpFilePath, HELP_CONTEXTPOPUP, ContextID) = False Then
+                        MsgBox "Unable to display help", vbOKOnly Or vbCritical
+                    End If
+                Else
+                    If WinHelpW(activeControl.hWnd, helpFilePath, HELP_CONTEXT, ContextID) = False Then
+                        MsgBox "Unable to display help", vbOKOnly Or vbCritical
+                    End If
+                End If
+            Else
+                If WhatsThisHelp = False Then
+                    If WinHelpW(activeControl.hWnd, helpFilePath, HELP_FINDER, 0&) = False Then
+                        MsgBox "Unable to display help", vbOKOnly Or vbCritical
+                    End If
+                End If
+            End If
+        Else
+            Const HH_DISPLAY_TEXT_POPUP As Long = 14
+            Const HH_HELP_CONTEXT As Long = 15
+            Const HH_HELP_FINDER As Long = 0
+            If ContextID <> 0 Then
+                If WhatsThisHelp = True Then
+                    Dim popupInfo As HH_POPUP
+                    With popupInfo
+                        .cbStruct = LenB(popupInfo)
+                        .idString = ContextID
+                        
+                        If ManuallyInvoked = False Then
+                            Dim helpControlRect As WinNativeFormsBASE.RECT
+                            GetWindowRect(helpControl.hwnd, helpControlRect)
+                            .pt.x = helpControlRect.Left
+                            .pt.y = helpControlRect.Top
+                        Else
+                        	USER32_GetCursorPos(.pt)    ' Invoked by ShowWhatsThis uses the Cursor position
+                        End If
+
+                        .clrForeground = -1
+                        .clrBackground = -1
+                        .rcMargins_left = -1
+                        .rcMargins_top = -1
+                        .rcMargins_right = -1
+                        .rcMargins_bottom = -1
+                        .pszFont = ""
+                    End With
+                    HtmlHelpW(activeControl.hWnd, helpFilePath, HH_DISPLAY_TEXT_POPUP, popupInfo)
+                Else
+                    If HtmlHelpW(activeControl.hWnd, helpFilePath, HH_HELP_CONTEXT, ContextID) = 0 Then
+                        ' Failed, so fallback to opening the default page
+                        HtmlHelpW(activeControl.hWnd, helpFilePath, HH_HELP_FINDER, 0&)
+                    End If
+                End If
+            Else
+                If WhatsThisHelp = False Then
+                    HtmlHelpW(activeControl.hWnd, helpFilePath, HH_HELP_FINDER, 0&)
+                End If
+            End If
+        End If
+
+    End Sub
+
+End Module

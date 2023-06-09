@@ -1,0 +1,319 @@
+Private Module Miscellaneous
+
+    Private DeclareWide PtrSafe Function StringFromGUID2 Lib "ole32" (ByRef rguid As WinNativeFormsBASE.GUID2, ByVal lpsz As LongPtr, ByVal cchMax As Long) As Long
+
+	Public Function GuidToString(guid As WinNativeFormsBASE.GUID2) As String
+        Dim retVal As String = String(38, " ")
+        StringFromGUID2(guid, StrPtr(retVal), 39)
+        Return retVal
+	End Function
+
+    Public Type ACCEL
+        fVirt As Byte                ' Also called the flags field 
+        key As Integer
+        cmd As Integer
+    End Type
+    
+    Public Enum DISPID_AMBIENT
+    	DISPID_AUTOSIZE = -500
+    	DISPID_BACKCOLOR = -501
+    	DISPID_BACKSTYLE = -502
+    	DISPID_BORDERCOLOR = -503
+    	DISPID_BORDERSTYLE = -504
+    	DISPID_BORDERWIDTH = -505
+    	DISPID_DRAWMODE = -507
+    	DISPID_DRAWSTYLE = -508
+    	DISPID_DRAWWIDTH = -509
+    	DISPID_FILLCOLOR = -510
+    	DISPID_FILLSTYLE = -511
+    	DISPID_FONT = -512
+    	DISPID_FORECOLOR = -513
+    	DISPID_ENABLED = -514
+    	DISPID_HWND = -515
+    	DISPID_TABSTOP = -516
+    	DISPID_TEXT = -517
+    	DISPID_CAPTION = -518
+    	DISPID_BORDERVISIBLE = -519
+    	DISPID_APPEARANCE = -520
+    	DISPID_MOUSEPOINTER = -521
+    	DISPID_MOUSEICON = -522
+    	DISPID_PICTURE = -523
+    	DISPID_VALID = -524
+    	DISPID_READYSTATE = -525
+    	DISPID_LISTINDEX = -526
+    	DISPID_SELECTED = -527
+    	DISPID_LIST = -528
+    	DISPID_COLUMN = -529
+    	DISPID_LISTCOUNT = -531
+    	DISPID_MULTISELECT = -532
+    	DISPID_MAXLENGTH = -533
+    	DISPID_PASSWORDCHAR = -534
+    	DISPID_SCROLLBARS = -535
+    	DISPID_WORDWRAP = -536
+    	DISPID_MULTILINE = -537
+    	DISPID_NUMBEROFROWS = -538
+    	DISPID_NUMBEROFCOLUMNS = -539
+    	DISPID_DISPLAYSTYLE = -540
+    	DISPID_GROUPNAME = -541
+    	DISPID_IMEMODE = -542
+    	DISPID_ACCELERATOR = -543
+    	DISPID_ENTERKEYBEHAVIOR = -544
+    	DISPID_TABKEYBEHAVIOR = -545
+    	DISPID_SELTEXT = -546
+    	DISPID_SELSTART = -547
+    	DISPID_SELLENGTH = -548
+
+    	DISPID_REFRESH = -550
+    	DISPID_DOCLICK = -551
+    	DISPID_ABOUTBOX = -552
+    	DISPID_ADDITEM = -553
+    	DISPID_CLEAR = -554
+    	DISPID_REMOVEITEM = -555
+
+    	DISPID_CLICK = -600
+    	DISPID_DBLCLICK = -601
+    	DISPID_KEYDOWN = -602
+    	DISPID_KEYPRESS = -603
+    	DISPID_KEYUP = -604
+    	DISPID_MOUSEDOWN = -605
+    	DISPID_MOUSEMOVE = -606
+    	DISPID_MOUSEUP = -607
+    	DISPID_ERROREVENT = -608
+    	DISPID_READYSTATECHANGE = -609
+    	DISPID_CLICK_VALUE = -610
+    	DISPID_RIGHTTOLEFT = -611
+    	DISPID_TOPTOBOTTOM = -612
+    	DISPID_THIS = -613
+
+    	DISPID_AMBIENT_BACKCOLOR = -701
+        DISPID_AMBIENT_DISPLAYNAME = -702
+        DISPID_AMBIENT_FONT = -703
+        DISPID_AMBIENT_FORECOLOR = -704
+        DISPID_AMBIENT_LOCALEID = -705
+        DISPID_AMBIENT_MESSAGEREFLECT = -706
+        DISPID_AMBIENT_SCALEUNITS = -707
+        DISPID_AMBIENT_TEXTALIGN = -708
+        DISPID_AMBIENT_USERMODE = -709
+        DISPID_AMBIENT_UIDEAD = -710
+        DISPID_AMBIENT_SHOWGRABHANDLES = -711
+        DISPID_AMBIENT_SHOWHATCHING = -712
+        DISPID_AMBIENT_DISPLAYASDEFAULT = -713
+        DISPID_AMBIENT_SUPPORTSMNEMONICS = -714
+        DISPID_AMBIENT_AUTOCLIP = -715
+        DISPID_AMBIENT_APPEARANCE = -716
+        DISPID_AMBIENT_CODEPAGE = -725
+        DISPID_AMBIENT_PALETTE = -726
+        DISPID_AMBIENT_CHARSET = -727
+        DISPID_AMBIENT_TRANSFERPRIORITY = -728
+        DISPID_AMBIENT_RIGHTTOLEFT = -732
+        DISPID_AMBIENT_TOPTOBOTTOM = -733
+        
+        DISPID_NAME = -800
+    	DISPID_DELETE = -801
+    	DISPID_OBJECT = -802
+    	DISPID_PARENT = -803
+
+    	DISPID_FONT_NAME = 0
+    	DISPID_FONT_SIZE = 2
+    	DISPID_FONT_BOLD = 3
+    	DISPID_FONT_ITALIC = 4
+    	DISPID_FONT_UNDER = 5
+    	DISPID_FONT_STRIKE = 6
+    	DISPID_FONT_WEIGHT = 7
+    	DISPID_FONT_CHARSET = 8
+    	DISPID_FONT_CHANGED = 9
+
+    	DISPID_PICT_HANDLE = 0
+    	DISPID_PICT_HPAL = 2
+    	DISPID_PICT_TYPE = 3
+    	DISPID_PICT_WIDTH = 4
+    	DISPID_PICT_HEIGHT = 5
+    	DISPID_PICT_RENDER = 6
+    End Enum
+    
+    Public Enum OLEMISC
+        OLEMISC_RECOMPOSEONRESIZE = &H1
+        OLEMISC_ONLYICONIC = &H2
+        OLEMISC_INSERTNOTREPLACE = &H4
+        OLEMISC_STATIC = &H8
+        OLEMISC_CANTLINKINSIDE = &H10
+        OLEMISC_CANLINKBYOLE1 = &H20
+        OLEMISC_ISLINKOBJECT = &H40
+        OLEMISC_INSIDEOUT = &H80
+        OLEMISC_ACTIVATEWHENVISIBLE = &H100
+        OLEMISC_RENDERINGISDEVICEINDEPENDENT = &H200
+        OLEMISC_INVISIBLEATRUNTIME = &H400
+        OLEMISC_ALWAYSRUN = &H800
+        OLEMISC_ACTSLIKEBUTTON = &H1000
+        OLEMISC_ACTSLIKELABEL = &H2000
+        OLEMISC_NOUIACTIVATE = &H4000
+        OLEMISC_ALIGNABLE = &H8000&
+        OLEMISC_SIMPLEFRAME = &H10000
+        OLEMISC_SETCLIENTSITEFIRST = &H20000
+        OLEMISC_IMEMODE = &H40000
+        OLEMISC_IGNOREACTIVATEWHENVISIBLE = &H80000
+        OLEMISC_WANTSTOMENUMERGE = &H100000
+        OLEMISC_SUPPORTSMULTILEVELUNDO = &H200000
+    End Enum
+    
+    Public Enum BorderStyles
+    	BDR_RAISEDOUTER = 1
+        BDR_SUNKENOUTER = 2
+        BDR_RAISEDINNER = 4
+        BDR_SUNKENINNER = 8
+        
+        BDR_OUTER = (BDR_RAISEDOUTER Or BDR_SUNKENOUTER)
+        BDR_INNER = (BDR_RAISEDINNER Or BDR_SUNKENINNER)
+        BDR_RAISED = (BDR_RAISEDOUTER Or BDR_RAISEDINNER)
+        BDR_SUNKEN = (BDR_SUNKENOUTER Or BDR_SUNKENINNER)
+        
+        EDGE_RAISED = (BDR_RAISEDOUTER Or BDR_RAISEDINNER)
+        EDGE_SUNKEN = (BDR_SUNKENOUTER Or BDR_SUNKENINNER)
+        EDGE_ETCHED = (BDR_SUNKENOUTER Or BDR_RAISEDINNER)
+        EDGE_BUMP = (BDR_RAISEDOUTER Or BDR_SUNKENINNER)
+    End Enum
+    
+    Public Enum BorderFlags
+    	BF_LEFT = 1
+        BF_TOP = 2
+        BF_RIGHT = 4
+        BF_BOTTOM = 8
+        BF_DIAGONAL = 16
+        
+        BF_MIDDLE = &H0800&
+        BF_SOFT = &H1000&
+        BF_ADJUST = &H2000&
+        BF_FLAT = &H4000&
+        BF_MONO = &H8000&
+
+        BF_TOPLEFT = BF_TOP Or BF_LEFT
+        BF_TOPRIGHT = BF_TOP Or BF_RIGHT
+        BF_BOTTOMLEFT = BF_BOTTOM Or BF_LEFT
+        BF_BOTTOMRIGHT = BF_BOTTOM Or BF_RIGHT
+        BF_RECT = BF_LEFT Or BF_TOP Or BF_RIGHT Or BF_BOTTOM
+        
+        BF_DIAGONAL_ENDTOPRIGHT = BF_DIAGONAL Or BF_TOP Or BF_RIGHT
+        BF_DIAGONAL_ENDTOPLEFT = BF_DIAGONAL Or BF_TOP Or BF_LEFT
+        BF_DIAGONAL_ENDBOTTOMLEFT = BF_DIAGONAL Or BF_BOTTOM Or BF_LEFT
+        BF_DIAGONAL_ENDBOTTOMRIGHT = BF_DIAGONAL Or BF_BOTTOM Or BF_RIGHT
+    End Enum
+        
+    Public DeclareWide PtrSafe Function USER32_CreateAcceleratorTableW Lib "user32" Alias "CreateAcceleratorTableW" (ByRef paccel As ACCEL, ByVal cCount As Long) As LongPtr
+    Public DeclareWide PtrSafe Function USER32_DestroyAcceleratorTable Lib "user32" Alias "DestroyAcceleratorTable" (ByVal accelPtr As LongPtr) As Long
+    Public DeclareWide PtrSafe Function USER32_BringWindowToTop Lib "user32" Alias "BringWindowToTop" (ByVal hwnd As LongPtr) As Long
+
+    Public DeclareWide PtrSafe Function GDI32_RoundRect Lib "gdi32" Alias "RoundRect" (ByVal hdc As LongPtr, ByVal left As Long, ByVal top As Long, ByVal right As Long, ByVal bottom As Long, ByVal width As Long, ByVal Height As Long) As Long
+    Public DeclareWide PtrSafe Function GDI32_Rectangle Lib "gdi32" Alias "Rectangle" (ByVal hdc As LongPtr, ByVal left As Long, ByVal top As Long, ByVal right As Long, ByVal bottom As Long) As Long
+    Public DeclareWide PtrSafe Function GDI32_Ellipse Lib "gdi32" Alias "Ellipse" (ByVal hdc As LongPtr, ByVal left As Long, ByVal top As Long, ByVal right As Long, ByVal bottom As Long) As Long
+    Public DeclareWide PtrSafe Function GDI32_CreatePen Lib "gdi32" Alias "CreatePen" (ByVal iStyle As Long, ByVal cWidth As Long, ByVal color As Long) As LongPtr
+    Public DeclareWide PtrSafe Function GDI32_SetROP2 Lib "gdi32" Alias "SetROP2" (ByVal hdc As LongPtr, ByVal rop2 As Long) As Long
+    Public DeclareWide PtrSafe Function GDI32_CreateHatchBrush Lib "gdi32" Alias "CreateHatchBrush" (ByVal iHatch As Long, ByVal color As Long) As LongPtr
+    Public DeclareWide PtrSafe Function GDI32_GetStockObject Lib "gdi32" Alias "GetStockObject" (ByVal i As Long) As LongPtr
+    Public DeclareWide PtrSafe Function GDI32_Polygon Lib "gdi32" Alias "Polygon" (ByVal hdc As LongPtr, ByRef points As Any, ByVal CountOfPoints As Long) As Long
+    Public DeclareWide PtrSafe Function GDI32_MoveToEx Lib "gdi32" Alias "MoveToEx" (ByVal hdc As LongPtr, ByVal x As Long, ByVal y As Long, ByVal lppt As LongPtr) As Long
+    Public DeclareWide PtrSafe Function GDI32_LineTo Lib "gdi32" Alias "LineTo" (ByVal hdc As LongPtr, ByVal x As Long, ByVal y As Long) As Long
+
+    Public Const HS_HORIZONTAL As Long = 0
+    Public Const HS_VERTICAL As Long = 1
+    Public Const HS_FDIAGONAL As Long = 2
+    Public Const HS_BDIAGONAL As Long = 3
+    Public Const HS_CROSS As Long = 4
+    Public Const HS_DIAGCROSS As Long = 5
+
+    Public Const NULL_BRUSH As Long = 5
+
+    Public Const PS_SOLID As Long = 0
+    Public Const PS_DASH As Long = 1
+    Public Const PS_DOT As Long = 2
+    Public Const PS_DASHDOT As Long = 3
+    Public Const PS_DASHDOTDOT As Long = 4
+    Public Const PS_NULL As Long = 5
+    Public Const PS_INSIDEFRAME As Long = 6
+
+    Type PointerUDTLong
+        Value As Long
+    End Type
+    Private Sub WriteMemLongInner(ByRef PointerUDTLong As PointerUDTLong, ByVal value As Long)
+    	PointerUDTLong.Value = value
+    End Sub
+    Public Sub WriteMemLong(ByVal valuePointer As LongPtr, ByVal value As Long)
+        If valuePointer <> 0 Then
+            WriteMemLongInner(valuePointer, value)
+        End If
+    End Sub
+
+    Type PointerUDT
+        Value As LongPtr
+    End Type
+    Private Sub SetOutParamToNothingInner(ByRef PointerUDT As PointerUDT)
+    	PointerUDT.Value = 0
+    End Sub
+    Public Sub SetOutParamToNothing(ByVal valuePointer As LongPtr)
+        Dim nothingObject As LongPtr = 0
+        If valuePointer <> 0 Then
+            SetOutParamToNothingInner(valuePointer)
+        End If
+    End Sub
+    
+    Private globalEmptyString As String ' = ""   FIXME not working in compiled builds
+    Public Function StrPtrSafe(ByRef s As String) As LongPtr
+    	Dim retVal As LongPtr = StrPtr(s)
+        If retVal = 0 Then retVal = StrPtr(globalEmptyString)
+        If retVal = 0 Then
+        	globalEmptyString = ""
+            retVal = StrPtr(globalEmptyString)
+        End If
+        Return retVal
+    End Function
+    
+    Public Sub SyncBorderStyle(objControl As Control)
+    	
+        Dim styles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE)
+        Dim exStyles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE)
+        
+        styles = styles And Not WinNativeFormsBASE.WS_BORDER
+        exStyles = exStyles And Not WinNativeFormsBASE.WS_EX_CLIENTEDGE
+        
+        If objControl.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+            If objControl.Appearance = AppearanceConstants.vbAppear3d Then
+                exStyles += WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_CLIENTEDGE
+            Else
+                styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_BORDER
+            End If
+        End If
+        
+        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE, styles)
+        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE, exStyles)
+        
+        'this is needed to ensure windows cached stuff is updated after changing GWL_STYLE
+        WinNativeFormsBASE.SetWindowPos(objControl.hwnd, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOACTIVATE)
+    End Sub
+    
+    Public Function GetShiftState() As ShiftConstants
+        If IsKeyPressed(vbKeyShift) Then GetShiftState += vbShiftMask
+        If IsKeyPressed(vbKeyMenu) Then GetShiftState += vbAltMask
+        If IsKeyPressed(vbKeyControl) Then GetShiftState += vbCtrlMask
+    End Function
+    
+        Public Function IsKeyPressed(ByVal KeyCode As KeyCodeConstants) As Boolean
+        Return WinNativeFormsBASE.GetAsyncKeyState(KeyCode) And &H8000&
+    End Function
+
+    
+End Module
+
+' FIXME not yet supported.
+[ COMExtensible (True) ]
+[ ClassId ("33AD4F70-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("33AD4F71-6699-11CF-B70C-00AA0060D393") ]
+Class MDIForm
+    Event DblClick()
+End Class
+
+' FIXME not yet supported.
+[ COMExtensible (True) ]
+[ ClassId ("164CBDD2-7321-11D1-A1E8-00A0C90F2731") ]
+[ InterfaceId ("164CBDD0-7321-11D1-A1E8-00A0C90F2731") ]
+Class VBControlExtender
+    Event GotFocus()
+End Class

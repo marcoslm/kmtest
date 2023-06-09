@@ -1,0 +1,41 @@
+[ FormDesignerId ("FA39E8DA-EC08-41E8-98AC-871383E6A51A") ]
+[ PredeclaredId ]
+Class frmAcerca
+    Attribute VB_Name = "frmAcerca"
+    Attribute VB_GlobalNameSpace = False
+    Attribute VB_Creatable = False
+    Attribute VB_PredeclaredId = True
+    Attribute VB_Exposed = False
+    Option Explicit
+    
+    Private Sub cmdCerrar_Click()
+        Unload Me
+    End Sub
+    
+    Private Sub Form_Load()
+        lblVers.Caption = "Versión " & App.Major & "." & App.Minor & "." & App.Revision & " build " & App.Build
+        lblInfo.Caption = "Programado por Marcos López Merayo para Bluebit (2009/2022)"
+        lblInfo.Caption = lblInfo.Caption & vbNewLine & vbNewLine
+        lblInfo.Caption = lblInfo.Caption & "KM-Test es una utilidad para testear el teclado y ratón/touchpad del ordenador."
+        lblInfo.Caption = lblInfo.Caption & vbNewLine
+        lblInfo.Caption = lblInfo.Caption & "Ideal para comprobar membranas de teclado sucias, estropeadas, ayudando a localizar falsas pulsaciones y malos contactos."
+        lblInfo.Caption = lblInfo.Caption & vbNewLine
+        lblInfo.Caption = lblInfo.Caption & "Esta aplicación es gratuita (freeware). Si has pagado por ella, te han engañado."
+        lblInfo.Caption = lblInfo.Caption & vbNewLine
+    End Sub
+    
+    Private Sub lblLink_Click()
+        ShellExecute hWnd, "open", "http://www.bluebit.es", vbNullString, vbNullString, conSwNormal
+    End Sub
+    
+    Private Sub lblLink_MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        lblLink.BackColor = &HDCA86F
+    End Sub
+    
+    Private Sub lblLink_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        lblLink.BackColor = &HC6853D
+    End Sub
+    
+    
+
+End Class

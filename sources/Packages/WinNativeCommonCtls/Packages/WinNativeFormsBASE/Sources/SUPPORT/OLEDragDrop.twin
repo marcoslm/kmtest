@@ -1,0 +1,118 @@
+Module OLEDragDrop
+
+    Public Sub CommonZOrder(Position As Variant, ByVal hwnd As LongPtr)
+    	If IsMissing(Position) Then Position = ZOrderConstants.vbBringToFront
+        Select Case Position
+        	Case ZOrderConstants.vbBringToFront
+                SetWindowPos(hwnd, CLngPtr(HWND_TOP), 0, 0, 0, 0, SWP_NOACTIVATE Or SWP_NOMOVE Or SWP_NOSIZE)
+            Case ZOrderConstants.vbSendToBack
+                SetWindowPos(hwnd, CLngPtr(HWND_BOTTOM), 0, 0, 0, 0, SWP_NOACTIVATE Or SWP_NOMOVE Or SWP_NOSIZE)
+            Case Else
+                Err.Raise 5
+        End Select
+    End Sub
+    
+    Public Sub CommonZOrderWindowless(Position As Variant, ByRef ControlContext As WindowsControlContext)
+    	If IsMissing(Position) Then Position = ZOrderConstants.vbBringToFront
+        Select Case Position
+        	Case ZOrderConstants.vbBringToFront, ZOrderConstants.vbSendToBack
+                ControlContext.ChangeWindowlessZOrder(CLng(Position))
+            Case Else
+                Err.Raise 5
+        End Select
+    End Sub
+    
+    Public Function CommonOLEDrag(ByVal RootThis As Object, Optional AutoSetValue As Variant, Optional IsFileList As Boolean, Optional IsAllowedAutoMove As Boolean = False) As Long
+        Dim dataObject As DataObjectSource = New DataObjectSource(RootThis)
+        
+        Dim effects As Long
+        If IsMissing(AutoSetValue) Then
+            effects = vbDropEffectNone
+            RaiseEventByName2(RootThis, "OLEStartDrag", dataObject, effects)
+        Else
+        	effects = vbDropEffectCopy
+            If IsAllowedAutoMove Then effects += vbDropEffectMove
+            Dim _dataObject As DataObject = dataObject
+            If IsFileList = True Then
+                _dataObject.SetData(, vbCFFiles)
+                Dim filePath As String
+                For Each filePath In Split(AutoSetValue, vbCrLf)
+                    _dataObject.Files.Add(filePath)
+                Next
+            Else
+                _dataObject.SetData(AutoSetValue)
+            End If
+        End If
+        
+        Dim arrBoundTop As Long = -1
+        If IsArrayInitialized(dataObject.InternalAvailableData) = True Then
+            arrBoundTop = UBound(dataObject.InternalAvailableData)
+        End If
+        
+        If (arrBoundTop > -1) And (effects <> 0) Then
+            Dim effectOut As Long
+            Dim dropSOurce As WinNativeFormsBASE.IDropSource = New OLEDropSource(RootThis)
+            DoDragDrop(dataObject, dropSOurce, effects, effectOut)
+            
+            If effectOut Then
+                RaiseEventByName2(RootThis, "OLECompleteDrag", effectOut)
+                Return effectOut
+            End If
+        End If
+        Return vbDropEffectNone
+    End Function
+
+	Public Sub CommonSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, _
+                                       ByRef DragDropHandler As OLEDragDropHandler, ByVal ControlContext As WindowsControlContext, _
+                                        ByVal RootWindowElementBase As WindowsControls.WindowElement, _
+                                        ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+
+        Select Case OLEDropMode
+        	Case OLEDropConstants.vbOLEDropNone, OLEDropConstants.vbOLEDropManual
+            
+            Case OLEDropConstants.vbOLEDropAutomatic
+                If AllowedAutomatic = False Then
+                    Err.Raise 5, , "this control does not support mode vbOLEDropAutomatic"
+                End If
+                
+            Case Else
+                Err.Raise 5, , "invalid OLEDropMode value"
+        End Select
+                
+        If DragDropHandler IsNot Nothing Then DragDropHandler.Disconnect()
+        
+        If OLEDropMode = OLEDropConstants.vbOLEDropManual Or _
+                OLEDropMode = OLEDropConstants.vbOLEDropAutomatic Then
+                
+            Set DragDropHandler = New OLEDragDropHandler(RootThis, ControlContext, RootWindowElementBase, IsContainer)
+        Else
+            Set DragDropHandler = Nothing
+        End If
+    End Sub
+    
+    Public Function ContainsAPictureFormat(Formats As DataObjectFormats) As ClipboardConstants
+    	Dim format As DataObjectFormat
+        For Each format In Formats
+        	Select Case format.FormatType
+            	Case ClipboardConstants.vbCFBitmap, ClipboardConstants.vbCFDIB, _
+                        ClipboardConstants.vbCFEMetafile, ClipboardConstants.vbCFMetafile
+                    
+                    Return format.FormatType
+        	End Select
+        Next
+        Return 0
+    End Function
+    
+    Public Function ContainsATextFormat(Formats As DataObjectFormats) As ClipboardConstants
+    	Dim format As DataObjectFormat
+        For Each format In Formats
+        	Select Case format.FormatType
+            	Case ClipboardConstants.vbCFText, ClipboardConstants.vbCFUnicodeText
+                    
+                    Return format.FormatType
+        	End Select
+        Next
+        Return 0
+    End Function
+    
+End Module

@@ -1,0 +1,89 @@
+[ InterfaceId ("33AD4F31-6699-11CF-B70C-00AA0060D393") ]
+Public Class Printer
+    [ Unimplemented ] Public Width As Long
+    [ Unimplemented ] Public Height As Long
+    [ Unimplemented ] Public FontName As String
+    [ Unimplemented ] Public FontSize As Single
+    [ Unimplemented ] Public FontBold As Boolean
+    [ Unimplemented ] Public FontItalic As Boolean
+    [ Unimplemented ] Public FontStrikethru As Boolean
+    [ Unimplemented ] Public FontUnderline As Boolean
+    [ Unimplemented ] Public hDC As LongPtr
+    [ Unimplemented ] Public CurrentX As Single
+    [ Unimplemented ] Public CurrentY As Single
+    [ Unimplemented ] Public ScaleLeft As Single
+    [ Unimplemented ] Public ScaleTop As Single
+    [ Unimplemented ] Public ScaleWidth As Single
+    [ Unimplemented ] Public ScaleHeight As Single
+    [ Unimplemented ] Public ScaleMode As Integer
+    [ Unimplemented ] Public FontTransparent As Boolean
+    [ Unimplemented ] Public DrawStyle As Integer
+    [ Unimplemented ] Public DrawWidth As Integer
+    [ Unimplemented ] Public FillStyle As Integer
+    [ Unimplemented ] Public FillColor As Long
+    [ Unimplemented ] Public DrawMode As Integer
+    [ Unimplemented ] Public ReadOnly Page As Integer
+    [ Unimplemented ] Public ReadOnly FontCount As Integer
+    [ Unimplemented ] Public Property Get Fonts(ByVal Index As Integer) As String
+    End Property
+    [ Unimplemented ] Public ReadOnly TwipsPerPixelX As Single
+    [ Unimplemented ] Public ReadOnly TwipsPerPixelY As Single
+    [ Unimplemented ] Public ReadOnly DeviceName As String
+    [ Unimplemented ] Public ReadOnly DriverName As String
+    [ Unimplemented ] Public ReadOnly Port As String
+    [ Unimplemented ] Public Orientation As Integer
+    [ Unimplemented ] Public PaperSize As Integer
+    [ Unimplemented ] Public Zoom As Long
+    [ Unimplemented ] Public Copies As Integer
+    [ Unimplemented ] Public PaperBin As Integer
+    [ Unimplemented ] Public ColorMode As Integer
+    [ Unimplemented ] Public Duplex As Integer
+    [ Unimplemented ] Public TrackDefault As Boolean
+    [ Unimplemented ] Public PrintQuality As Integer
+    [ Unimplemented ] Public Font As StdFont
+    [ Unimplemented ] Public RightToLeft As Boolean
+    [ Unimplemented ] Public ForeColor As Long
+    [ Unimplemented ] Public Sub EndDoc()
+    End Sub
+    [ Unimplemented ] Public Sub NewPage()
+    End Sub
+    [ Unimplemented ] Public Sub KillDoc()
+    End Sub
+    [ Unimplemented ] Public Sub Circle(ByVal Flags As Integer, _
+                        ByVal X As Single, ByVal Y As Single, _
+                        ByVal Radius As Single, _	
+                        ByVal Color As Long, _
+                        ByVal Start As Single, _
+                        ByVal _End As Single, _
+                        ByVal Aspect As Single)
+    End Sub
+    [ Unimplemented ] Public Sub Line(ByVal Flags As Integer, _
+                        ByVal X1 As Single, _
+                        ByVal Y1 As Single, _
+                        ByVal X2 As Single, _
+                        ByVal Y2 As Single, _
+                        ByVal Color As Long)
+    End Sub
+    [ Unimplemented ] Public Sub PaintPicture(ByVal Picture As StdPicture, ByVal X1 As Single, ByVal Y1 As Single, Optional ByVal Width1 As Variant, Optional ByVal Height1 As Variant, Optional ByVal X2 As Variant, Optional ByVal Y2 As Variant, Optional ByVal Width2 As Variant, Optional ByVal Height2 As Variant, Optional ByVal Opcode As Variant)
+    End Sub
+    [ Unimplemented ] Public Sub PSet(ByVal Flags As Integer, _
+                        ByVal X As Single, _
+                        ByVal Y As Single, _
+                        ByVal Color As Long)
+    End Sub
+    [ Unimplemented ] Public Sub Scale(ByVal Flags As Integer, _
+                        Optional ByVal X1 As Single, _
+                        Optional ByVal Y1 As Single, _
+                        Optional ByVal X2 As Single, _
+                        Optional ByVal Y2 As Single)
+    End Sub
+    [ Unimplemented ] Public Function ScaleX(ByVal Width As Single, Optional ByVal FromScale As Variant, Optional ByVal ToScale As Variant) As Single
+    End Function
+
+    [ Unimplemented ] Public Function ScaleY(ByVal Height As Single, Optional ByVal FromScale As Variant, Optional ByVal ToScale As Variant) As Single
+    End Function
+    [ Unimplemented ] Public Function TextWidth(str As String) As Double
+    End Function
+    [ Unimplemented ] Public Function TextHeight(str As String) As Double
+    End Function
+End Class

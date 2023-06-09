@@ -1,0 +1,41 @@
+Private Module Miscellaneous
+        
+    Public DeclareWide PtrSafe Function GetTickCount Lib "kernel32" () As Long
+    Public DeclareWide PtrSafe Function GetDoubleClickTime Lib "user32" () As Long
+    Public DeclareWide PtrSafe Function GetTextExtentPoint32W Lib "gdi32" (ByVal hDC As LongPtr, ByVal lpsz As String, ByVal cbString As Long, ByRef lpSize As WinNativeFormsBASE.SIZE) As Long
+
+    Private globalEmptyString As String ' = ""   FIXME not working in compiled builds
+    Public Function StrPtrSafe(ByRef s As String) As LongPtr
+    	Dim retVal As LongPtr = StrPtr(s)
+        If retVal = 0 Then retVal = StrPtr(globalEmptyString)
+        If retVal = 0 Then
+        	globalEmptyString = ""
+            retVal = StrPtr(globalEmptyString)
+        End If
+        Return retVal
+    End Function
+    
+    Public Sub SyncBorderStyle(objControl As Control)
+    	
+        Dim styles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE)
+        Dim exStyles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE)
+        
+        styles = styles And Not WinNativeFormsBASE.WS_BORDER
+        exStyles = exStyles And Not WinNativeFormsBASE.WS_EX_CLIENTEDGE
+        
+        If objControl.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+            If objControl.Appearance = AppearanceConstants.vbAppear3d Then
+                exStyles += WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_CLIENTEDGE
+            Else
+                styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_BORDER
+            End If
+        End If
+        
+        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE, styles)
+        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE, exStyles)
+        
+        'this is needed to ensure windows cached stuff is updated after changing GWL_STYLE
+        WinNativeFormsBASE.SetWindowPos(objControl.hwnd, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOACTIVATE)
+    End Sub
+    
+End Module

@@ -1,0 +1,124 @@
+[ Description ("A Win32 native Timer") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Timer??.png") ]
+[ ClassId ("33AD4F28-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("CBF980C9-52E5-41E8-A1FF-CA3BD890F8F8") ]    ' FIXME implement {33AD4F29-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Timer
+
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlNotFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlNotFocusable(ControlTypeConstants.vbTimer)
+
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Description ("") ]
+            Public Interval As Long = 0
+        [ Description ("") ]
+            Public Enabled As Boolean = True
+
+            Private WithEvents InternalTimer As WindowsControls.WindowsControlTimer
+        
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Timer()
+    
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                ' InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+            Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                Me.Initialize(ControlContext)
+                
+                Set Me.InternalTimer = ControlContext.CreateTimer()
+                Me.InternalHandleChangedTimer()
+        End Sub
+        
+        Private Sub HandleDestroy() _
+            Implements IWindowsControl.Destroy
+
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            ' disconnect anything that causes a circular reference here
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+    
+        Private Sub InternalHandleChangedTimer()
+            If Me.InternalTimer IsNot Nothing Then
+                Me.InternalTimer.Interval = Interval
+                Me.InternalTimer.Enabled = Enabled
+            End If
+        End Sub
+
+        Private Sub HandleChangedTimer() _
+                Handles Interval.OnPropertyLet, _
+                        Enabled.OnPropertyLet
+                                        
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.InternalHandleChangedTimer()
+        End Sub
+        
+        Private Sub HandleTimer() _
+                Handles InternalTimer.OnTimer
+                
+            RaiseEvent Timer
+        End Sub
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Boolean
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return Me.Enabled
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(ByVal Value As Boolean)
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.Enabled = Value      ' FIXME does this actually trigger HandleChangedTimer? probably not, as we are calling from the internal interface
+        End Property
+
+        Private Sub OnTouchedFormProperties() _
+                Handles Interval.OnPropertyGet, _
+                        Enabled.OnPropertyGet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+
+    #End Region
+
+End Class

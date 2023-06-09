@@ -1,0 +1,97 @@
+[ ClassId ("02370256-1788-4FFE-AD64-E150AB402686") ]
+[ InterfaceId ("C1A69641-F7E0-49B9-BC3C-EFEC42AF0728") ]
+[ COMCreatable (False) ]
+Private Class BaseControlWindowlessPoints
+
+    Implements BaseControlPoints Via BaseControlPoints
+
+    [ Description ("") ]
+        Public Visible As Boolean = True
+
+    [ Serialize (False) ]
+        Private RootWindowElementBase As WindowsControls.WindowElement
+
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControlPoints = New BaseControlPoints(ControlType)
+    End Sub
+
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown) As WindowElement
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.RootWindowElementBase = Me.ControlContext.CreateWindowElement(vbNullString, vbNullString, 0, 0, False)
+        Return Me.RootWindowElementBase
+    End Function
+    
+    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+
+    [ DispId (-856) ]
+    Public Property Get Container() As Object
+        On Error Resume Next
+        Me.ControlContext.EnsureFormIsLoaded()
+    	Return Me.RootWindowElementBase.Container
+    End Property
+
+    Private Sub OnPropertyChanged_Visible() _
+            Handles Visible.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        Me.ControlContext.WindowlessRefresh()
+    End Sub
+
+    Private Sub OnTouchedFormProperties() _
+            Handles Visible.OnPropertyGet
+                    
+        Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    [ Serialize (False) ]
+    Public Property Get X1() As Double
+        Return Me.ControlContext.GetScaledX1
+    End Property
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Let X1(ByVal Value As Double)
+        Me.ControlContext.SetScaledX1(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Y1() As Double
+        Return Me.ControlContext.GetScaledY1
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Y1(ByVal Value As Double)
+        Me.ControlContext.SetScaledY1(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get X2() As Double
+        Return Me.ControlContext.GetScaledX2
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let X2(ByVal Value As Double)
+        Me.ControlContext.SetScaledX2(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Y2() As Double
+        Return Me.ControlContext.GetScaledY2
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Y2(ByVal Value As Double)
+        Me.ControlContext.SetScaledY2(Value)
+    End Property
+    
+    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+        CommonZOrderWindowless(Position, Me.ControlContext)
+    End Sub
+
+End Class

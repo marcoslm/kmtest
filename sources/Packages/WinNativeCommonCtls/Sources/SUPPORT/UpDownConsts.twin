@@ -1,0 +1,35 @@
+Module UpDownConsts
+
+    Public Enum UpDownStyles
+        UDS_WRAP = &H0001
+        UDS_SETBUDDYINT = &H0002
+        UDS_ALIGNRIGHT = &H0004
+        UDS_ALIGNLEFT = &H0008
+        UDS_AUTOBUDDY = &H0010
+        UDS_ARROWKEYS = &H0020
+        UDS_HORZ = &H0040
+        UDS_NOTHOUSANDS = &H0080
+        UDS_HOTTRACK = &H0100
+    End Enum
+    
+    Public Enum UpDownMessages
+    	UDM_SETRANGE = &H0465
+        UDM_GETRANGE = &H0466
+        UDM_SETPOS = &H0467
+        UDM_GETPOS = &H0468
+        UDM_SETBUDDY = &H0469
+        UDM_GETBUDDY = &H046A
+        UDM_SETACCEL = &H046B
+        UDM_GETACCEL = &H046C
+        UDM_SETBASE = &H046D
+        UDM_GETBASE = &H046E
+        UDM_SETRANGE32 = &H046F
+        UDM_GETRANGE32 = &H0470
+        UDM_SETPOS32 = &H0471
+        UDM_GETPOS32 = &H0472
+    End Enum
+        
+    Const UD_MAXVAL As Long = &H7fff
+    Const UD_MINVAL As Long = (-UD_MAXVAL)
+
+End Module

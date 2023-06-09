@@ -1,0 +1,399 @@
+[ Description ("A Win32 native Shape") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Shape??.png") ]
+[ ClassId ("33AD4F80-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("769C0185-5C1E-4D3B-B37B-DB794FCAD227") ]    ' FIXME implement {33AD4F81-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Shape
+
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlWindowlessNoDrag Via _BaseControl = New WinNativeFormsBase.BaseControlWindowlessNoDrag(ControlTypeConstants.vbShape)
+        
+    #End Region
+        
+    #Region "STATE"
+    
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowBackground
+        [ Description ("") ]
+            Public BackStyle As BackFillStyleConstants = BackFillStyleConstants.vbBFTransparent
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BorderColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowText
+        [ Description ("") ]
+            Public BorderStyle As BorderStyleConstants = BorderStyleConstants.vbBSSolid
+        [ Description ("") ]
+            Public BorderWidth As Long = 1
+        [ Description ("") ]
+            Public DrawMode As DrawModeConstants = DrawModeConstants.vbCopyPen
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public FillColor As OLE_COLOR = VBRUN.SystemColorConstants.vbScrollBars
+        [ Description ("") ]
+            Public FillStyle As FillStyleConstants = FillStyleConstants.vbFSTransparent
+        [ Description ("") ]
+            Public Shape As ShapeConstants = ShapeConstants.vbShapeRectangle
+        [ Description ("") ]
+            Public RoundedCornerSize As Long = 20
+        [ Description ("For use with Stars and Arrows (Stars 0-30, Arrows 0-100)") ]
+            Public VariationA As Long = -1
+        [ Description ("For use with Stars and Arrows (Stars 0+, Arrows 0-100)") ]
+            Public VariationB As Long = -1
+        [ Description ("For use with Stars, from 0-12") ]
+            Public VariationC As Long = -1
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+            
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Event Initialize()
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            Me.IsDesignMode = Serializer.IsDesignMode
+            If Not Serializer.Deserialize(Me) Then
+                'InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext)
+            Me.RootWindowElement.RequiresWindowlessPainting(False)
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            RaiseEvent Initialize()
+        End Sub
+
+        Type contigiousPoints30
+        	points(0 To 60) As WinNativeFormsBase.POINT
+        End Type
+
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+                                    
+            ' Can't use CurrentLeft/etc for windowless controls
+            ' Dim X As Long = RootWindowElement.CurrentLeft
+            ' Dim Y As Long = RootWindowElement.CurrentTop
+            ' Dim Width As Long = RootWindowElement.CurrentWidth
+            ' Dim Height As Long = RootWindowElement.CurrentHeight
+
+            Dim X As Long = Me.PixelsLeft * RootWindowElement.UnitPixelScale
+            Dim Y As Long = Me.PixelsTop * RootWindowElement.UnitPixelScale
+            Dim Width As Long = Me.PixelsWidth * RootWindowElement.UnitPixelScale
+            Dim Height As Long = Me.PixelsHeight * RootWindowElement.UnitPixelScale
+            
+            If Width <= 0 Or Height <= 0 Then Exit Sub
+            
+            If Visible = False And Me.IsDesignMode = False Then Exit Sub
+
+            ' FIXME need to cache these pens and brushes!
+
+            Dim backBrush As LongPtr
+            Dim backColor As Long = TranslateColor(Me.BackColor)
+            Dim fillColor As Long = TranslateColor(Me.FillColor)
+
+            Select Case Me.FillStyle
+            	Case vbFSTransparent
+                    If Me.BackStyle = vbBFTransparent Then
+                        backBrush = GDI32_GetStockObject(NULL_BRUSH)
+                    Else
+                        backBrush = WinNativeFormsBASE.WindowsAPI.GDI32_CreateSolidBrushColor(backColor)
+                    End If
+                Case vbFSSolid: backBrush = WinNativeFormsBASE.WindowsAPI.GDI32_CreateSolidBrushColor(fillColor)
+                Case vbCross: backBrush = GDI32_CreateHatchBrush(HS_CROSS, fillColor)
+                Case vbDiagonalCross: backBrush = GDI32_CreateHatchBrush(HS_DIAGCROSS, fillColor)
+                Case vbDownwardDiagonal: backBrush = GDI32_CreateHatchBrush(HS_FDIAGONAL, fillColor)
+                Case vbHorizontalLine: backBrush = GDI32_CreateHatchBrush(HS_HORIZONTAL, fillColor)
+                Case vbUpwardDiagonal: backBrush = GDI32_CreateHatchBrush(HS_BDIAGONAL, fillColor)
+                Case vbVerticalLine: backBrush = GDI32_CreateHatchBrush(HS_VERTICAL, fillColor)
+            End Select
+
+            Dim borderColor As Long = TranslateColor(Me.BorderColor)
+            Dim pen As LongPtr
+            Select Case Me.BorderStyle
+            	Case vbTransparent: pen = GDI32_CreatePen(PS_NULL, Me.BorderWidth, borderColor)
+            	Case vbBSSolid: pen = GDI32_CreatePen(PS_SOLID, Me.BorderWidth, borderColor)
+            	Case vbBSDot: pen = GDI32_CreatePen(PS_DOT, Me.BorderWidth, borderColor)
+            	Case vbBSDash: pen = GDI32_CreatePen(PS_DASH, Me.BorderWidth, borderColor)
+            	Case vbBSDashDot: pen = GDI32_CreatePen(PS_DASHDOT, Me.BorderWidth, borderColor)
+            	Case vbBSDashDotDot: pen = GDI32_CreatePen(PS_DASHDOTDOT, Me.BorderWidth, borderColor)
+            	Case vbBSInsideSolid: pen = GDI32_CreatePen(PS_INSIDEFRAME, Me.BorderWidth, borderColor)
+            End Select
+
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API directly
+    
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackColor(ps.hdc, backColor)
+
+                'Dim oldBkMode As Long = WindowsAPI.GDI32_SetBackMode(ps.hdc, If((Me.FillStyle = vbFSTransparent) And (Me.BackStyle = vbBFTransparent), BackgroundModes.TRANSPARENT, BackgroundModes.OPAQUE))
+                Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, WinNativeFormsBASE.BackgroundModes.OPAQUE)
+
+                Dim oldBrush As LongPtr
+                Dim oldPen As LongPtr
+                
+                If backBrush <> 0 Then
+                    oldBrush = WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, backBrush)
+                End If
+
+                If pen <> 0 Then
+                    oldPen = WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, pen)
+                End If
+
+                GDI32_SetROP2(ps.hdc, Me.DrawMode)
+
+                Select Case Me.Shape
+                    Case ShapeConstants.vbShapeCircle, _
+                            ShapeConstants.vbShapeSquare, _
+                            ShapeConstants.vbShapeRoundedSquare, _
+                            ShapeConstants.vbShapeStar
+                        If Width > Height Then
+                            X += (Width - Height) / 2
+                        	Width = Height
+                        Else
+                            Y += (Height - Width) / 2
+                            Height = Width
+                        End If
+                End Select
+
+                Dim points As contigiousPoints30
+                Dim arrowHeadSize As Double
+                Dim arrowHeadSize2 As Double
+
+                Select Case Me.Shape
+                    Case ShapeConstants.vbShapeOval, ShapeConstants.vbShapeCircle
+                        GDI32_Ellipse(ps.hdc, X, Y, X + Width, Y + Height)
+                    Case ShapeConstants.vbShapeRectangle, ShapeConstants.vbShapeSquare
+                        GDI32_Rectangle(ps.hdc, X, Y, X + Width, Y + Height)
+                    Case ShapeConstants.vbShapeRoundedRectangle, ShapeConstants.vbShapeRoundedSquare
+                        GDI32_RoundRect(ps.hdc, X, Y, X + Width, Y + Height, Me.RoundedCornerSize * RootWindowElement.UnitPixelScale, Me.RoundedCornerSize * RootWindowElement.UnitPixelScale)
+                    Case ShapeConstants.vbShapeStar
+                        Dim numPoints As Long = If(VariationA >= 2 And VariationA <= 30, VariationA, 5)
+                        Dim sides As Long = numPoints * 2
+                        Dim divisor As Double
+                        Select Case VariationC
+                            Case 1: divisor = 0.01
+                            Case 2: divisor = 0.02
+                            Case 3: divisor = 0.04
+                            Case 4: divisor = 0.05
+                            Case 5: divisor = 0.08
+                            Case 6: divisor = 0.10
+                            Case 7: divisor = 0.20
+                            Case 8: divisor = 0.25
+                            Case 9: divisor = 0.40
+                            Case 10: divisor = 0.50
+                            Case 11: divisor = 1
+                            Case 12: divisor = 2
+                            Case Else: divisor = 2
+                        End Select
+                        Dim alpha As Double = (2 * 3.141592653589793238462643383279) / (numPoints * divisor)
+                        Dim radius As Double = Width / 2
+                        Dim _X As Double = X + (Width / 2)
+                        Dim _Y As Double = Y + (Height / 2)
+                        Dim rA As Double = radius / If(VariationB > 0, (VariationB + 100) / 100, 2)
+                        Dim rB As Double = radius
+                        Dim pointIndex As Long
+                        For pointIndex = 0 To sides
+                            Dim r As Double = If(pointIndex Mod 2, rB, rA)
+                            Dim omega As Double = alpha * pointIndex
+                            points.points(pointIndex).X = _X + (r * Sin(omega))
+                            points.points(pointIndex).Y = _Y + (r * Cos(omega))
+                        Next
+                        GDI32_Polygon(ps.hdc, points, sides + 1)
+                    Case ShapeConstants.vbShapeArrowLeft, ShapeConstants.vbShapeArrowRight
+                        arrowHeadSize = Height * If(VariationA >= 0 And VariationA <= 100, VariationA / 100, 0.3)
+                        arrowHeadSize2 = Width * If(VariationB >= 0 And VariationB <= 100, VariationB / 100, 0.5)
+                        If Shape = ShapeConstants.vbShapeArrowLeft Then
+                        	X += Width
+                            arrowHeadSize2 = -arrowHeadSize2
+                            Width = -Width
+                        End If
+                        points.points(0).X = X
+                        points.points(0).Y = Y + arrowHeadSize
+                        points.points(1).X = X + arrowHeadSize2
+                        points.points(1).Y = Y + arrowHeadSize
+                        points.points(2).X = X + arrowHeadSize2
+                        points.points(2).Y = Y
+                        points.points(3).X = X + Width
+                        points.points(3).Y = Y + (Height / 2)
+                        points.points(4).X = X + arrowHeadSize2
+                        points.points(4).Y = Y + Height
+                        points.points(5).X = X + arrowHeadSize2
+                        points.points(5).Y = (Y + Height) - arrowHeadSize
+                        points.points(6).X = X
+                        points.points(6).Y = (Y + Height) - arrowHeadSize
+                        GDI32_Polygon(ps.hdc, points, 7)
+                    Case ShapeConstants.vbShapeArrowUp, ShapeConstants.vbShapeArrowDown
+                        arrowHeadSize = Width * If(VariationA >= 0 And VariationA <= 100, VariationA / 100, 0.3)
+                        arrowHeadSize2 = Height * If(VariationB >= 0 And VariationB <= 100, VariationB / 100, 0.5)
+                        If Shape = ShapeConstants.vbShapeArrowUp Then
+                        	Y += Height
+                            arrowHeadSize2 = -arrowHeadSize2
+                            Height = -Height
+                        End If
+                        points.points(0).X = (X + Width) - arrowHeadSize
+                        points.points(0).Y = Y
+                        points.points(1).X = (X + Width) - arrowHeadSize
+                        points.points(1).Y = Y + arrowHeadSize2
+                        points.points(2).X = X + Width
+                        points.points(2).Y = Y + arrowHeadSize2
+                        points.points(3).X = X + (Width / 2)
+                        points.points(3).Y = Y + Height
+                        points.points(4).X = X
+                        points.points(4).Y = Y + arrowHeadSize2
+                        points.points(5).X = X + arrowHeadSize
+                        points.points(5).Y = Y + arrowHeadSize2
+                        points.points(6).X = X + arrowHeadSize
+                        points.points(6).Y = Y
+                        GDI32_Polygon(ps.hdc, points, 7)
+                End Select
+
+                If backBrush <> 0 Then
+                    WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, oldBrush)
+                End If
+                
+                If pen <> 0 Then
+                    WinNativeFormsBASE.GDI32_SelectObject(ps.hdc, oldPen)
+                End If
+
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, oldBkMode)
+
+            Me.RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+
+            If backBrush <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(backBrush)
+            If pen <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(pen)
+
+        End Sub
+
+        Private Sub OnChangeProp() _
+                Handles BackColor.OnPropertyLet, _
+                        BackStyle.OnPropertyLet, _
+                        BorderColor.OnPropertyLet, _
+                        BorderStyle.OnPropertyLet, _
+                        BorderWidth.OnPropertyLet, _
+                        DrawMode.OnPropertyLet, _
+                        FillColor.OnPropertyLet, _
+                        FillStyle.OnPropertyLet, _
+                        Shape.OnPropertyLet, _
+                        RoundedCornerSize.OnPropertyLet, _
+                        VariationA.OnPropertyLet, _
+                        VariationB.OnPropertyLet, _
+                        VariationC.OnPropertyLet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.ControlContext.WindowlessRefresh()
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BackColor.OnPropertyGet, _
+                        BackStyle.OnPropertyGet, _
+                        BorderColor.OnPropertyGet, _
+                        BorderStyle.OnPropertyGet, _
+                        BorderWidth.OnPropertyGet, _
+                        DrawMode.OnPropertyGet, _
+                        FillColor.OnPropertyGet, _
+                        FillStyle.OnPropertyGet, _
+                        Shape.OnPropertyGet, _
+                        RoundedCornerSize.OnPropertyGet, _
+                        VariationA.OnPropertyGet, _
+                        VariationB.OnPropertyGet, _
+                        VariationC.OnPropertyGet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Long
+            Return Me.Shape
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As Long)
+            Me.Shape = Value
+        	Me.ControlContext.WindowlessRefresh()
+        End Property
+        
+        Private Sub HandleResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, _
+                                               ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long) _
+                Handles RootWindowElement.ResizeWindowless
+                
+            Dim containerHwnd As LongPtr = Me.Container.hwnd
+            If containerHwnd = 0 Then
+                ' Windowless UC container...  FIXME need to pass on the RECTs to refine the InvalidateRect passed to the UC site
+                On Error Resume Next
+                Me.Container.InternalRaiseViewChanged()
+                Exit Sub
+            End If
+            
+            Dim strokeWidthAreaAdjust As Long = Round(BorderWidth / 2) + 1
+            Dim rect As WinNativeFormsBASE.RECT
+            
+            If oldWidth <> 0 And oldHeight <> 0 Then
+                rect.Left = oldLeft - strokeWidthAreaAdjust
+                rect.Top = oldTop - strokeWidthAreaAdjust
+                rect.Right = oldLeft + oldWidth + strokeWidthAreaAdjust
+                rect.Bottom = oldTop + oldHeight + strokeWidthAreaAdjust
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+            
+            If newWidth <> 0 And newHeight <> 0 Then
+                rect.Left = newLeft - strokeWidthAreaAdjust
+                rect.Top = newTop - strokeWidthAreaAdjust
+                rect.Right = newLeft + newWidth + strokeWidthAreaAdjust
+                rect.Bottom = newTop + newHeight + strokeWidthAreaAdjust
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+            
+            'Debug.Print "***LINE*** HandleResizeWindowless - newLeft: " & newLeft & ", newWidth: " & newWidth
+            'Debug.Print "***LINE*** HandleResizeWindowless - newTop: " & newTop & ", newHeight: " & newHeight
+
+        End Sub
+                
+    #End Region
+    
+End Class

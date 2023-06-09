@@ -1,0 +1,87 @@
+[ ClassId ("EDC4755E-A852-4CD8-9FEA-462C66582821") ]
+[ InterfaceId ("E2C6BAC0-598E-4C7C-B975-9D31F06AF707") ]
+[ COMCreatable (False) ]
+Private Class BaseControlPoints
+    
+    Implements BaseControl Via BaseControl
+
+'    [ DispId (-859) ]
+    [ Description ("") ]
+    [ Serialize (True, "X1") ]
+        Public PixelsX1 As Double
+        Attribute X1.VB_VarUserMemId = -859
+'    [ DispId (-860) ]
+    [ Description ("") ]
+    [ Serialize (True, "Y1") ]
+        Public PixelsY1 As Double
+        Attribute Y1.VB_VarUserMemId = -860
+'    [ DispId (-861) ]
+    [ Description ("") ]
+    [ Serialize (True, "X2") ]
+        Public PixelsX2 As Double
+        Attribute X2.VB_VarUserMemId = -861
+'    [ DispId (-862) ]
+    [ Description ("") ]
+    [ Serialize (True, "Y2") ]
+        Public PixelsY2 As Double
+        Attribute Y2.VB_VarUserMemId = -862
+
+        Private X1Cached As Double
+        Private Y1Cached As Double
+        Private X2Cached As Double
+        Private Y2Cached As Double
+     
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControl = New BaseControl(ControlType)
+    End Sub
+
+    Private Sub OnPropertyChanged_X1() _
+            Handles PixelsX1.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsX1 <> X1Cached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            X1Cached = PixelsX1
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_Y1() _
+            Handles PixelsY1.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsY1 <> Y1Cached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            Y1Cached = PixelsY1
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_X2() _
+            Handles PixelsX2.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsX2 <> X2Cached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            X2Cached = PixelsX2
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_Y2() _
+            Handles PixelsY2.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsY2 <> Y2Cached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            Y2Cached = PixelsY2
+        End If
+    End Sub
+
+    Private Sub OnTouchedFormProperties() _
+            Handles PixelsX1.OnPropertyGet, _
+                    PixelsY1.OnPropertyGet, _
+                    PixelsX2.OnPropertyGet, _
+                    PixelsY2.OnPropertyGet
+                    
+        Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+
+End Class

@@ -1,0 +1,414 @@
+[ ClassId ("5D93AFFC-1494-417B-A383-3759B983E1CF") ]
+[ InterfaceId ("D66C7E51-3D21-48A8-8E9C-6F9A5872D7E1") ]
+[ COMCreatable (False) ]
+Private Class BaseControlNotFocusable2
+
+    Implements BaseControlRect Via BaseControlRect
+
+    ' like BaseControlFocusable, but without TabStop
+
+    [ Serialize (False) ]
+        Private WithEvents RootWindowElementBase As WindowsControls.WindowElement
+    [ Description ("Determines how the sides of this control are anchored to its container") ]
+        Public ReadOnly Anchors As Anchors = New Anchors
+    [ Description ("Adjusts how the control is docked inside of its container") ]
+        Public ReadOnly Dock As VBRUN.DockModeConstants = VBRUN.DockModeConstants.vbDockNone
+    [ Description ("Adjusts the TAB key order of this control at runtime") ]
+        Public TabIndex As Long
+    [ Description ("") ]
+        Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+    [ Description ("") ]
+        Public MousePointer As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+    [ Serialize (True, "MouseIcon") ]
+    [ CustomDesigner ("designer_IconBytes") ]
+        Private ReadOnly MouseIconINIT() As Byte
+    [ Serialize (False) ]
+        Private InternalMouseIcon As StdPicture
+        Private IgnoreMousePointerChanged As Boolean
+        
+        Public ToolTipText As String
+        Public ReadOnly VisualStyles As Boolean = True
+
+    [ Serialize (True, "DragIcon") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+    [ Description ("") ]
+        Private ReadOnly DragIconINIT() As Byte
+    [ Serialize (False) ]
+    [ Description ("") ]
+        Public DragIcon As StdPicture
+        Public DragMode As VBRUN.DragModeConstants
+        
+    ' FIXME need a font picker, then hide these from the property sheet
+        [ Serialize (True, "FontBold") ]
+        Private FontBoldINIT As Boolean = False
+        [ Serialize (True, "FontItalic") ]
+        Private FontItalicINIT As Boolean = False
+        [ Serialize (True, "FontName") ]
+        Private FontNameINIT As String = "Segoe UI"
+        [ Serialize (True, "FontSize") ]
+        Private FontSizeINIT As Single = 8
+        [ Serialize (True, "FontStrikethru") ]
+        Private FontStrikethruINIT As Boolean = False
+        [ Serialize (True, "FontUnderline") ]
+        Private FontUnderlineINIT As Boolean = False
+        
+        Public Property Get FontBold() As Boolean
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Bold
+        End Property
+        Public Property Let FontBold(ByVal Value As Boolean)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Bold = Value
+        End Property
+        
+        Public Property Get FontItalic() As Boolean
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Italic
+        End Property
+        Public Property Let FontItalic(ByVal Value As Boolean)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Italic = Value
+        End Property
+        
+        Public Property Get FontName() As String
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Name
+        End Property
+        Public Property Let FontName(ByVal Value As String)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Name = Value
+        End Property
+        
+        Public Property Get FontSize() As Single
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Size
+        End Property
+        Public Property Let FontSize(ByVal Value As Single)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Size = Value
+        End Property
+        
+        Public Property Get FontStrikethru() As Boolean
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Strikethrough
+        End Property
+        Public Property Let FontStrikethru(ByVal Value As Boolean)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Strikethrough = Value
+        End Property
+        
+        Public Property Get FontUnderline() As Boolean
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.Font.Underline
+        End Property
+        Public Property Let FontUnderline(ByVal Value As Boolean)
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        	Me.Font.Underline = Value
+        End Property
+
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    [ Serialize (True, "Visible") ]
+        Private VisibleINIT As Boolean = True
+        [ Description ("") ]
+    [ Serialize (True, "Enabled") ]
+        Private EnabledINIT As Boolean = True
+        
+    [ Serialize (False) ]
+        Public Font As StdFont
+            
+        Private CurrentFontHandle As LongPtr
+        Private CurrentBackBrush As LongPtr
+        Private CurrentBackBrushColor As OLE_COLOR
+
+    Sub New(ByVal ControlType As ControlTypeConstants)
+       Set Me.BaseControlRect = New BaseControlRect(ControlType)
+    End Sub
+    
+    Sub Class_Terminate()
+       WindowsAPI.GDI32_DeleteObject(Me.CurrentFontHandle)
+       WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+    End Sub
+        
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Get Enabled() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return Not WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_DISABLED)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Let Enabled(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_EnableWindow(Me.RootWindowElementBase, Value)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Get Visible() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_VISIBLE)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Let Visible(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_ShowWindow(Me.RootWindowElementBase, CLng(If(Value, SW_NORMAL, SW_HIDE)))
+        
+        If Me.Dock <> DockModeConstants.vbDockNone Then
+            ' FIXME bodge, this forces layout to be recalculated
+            WindowsAPI.USER32_SendMessageHandle(WindowsAPI.USER32_GetParent(Me.RootWindowElementBase), WM_SIZE, -1, 0)
+        End If
+    End Property
+    
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                        ByVal ClassName As String, ByVal Caption As String, _
+                                        ByVal WindowStyles As Long, ByVal ExtendedStyles As Long, _
+                                        Optional ByVal SubClass As Boolean = False) As WindowElement
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        WindowStyles += If(Me.EnabledINIT, 0, WS_DISABLED)
+        WindowStyles += If(Me.VisibleINIT, WS_VISIBLE, 0)
+        Set Me.RootWindowElementBase = ControlContext.CreateWindowElement(ClassName, Caption, WindowStyles, ExtendedStyles, SubClass)
+
+        If IsArrayInitialized(Me.MouseIconINIT) AndAlso (UBound(Me.MouseIconINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            IgnoreMousePointerChanged = True
+            Set Me.MouseIcon = [_HiddenModule].LoadPictureInternal(Me.MouseIconINIT)
+            IgnoreMousePointerChanged = False
+        End If
+        
+        If IsArrayInitialized(Me.DragIconINIT) AndAlso (UBound(Me.DragIconINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set Me.DragIcon = [_HiddenModule].LoadPictureInternal(Me.DragIconINIT)
+        End If
+        
+        Return Me.RootWindowElementBase
+    End Function
+    
+    Private Sub HandleCreate() _
+            Handles RootWindowElementBase.Create
+            
+        If Me.CurrentFontHandle <> 0 Then
+        	' This happens due to calling RootWindowElement.RecreateWindow
+            Me.CurrentFontHandle = 0        ' the handle was destroyed as it was selected into the old HWND
+        End If
+        SyncFontProperties()
+    End Sub
+    
+    Private Sub HandleDPIChange() _
+            Handles RootWindowElementBase.DPIChange
+         
+        SyncFontProperties()
+    End Sub
+         
+    Private Sub SyncFont() _
+           Handles Font.OnPropertySet
+
+        Dim oldFontHandle As LongPtr = Me.CurrentFontHandle
+        Me.CurrentFontHandle = WindowsAPI.USER32_SetFont(Me.RootWindowElementBase, Me.Font)
+        If oldFontHandle <> 0 Then WindowsAPI.GDI32_DeleteObject oldFontHandle
+    End Sub
+
+    Friend Function CreateBackBrush(ByVal Color As OLE_COLOR) As LongPtr
+        If Color <> Me.CurrentBackBrushColor Then
+            If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+                Me.CurrentBackBrush = WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(Color))
+                Me.CurrentBackBrushColor = Color
+        End If
+        Return Me.CurrentBackBrush
+    End Function
+
+    Private Sub InitializeOLEFont()
+        Dim NewFont As StdFont = New StdFont
+        With NewFont
+            .Bold = Me.FontBoldINIT
+            .Italic = Me.FontItalicINIT
+            .Name = Me.FontNameINIT
+            .Size = Me.FontSizeINIT
+            .Strikethrough = Me.FontStrikethruINIT
+            .Underline = Me.FontUnderlineINIT
+        End With
+        Dim font As IFont = NewFont
+        font.SetRatio(RootWindowElementBase.DPI, 2540)
+        Set Me.Font = NewFont
+    End Sub
+    
+    Friend Function GetFontMetrics() As TEXTMETRIC
+        If Me.Font Is Nothing Then
+            InitializeOLEFont
+        End If
+        
+        Dim font As IFont = Me.Font
+        Dim hdc As LongPtr = WindowsAPI.GDI32_CreateCompatibleDC()
+        font.SetRatio(RootWindowElementBase.DPI, 2540)
+        Dim oldFont As LongPtr = WindowsAPI.GDI32_SelectObject(hdc, font.hFont)
+        WindowsAPI.GDI32_GetTextMetrics(hdc, GetFontMetrics)
+        WindowsAPI.GDI32_SelectObject(hdc, oldFont)
+		WindowsAPI.GDI32_DeleteDC(hdc)
+    End Function
+    
+    Private Sub SyncFontProperties()
+        If Me.Font Is Nothing Then
+            InitializeOLEFont
+        End If
+        SyncFont()
+        Refresh()
+    End Sub
+    
+    Private Sub OnPropertyChanged() _
+            Handles Appearance.OnPropertyLet
+                    
+        Me.ControlContext.EnsureFormIsLoaded()
+        Err.Raise 5, , "Sorry, tB does not support setting this property at runtime YET"
+    End Sub
+    
+    Public Sub SetFocus()
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_SetFocus(Me.RootWindowElementBase)
+    End Sub
+    
+    Public Sub Refresh()
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_RedrawWindow(Me.RootWindowElementBase, 0, 0, RDW_ERASE Or RDW_INVALIDATE Or RDW_UPDATENOW)
+    End Sub
+
+    Friend Function SubClassWindowElement(ByVal hWnd As LongPtr) As stdole.IUnknown
+    	Return Me.ControlContext.SubClassWindowElement(hWnd)
+    End Function
+    
+    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+
+    [ DispId (-856) ]
+    Public Property Get Container() As Object
+        On Error Resume Next
+        Me.ControlContext.EnsureFormIsLoaded()
+    	Return Me.RootWindowElementBase.Container
+    End Property
+    
+    Private Sub MousePointerChanged() _
+            Handles MousePointer.OnPropertyLet
+            
+        If IgnoreMousePointerChanged Then Exit Sub
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.MousePointerChanged()
+    End Sub
+
+    Private Sub OnTouchedFormProperties() _
+            Handles Anchors.OnPropertyGet, _
+                    Dock.OnPropertyGet, _
+                    TabIndex.OnPropertyGet, _
+                    TabIndex.OnPropertyLet, _
+                    MousePointer.OnPropertyGet, _
+                    Appearance.OnPropertyGet, _
+                    VisualStyles.OnPropertyGet, _
+                    Font.OnPropertyGet
+
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    Private Sub ToolTipChanged() Handles ToolTipText.OnPropertyLet
+        Me.RootWindowElementBase.ToolTipChanged()
+    End Sub
+    
+    Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
+        Me.ControlContext.EnsureFormIsLoaded()
+        If InternalMove(Me, Left, Top, Width, Height) Then
+        	Me.ControlContext.ChangedPosition()
+        End If
+    End Sub
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Get Left() As Double
+        Return Me.ControlContext.GetScaledLeft
+    End Property
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Let Left(ByVal Value As Double)
+        Me.ControlContext.SetScaledLeft(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Top() As Double
+        Return Me.ControlContext.GetScaledTop
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Top(ByVal Value As Double)
+        Me.ControlContext.SetScaledTop(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Width() As Double
+        Return Me.ControlContext.GetScaledWidth
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Width(ByVal Value As Double)
+        Me.ControlContext.SetScaledWidth(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Height() As Double
+        Return Me.ControlContext.GetScaledHeight
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Height(ByVal Value As Double)
+        Me.ControlContext.SetScaledHeight(Value)
+    End Property
+    
+    Public Sub Drag([ TypeHint (DragConstants) ] Optional ByVal Action As Variant)
+    	If IsMissing(Action) Then Action = DragConstants.vbBeginDrag
+        Select Case Action
+        	Case DragConstants.vbBeginDrag
+                Me.RootWindowElementBase.StartDrag
+            Case DragConstants.vbCancel
+                Me.RootWindowElementBase.CancelDrag
+            Case DragConstants.vbEndDrag
+                Me.RootWindowElementBase.EndDrag
+            Case Else
+                Err.Raise 5
+        End Select
+    End Sub
+    
+    Friend Sub BaseSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, ByRef DragDropHandler As OLEDragDropHandler, ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+        CommonSyncOLEDropMode(RootThis, OLEDropMode, DragDropHandler, ControlContext, RootWindowElementBase, IsContainer, AllowedAutomatic)
+    End Sub
+    
+    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+        CommonZOrder(Position, Me.RootWindowElementBase.Handle)
+    End Sub
+
+    Public Sub InternalOLEDrag(ByVal RootThis As Object)
+        CommonOLEDrag(RootThis)
+    End Sub
+
+    [ Serialize (False) ]
+    Public Property Get MouseIcon() As StdPicture
+        Return InternalMouseIcon
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+
+End Class

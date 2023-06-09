@@ -1,0 +1,800 @@
+[ WindowsControl ("/miscellaneous/ICONS??/ListView??.png") ]
+[ ClassId ("ED6464B0-4324-4E2E-8A17-83A81F9D48DD") ]
+[ InterfaceId ("A841B4F1-4F62-4FED-B58A-B0E88F836DC8") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class ListView
+
+    Enum ListViewConstants
+        lvwIcon = 0
+        lvwSmallIcon = 1
+        lvwList = 2
+        lvwReport = 3
+    End Enum
+    
+    Enum ListArrangeConstants
+        lvwNone = 0
+        lvwAutoLeft = 1
+        lvwAutoTop = 2
+    End Enum
+    
+    Enum ListTextBackgroundConstants
+        lvwTransparent = 0
+    	lvwOpaque = 1
+    End Enum
+    
+    Enum ListLabelEditConstants
+        lvwAutomatic = 0
+        lvwManual = 1
+        lvwDisabled = 2
+    End Enum
+
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbListView)
+        
+    #End Region
+            
+    #Region "STATE"
+    
+        [ Description ("Determines the border style of the listview") ]
+            Public BorderStyle As TreeBorderStyleConstants = TreeBorderStyleConstants.ccFixedSingle
+        [ Description ("Determines if each list item of the listview has a checkbox associated with it") ]
+            Public CheckBoxes As Boolean = False
+        [ Description ("Determines if gridlines are displayed between columns and rows") ]
+            Public GridLines As Boolean = False
+        [ Description ("Determines if column headers are hidden in REPORT view") ]
+            Public HideColumnHeaders As Boolean = False
+        [ Description ("Determines if each list item of the listview occupies the whole row, or just the text area") ]
+            Public FullRowSelect As Boolean = False
+        [ Description ("Determines if the selected list item is visible even when the listview does not have the focus") ]
+            Public HideSelection As Boolean = True
+        [ Description ("Determines if multiple list items can be selected at once") ]
+            Public MultiSelect As Boolean = False
+        [ Description ("Determines if the item text wraps to new lines when in ICON view") ]
+            Public LabelWrap As Boolean = True
+        [ Description ("Determines if the flat scrollbar is used") ]
+            Public FlatScrollBar As Boolean = False
+        [ Description ("Determines whether list items are highlighted as the mouse pointer hovers over them") ]
+            Public HotTracking As Boolean = False
+        [ Description ("Determines whether list items can be edited inline at runtime.  If set to Manual, you must call StartLabelEdit manually") ]
+            Public LabelEdit As ListLabelEditConstants = ListLabelEditConstants.lvwAutomatic
+        [ Description ("Determines whether the root list items also have visible association lines") ]
+        [ Description ("") ]
+            Public View As ListViewConstants = ListViewConstants.lvwIcon
+        [ Description ("") ]
+            Public Arrange As ListArrangeConstants = ListArrangeConstants.lvwNone
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("The back color used when rendering") ]
+            Public BackColor As OLE_COLOR = SystemColorConstants.vbWindowBackground
+        '[ CustomDesigner ("designer_SpectrumWindows") ]
+        '[ Description ("The fore color (font color) used when rendering") ]
+        '    Public ForeColor As OLE_COLOR = SystemColorConstants.vbWindowText
+        [ Description ("") ]
+            Public TextBackground As ListTextBackgroundConstants = ListTextBackgroundConstants.lvwTransparent
+
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        Public OLEDropMode As VBRUN.OLEDropConstants
+        Public CausesValidation As Boolean = True
+        
+        Public AllowColumnReorder As Boolean = False
+
+        Private InternalItems As ListItems
+        Private InternalColumnHeaders As ColumnHeaders
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private IndentationScale As Double
+        Private IsDesignMode As Boolean
+        Private IsClicked As Boolean
+        Private IsEdittingNodeText As Boolean
+        Private MouseButtonDown As Long
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+        Private CachedTopHandle As LongPtr = -1
+        Private BoldFontCached As StdFont = Nothing
+        Private BoldFontCachedId As Long = 0
+        
+        [ Serialize (False) ]
+        Private ReadOnly InternalBuffer As String = String(InternalBufferLen, vbNullChar)
+        [ Serialize (False) ]
+        Friend ReadOnly InternalBufferLen As Long = 1024
+
+        ' TODO:
+        ' ForeColor
+        ' FindItem(sz As String, Where, Index, fPartial) As ListItem
+        ' Picture
+        ' PictureAlignment
+        ' Sorted As Boolean
+        ' SortKey As Integer
+        ' SortOrder As ListSortOrderConstants
+        ' CausesValidation
+
+        ' HotTracking As Boolean
+        ' HoverSelection As Boolean
+
+        ' ColumnHeaderIcons As Object ' imagelist
+        ' Icons ' imagelist
+        ' SmallIcons ' imageList
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("This event is the first event to fire on this control, as soon as the control is created") ]
+            Event Initialize()
+        [ DefaultDesignerEvent ]
+        [ Description ("This event is fired when the user clicks anywhere within the listview window area") ]
+            Event Click()
+        [ Description ("This event is fired when the user double-clicks anywhere within the listview window area") ]
+            Event DblClick()
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyDown(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("This event fires when the user releases a key") ]
+            Event KeyUp(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("This event fires when the user presses a mouse button down within the listview window area") ]
+            Event MouseDown(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires when the user moves the mouse over the listview window area") ]
+            Event MouseMove(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires when the user releases a mouse button within the listview window area") ]
+            Event MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As OLE_XPOS_PIXELS, ByVal y As OLE_YPOS_PIXELS)
+        [ Description ("This event fires before a label-edit operation, providing a change to cancel the operation") ]
+            Event BeforeLabelEdit(Cancel As Boolean)
+        [ Description ("This event fires after a label-edit operation ends, providing a chance to validate and/or cancel the operation") ]
+            Event AfterLabelEdit(Cancel As Boolean, NewString As String)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event Validate(Cancel As Boolean)
+        
+        Event ColumnClick(ColumnHeader As ColumnHeader)
+        Event ItemCheck(Item As ListItem)
+        Event ItemClick(Item As ListItem)
+
+        [ Unimplemented ] Event Scroll()      ' new to tB
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                ' InitializeDefaultValues
+            End If
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+            
+            If Me.Appearance = vbAppear3d Then
+                extendedStyles += WinNativeFormsBASE.WS_EX_CLIENTEDGE
+            Else
+                If Me.BorderStyle = TreeBorderStyleConstants.ccFixedSingle Then
+                    styles += WinNativeFormsBASE.WS_BORDER
+                End If
+            End If
+            styles += If(Me.HideSelection, 0, ListViewConsts.LVS_SHOWSELALWAYS)
+            styles += If(Me.LabelWrap, 0, ListViewConsts.LVS_NOLABELWRAP)
+            styles += If(Me.MultiSelect, 0, ListViewConsts.LVS_SINGLESEL)
+            styles += If(Me.LabelEdit <> ListLabelEditConstants.lvwDisabled, ListViewConsts.LVS_EDITLABELS, 0)
+            styles += If(Me.HideColumnHeaders, LVS_NOCOLUMNHEADER, 0)
+            
+            If Me.IsDesignMode Then
+                styles += LVS_LIST
+            Else
+                Select Case Me.View
+                    Case ListViewConstants.lvwIcon
+                        styles += LVS_ICON
+                    Case ListViewConstants.lvwList
+                        styles += LVS_LIST
+                    Case ListViewConstants.lvwReport
+                        styles += LVS_REPORT
+                    Case ListViewConstants.lvwSmallIcon
+                        styles += LVS_SMALLICON
+                End Select
+            End If
+            
+            Select Case Me.Arrange
+            	Case ListArrangeConstants.lvwAutoLeft
+                    styles += LVS_AUTOARRANGE Or LVS_ALIGNLEFT
+            	Case ListArrangeConstants.lvwAutoTop
+                    styles += LVS_AUTOARRANGE Or LVS_ALIGNTOP
+            End Select
+            
+'            Debug.Print "extendedStyles: " & Hex(extendedStyles)
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderListView", vbNullString, styles, extendedStyles)
+        End Sub
+                
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean) _
+                Handles RootWindowElement.PreMouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+            Me.IsClicked = True
+            Me.MouseButtonDown = Button
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+            
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            'If Me.IsClicked Then RaiseEvent Click()
+            Me.IsClicked = False
+        End Sub
+        
+        Private Sub HandleKeyDown(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyDown
+            
+            RaiseEvent KeyDown(CInt(KeyCode), CInt(ShiftState))
+            
+            ' If KeyCode = vbKeySpace And Me.CheckBoxes Then
+            '     Me.ScheduleCallback New TreeViewNodeCheckState(Me, SelectedItem, False, 0, 0, 0, 0)
+            ' End If
+        End Sub
+        
+        Private Sub HandleKeyPress(KeyCode As Integer) _
+                Handles RootWindowElement.KeyPress
+            
+            RaiseEvent KeyPress(CInt(KeyCode))
+        End Sub
+        
+        Private Sub HandleKeyUp(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyUp
+            
+            RaiseEvent KeyUp(CInt(KeyCode), CInt(ShiftState))
+        End Sub
+
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If Me.InternalItems IsNot Nothing Then
+                Me.InternalItems.Clear()
+                Set Me.InternalItems = Nothing
+            End If
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            Dim extendedStyles As Long
+            extendedStyles += If(Me.FullRowSelect, LVS_EX_FULLROWSELECT, 0)
+            extendedStyles += If(Me.HotTracking, LVS_EX_TRACKSELECT, 0)
+            extendedStyles += If(Me.CheckBoxes, LVS_EX_CHECKBOXES, 0)
+            extendedStyles += If(Me.GridLines, LVS_EX_GRIDLINES, 0)
+            extendedStyles += If(Me.FlatScrollBar, LVS_EX_FLATSB, 0)
+            extendedStyles += LVS_EX_INFOTIP
+            extendedStyles += If(Me.AllowColumnReorder, LVS_EX_HEADERDRAGDROP, 0)      ' only for REPORT mode
+            WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, extendedStyles)
+
+            If Me.IsDesignMode Then
+                ListItems.Add , , Me.Name
+                
+'                 ColumnHeaders.Add(, , "ColA", 100)
+'                 ColumnHeaders.Add(, , "ColB", 200)
+'                 ColumnHeaders.Add(, , "ColC", 100)
+'                 Dim item1 As ListItem = ListItems.Add(, , "ABC1")
+'                 Dim item2 As ListItem = ListItems.Add(, , "ABC2")
+'                 Dim item3 As ListItem = ListItems.Add(, , "ABC3")
+                
+'                 ListItems.DumpContents
+
+'                 ListItems.Add 2, , "ABC4"
+                
+'                 ListItems.DumpContents
+
+'                 ListItems.Add 1, , "ABC5"
+                
+'                 ListItems.DumpContents
+
+'                 ListItems.Add ListItems.Count, , "ABC6"
+                
+'                 ListItems.DumpContents
+
+'                 ListItems.Add ListItems.Count + 1, "Key1", "ABC7"
+                
+'                 ListItems.DumpContents
+                
+'                 ListItems.Remove 2
+'                 ListItems.Remove "Key1"
+                
+' '                ListItems.Clear
+'                 ListItems.DumpContents
+                
+'                 ' Dim itemId As Long = CreateItem("ABC1")
+'                 ' SetSubItem(itemId, 1, "ABC1a")
+'                 ' CreateItem("ABC2")
+'                 ' CreateItem("ABC3")
+'                 ' CreateItem("ABC4")
+            End If
+            SyncOLEDropMode()
+            BackColorChanged()
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleListLabelEdit(tvItemInfo As NMLVDISPINFOW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+            Dim Cancel As Boolean
+
+            Select Case Notification.Code
+                Case ListViewConsts.LVN_BEGINLABELEDITW
+                    If Me.LabelEdit = ListLabelEditConstants.lvwManual And IsEdittingNodeText = False Then
+                        MutedReturnValue = 1
+                    Else
+                        RaiseEvent BeforeLabelEdit(Cancel)
+                        If Cancel Then
+                            MutedReturnValue = 1
+                        Else
+                            MutedReturnValue = 0
+                            IsEdittingNodeText = True
+                        End If
+                    End If
+                    
+                Case ListViewConsts.LVN_ENDLABELEDITW
+                    With tvItemInfo.Item
+                        If .pszText <> 0 Then
+                            RaiseEvent AfterLabelEdit(Cancel, WinNativeFormsBASE.OLEAUT32_SysAllocString(.pszText))
+                            If Cancel Then
+                                MutedReturnValue = 0
+                            Else
+                                MutedReturnValue = 1
+                            End If
+                        Else
+                            MutedReturnValue = 0
+                        End If
+                    End With
+                    IsEdittingNodeText = False
+                    
+            End Select
+        End Sub
+                
+        Private Function GetBoldFont() As stdole.IFont
+            If (BoldFontCached Is Nothing) OrElse (BoldFontCachedId <> InternalFontChangeCount) Then
+'                Debug.Print "Change of font detected!"
+            	Set BoldFontCached = New StdFont
+                With BoldFontCached
+                    .Bold = True
+                    .Italic = Me.FontItalic
+                    .Name = Me.FontName
+                    .Size = Me.FontSize
+                    .Strikethrough = Me.FontStrikethru
+                    .Underline = Me.FontUnderline
+                End With
+                Dim font As IFont = BoldFontCached
+                font.SetRatio(RootWindowElement.DPI, 2540)
+                BoldFontCachedId = InternalFontChangeCount
+            End If
+            Return BoldFontCached
+        End Function
+        
+        Private Sub HandleListCustomDraw(ByRef customDrawInfo As NMLVCUSTOMDRAW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+        	
+            Dim ListItem As ListItem
+            
+            With customDrawInfo
+                Select Case .nmcd.dwDrawStage
+                    Case CommonCustomDrawState.CDDS_PREPAINT
+                        MutedReturnValue = CDRF_NOTIFYITEMDRAW
+
+                    Case CommonCustomDrawState.CDDS_ITEMPREPAINT
+                        Dim ChangedFont As Boolean = False
+                        Set ListItem = WinNativeFormsBASE.ObjPtrToObject(.nmcd.lItemlParam)
+                        If ListItem IsNot Nothing Then
+                            'Debug.Print "PREPAINT: " & ListItem.Text & " (uItemState: " & Hex(.nmcd.uItemState) & ")"
+                            'Dim isFocused As Boolean = (.nmcd.uItemState And CDIS_FOCUS) <> 0
+                            'Dim isSelected As Boolean = (.nmcd.uItemState And CDIS_SELECTED) <> 0 ' This flag does not work correctly for owner-drawn list-view controls that have the LVS_SHOWSELALWAYS style
+                            'If (isFocused = False) And (isSelected = False) Then
+                                .clrText = TranslateColor(ListItem.ForeColor)
+                                If ListItem.BackColor <> -1 Then .clrTextBk = TranslateColor(ListItem.BackColor)
+                                
+                                If ListItem.Bold Then
+                                    Dim FontHandleBold As LongPtr = GetBoldFont().hFont ' FIXME will be invalid
+                                    WinNativeFormsBASE.SelectObject(customDrawInfo.nmcd.hDC, FontHandleBold)
+                                	ChangedFont = True
+                                End If
+                            'End If
+                        End If
+                        MutedReturnValue = If(ChangedFont, CDRF_NEWFONT, 0) Or CDRF_NOTIFYSUBITEMDRAW
+                        
+                    Case (CommonCustomDrawState.CDDS_ITEMPREPAINT Or CommonCustomDrawState.CDDS_SUBITEM)
+                        MutedReturnValue = CDRF_DODEFAULT
+                        
+                End Select
+            End With
+        End Sub
+        
+        Private Sub HandleListGetInfoTip(ByRef request As NMLVGETINFOTIPW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+        	If request.iItem > -1 And request.pszText <> 0 Then
+                Dim ToolTipText As String = Left$(Me.ListItems(request.iItem + 1).ToolTipText, request.cchTextMax - 1)
+                WinNativeFormsBASE.KERNEL32_CopyMemory(request.pszText, StrPtr(ToolTipText), LenB(ToolTipText) + 2)
+        	End If
+        End Sub
+        
+        Private Sub HandleListColumnClick(ByRef nmlv As NMLISTVIEW, ByRef Notification As NMHDR, ByRef MutedReturnValue As Variant)
+        	RaiseEvent ColumnClick(Me.ColumnHeaders(nmlv.iSubItem + 1))
+        End Sub
+        
+        Private Sub CommonControlsNotification(ByRef Notification As NMHDR, MutedReturnValue As Variant) _
+                Handles RootWindowElement.Notify
+
+            Select Case Notification.Code
+            
+                Case CommonNotifications.NM_CLICK, CommonNotifications.NM_RCLICK
+                    ' If a mouse down occurs ON a node area, then this event doesn't fire until the MouseUp occurs
+                    ' If a mouse down occurs OUTSIDE a node area, then this event fires immediately, so we wait for a real MouseUp message
+                    Dim clickIsOnNode As Boolean
+                    Dim clickIsOnIcon As Boolean
+                    Dim hitTestInfo As LVHITTESTINFO
+                    With hitTestInfo
+                        WinNativeFormsBASE.GetCursorPos(.PT)
+                        WinNativeFormsBASE.ScreenToClient(Me.RootWindowElement.Handle, .PT)
+                        WinNativeFormsBASE.USER32_SendMessage(Me.RootWindowElement, ListViewConsts.LVMessages.LVM_SUBITEMHITTEST, 0, VarPtr(hitTestInfo))
+                        clickIsOnNode = (.iItem <> -1) And ((.Flags And ListViewConsts.LVMisc.LVHT_ONITEM) <> 0)
+                        clickIsOnIcon = (.iSubItem = 0) And (.Flags And ListViewConsts.LVMisc.LVHT_ONITEMSTATEICON) <> 0
+                        'Debug.Print "CommonNotifications.NM_CLICK flags: " & Hex(.Flags), ", .iSubItem: " & .iSubItem
+                    End With
+                    
+                    If clickIsOnNode Then
+                        If clickIsOnIcon And Me.CheckBoxes Then
+                            ' We can't yet RaiseEvent NodeCheck because the state hasn't been updated, so we schedule it so that it will fire via the message pump
+                    	    ' See https://docs.microsoft.com/en-us/troubleshoot/developer/visualstudio/cpp/libraries/click-check-box-treeview
+                            ' In addition, because we want the MouseUp/Click events to fire AFTER the NodeCheck event, we also postpone them into the scheduled callback
+                            Me.ScheduleCallback(New ListViewNodeCheckState(Me, ListItems(hitTestInfo.iItem + 1), IsClicked, CInt(MouseButtonDown), GetShiftState(), CDbl(hitTestInfo.PT.X), CDbl(hitTestInfo.PT.Y)))
+                        Else
+                            If clickIsOnIcon = False Then
+                                If (hitTestInfo.iSubItem = 0) OrElse (Me.FullRowSelect = True) Then
+                                    RaiseEvent ItemClick(ListItems(hitTestInfo.iItem + 1))
+                                End If
+                            End If
+                            
+                            If Me.IsClicked Then
+                                RaiseEvent MouseUp(CInt(MouseButtonDown), GetShiftState(), hitTestInfo.PT.X, hitTestInfo.PT.Y)
+                                RaiseEvent Click()
+                            End If
+                        End If
+                        Me.IsClicked = False
+                    End If
+                
+                Case CommonNotifications.NM_DBLCLK
+                    RaiseEvent DblClick()
+                    
+                Case ListViewConsts.LVN_BEGINLABELEDITW, ListViewConsts.LVN_ENDLABELEDITW
+                     HandleListLabelEdit(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+                ' Case TreeViewConsts.Notifications.TVN_SELCHANGED
+                '     HandleTreeSelectionChanged(VarPtr(Notification), Notification, MutedReturnValue)
+
+                Case ListViewConsts.LVN_COLUMNCLICK
+                    HandleListColumnClick(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+                Case CommonNotifications.NM_CUSTOMDRAW
+                    HandleListCustomDraw(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+                Case LVN_GETINFOTIPW
+                    HandleListGetInfoTip(VarPtr(Notification), Notification, MutedReturnValue)
+                    
+            End Select
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                'Handles BackColor.OnPropertyGet, _
+                        ForeColor.OnPropertyGet
+                            
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+
+        [ Serialize (False) ]
+        [ Description ("Returns the raw HWND handle associated with the listview") ]
+        Public Property Get hWnd() As LongPtr
+            Me.ControlContext.EnsureFormIsLoaded()
+        	Return Me.RootWindowElement.Handle
+        End Property
+        
+        Private Sub ChangeWindowStyleFlag(ByVal flag As Long, ByVal Value As Boolean)
+        	Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE)
+            Dim hasValueFlagSet As Boolean = dwStyle And flag
+            
+            If Value <> hasValueFlagSet Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE, If(Value, dwStyle Or flag, dwStyle And Not flag))
+            End If
+        End Sub
+        
+        Private Sub ChangeWindowExStyleFlag(ByVal flag As Long, ByVal Value As Boolean)
+        	Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_EXSTYLE)
+            Dim hasValueFlagSet As Boolean = dwStyle And flag
+            
+            If Value <> hasValueFlagSet Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_EXSTYLE, If(Value, dwStyle Or flag, dwStyle And Not flag))
+            End If
+        End Sub
+        
+        Private Sub ChangeWindowExStyleFlag2(ByVal flag As Long, ByVal Value As Boolean)
+        	Dim dwStyle As Long = CLng(WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_GETEXTENDEDLISTVIEWSTYLE, 0, 0))
+            Dim hasValueFlagSet As Boolean = dwStyle And flag
+            
+            If Value <> hasValueFlagSet Then
+                WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, LVM_SETEXTENDEDLISTVIEWSTYLE, 0, If(Value, dwStyle Or flag, dwStyle And Not flag))
+            End If
+        End Sub
+
+        Private Sub RefreshWindowsCachedStyles()
+            'this is needed to ensure windows cached stuff is updated after changing GWL_STYLE
+            WinNativeFormsBASE.SetWindowPos(Me.RootWindowElement.Handle, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED)
+        End Sub
+        
+        Private Sub BackColorChanged() _
+        	    Handles BackColor.OnPropertyLet, _
+                        TextBackground.OnPropertyLet
+                
+            WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_SETBKCOLOR, 0, TranslateColor(Me.BackColor))
+            If TextBackground = ListTextBackgroundConstants.lvwOpaque Then
+                WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_SETTEXTBKCOLOR, 0, TranslateColor(Me.BackColor))
+            Else
+                WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_SETTEXTBKCOLOR, 0, -1)
+            End If
+            Me.Refresh
+        End Sub
+
+        Private Sub BorderStyleChanged() _  
+        	    Handles BorderStyle.OnPropertyLet
+                
+            SyncBorderStyle(Me)
+        End Sub
+        
+        Private Sub ChangedFullRowSelect() _
+                Handles FullRowSelect.OnPropertyLet
+            
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_FULLROWSELECT, Me.FullRowSelect)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedCheckboxes() _
+                Handles Checkboxes.OnPropertyLet
+            
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_CHECKBOXES, Me.CheckBoxes)
+        End Sub
+        
+        Private Sub ChangedGridLines() _
+                Handles GridLines.OnPropertyLet
+            
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_GRIDLINES, Me.GridLines)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedFlatScrollBar() _
+        	    Handles FlatScrollBar.OnPropertyLet
+                
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_FLATSB, Me.GridLines)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedAllowColumnReorder() _
+        	    Handles AllowColumnReorder.OnPropertyLet
+                
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_HEADERDRAGDROP, Me.AllowColumnReorder)
+        End Sub
+        
+        Private Sub ChangedHideSelection() _
+                Handles HideSelection.OnPropertyLet
+            
+            ChangeWindowStyleFlag(ListViewConsts.LVS_SHOWSELALWAYS, Not Me.HideSelection)
+            Me.Refresh
+        End Sub
+        
+        Private Sub ChangedLabelWrap() _
+        	    Handles LabelWrap.OnPropertyLet
+                
+            ChangeWindowStyleFlag(ListViewConsts.LVS_NOLABELWRAP, Not Me.LabelWrap)
+            Me.Refresh      ' FIXME check if needed
+        End Sub
+        
+        Private Sub ChangedMultiSelect() _ 
+        	    Handles MultiSelect.OnPropertyLet
+                
+            ChangeWindowStyleFlag(ListViewConsts.LVS_SINGLESEL, Not Me.MultiSelect)
+        End Sub
+        
+        Private Sub ChangedHideColumnHeaders() _
+                Handles HideColumnHeaders.OnPropertyLet
+            
+            ChangeWindowStyleFlag(ListViewConsts.LVS_NOCOLUMNHEADER, Me.HideColumnHeaders)
+        End Sub
+        
+        Private Sub ChangedHotTracking() _
+                Handles HotTracking.OnPropertyLet
+            
+            ChangeWindowExStyleFlag2(ListViewConsts.LVS_EX_TRACKSELECT, Me.HotTracking)
+            Me.Refresh
+        End Sub
+                
+        Private Sub ChangedView() _
+        	    Handles View.OnPropertyLet
+                
+            Dim newView As Long
+            Select Case Me.View
+            	Case ListViewConstants.lvwIcon
+                    newView += LVS_ICON
+            	Case ListViewConstants.lvwList
+                    newView += LVS_LIST
+            	Case ListViewConstants.lvwReport
+                    newView += LVS_REPORT
+            	Case ListViewConstants.lvwSmallIcon
+                    newView += LVS_SMALLICON
+            End Select
+            
+            Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE)
+            Dim currentView As Long = dwStyle And LVS_TYPEMASK
+            
+            If currentView <> newView Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE, (dwStyle And Not LVS_TYPEMASK) Or newView)
+            End If
+        End Sub
+        
+        Private Sub ChangedArrange() _
+        	    Handles Arrange.OnPropertyLet
+                
+            Dim newArrange As Long
+            Select Case Me.Arrange
+            	Case ListArrangeConstants.lvwAutoLeft
+                    newArrange += LVS_AUTOARRANGE Or LVS_ALIGNLEFT
+            	Case ListArrangeConstants.lvwAutoTop
+                    newArrange += LVS_AUTOARRANGE Or LVS_ALIGNTOP
+            End Select
+            
+            Dim dwStyle As Long = WinNativeFormsBASE.USER32_GetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE)
+            Dim currentArrange As Long = dwStyle And (LVS_ALIGNLEFT Or LVS_AUTOARRANGE)
+            
+            If currentArrange <> newArrange Then
+                WinNativeFormsBASE.USER32_SetWindowLong(Me.RootWindowElement, WinNativeFormsBASE.GWL_STYLE, (dwStyle And Not (LVS_ALIGNLEFT Or LVS_AUTOARRANGE)) Or newArrange)
+            End If
+        End Sub
+                
+        Private Sub ChangedLabelEdit() _
+                 Handles LabelEdit.OnPropertyLet
+            
+            ChangeWindowStyleFlag(ListViewConsts.LVStyles.LVS_EDITLABELS, Me.LabelEdit <> ListLabelEditConstants.lvwManual)
+        End Sub
+            
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get ListItems() As ListItems
+        	Me.ControlContext.EnsureFormIsLoaded
+            If Me.InternalItems Is Nothing Then Set Me.InternalItems = New ListItems(Me)
+            Return Me.InternalItems
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get ColumnHeaders() As ColumnHeaders
+        	Me.ControlContext.EnsureFormIsLoaded
+            If Me.InternalColumnHeaders Is Nothing Then Set Me.InternalColumnHeaders = New ColumnHeaders(Me)
+            Return Me.InternalColumnHeaders
+        End Property
+        
+        Public Function GetFirstVisible() As ListItem
+        	Dim firstVisibleIndex As Long = CLng(WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_GETTOPINDEX, 0, 0))
+            Return Me.ListItems(firstVisibleIndex + 1)
+        End Function
+        
+        [ Serialize (False) ]
+        Public Property Get SelectedItemIndex() As Long
+            Return CLng(WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_GETNEXTITEM, -1, LVNI_ALL Or LVNI_FOCUSED))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get SelectedItem() As ListItem
+            Dim itemIndex As Long = SelectedItemIndex
+            If itemIndex <> -1 Then
+                Return Me.ListItems(itemIndex + 1)
+            End If
+        End Property
+        
+        Public Sub StartLabelEdit()
+            IsEdittingNodeText = True
+        	WinNativeFormsBASE.SendMessageW(Me.RootWindowElement.Handle, LVM_EDITLABELW, SelectedItemIndex, 0)
+            IsEdittingNodeText = False
+        End Sub
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode(Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+                
+        Private Sub HandleWheel(ByVal Delta As Integer, ByVal Horizontal As Boolean) _
+                Handles RootWindowElement.MouseWheel
+                
+            If Horizontal = False Then
+                'If WheelScrollEvent Then CheckTopIndexChanged()
+            Else
+                'If WheelScrollEvent Then RaiseEvent Scroll
+            End If
+        End Sub
+        
+        Private Sub HandleScroll(ByVal ScrollType As WinNativeFormsBASE.SCROLLNOTIFY, ByVal IsHorizontal As Boolean) _
+                Handles RootWindowElement.Scroll
+            
+            'CachedTopHandle = WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, TreeViewConsts.Messages.TVM_GETNEXTITEM, TVGN_FIRSTVISIBLE, TVI_ROOT)
+            RaiseEvent Scroll()
+
+        End Sub
+                
+        Friend Function InternalGetPixelsMultiplierX() As Double
+        	Return ControlContext.GetScaleModePixelsMultiplierX()
+        End Function
+        
+        Friend Function InternalGetPixelsMultiplierY() As Double
+        	Return ControlContext.GetScaleModePixelsMultiplierY()
+        End Function
+        
+        Friend Function InternalUnitPixelScale() As Double
+        	Return RootWindowElement.UnitPixelScale
+        End Function
+        
+        Friend Function InternalGetStringBuffer() As LongPtr
+        	Return StrPtr(InternalBuffer)
+        End Function
+        
+    #End Region
+	
+End Class

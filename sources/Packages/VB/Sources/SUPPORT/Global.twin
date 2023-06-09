@@ -1,0 +1,112 @@
+[ InterfaceId ("33AD4F79-6699-11CF-B70C-00AA0060D393") ]
+' FIXME need to match vtable layout to VB6 version
+' FIXME add descriptions here
+Public Interface _App Extends stdole.IUnknown      ' FIXME needs to suppot IDispatch
+    Property Get hInstance() As LongPtr
+    Property Get ThreadID() As LongPtr
+    Property Get Path() As String
+    Property Get EXEName() As String
+    Property Get IsInIDE() As Boolean
+    Property Get Major() As Integer
+    Property Get Minor() As Integer
+    Property Get Revision() As Integer
+    Property Get Build() As Integer
+    Property Get ModulePath() As String
+    Property Get Comments() As String
+    Property Get CompanyName() As String
+    Property Get FileDescription() As String
+    Property Get LegalCopyright() As String
+    Property Get LegalTrademarks() As String
+    Property Get ProductName() As String
+    Property Get LastBuildPath() As String
+    Property Get PrevInstance() As Boolean
+    Property Get Title() As String
+    Property Let Title(ByVal Value As String)
+    Property Get HelpFile() As String
+    Property Let HelpFile(ByVal Value As String)
+    Property Get LogMode() As LogModeConstants      ' FIXME Currently only supports vbLogOff and vbLogAuto for IDE detection purposes.
+End Interface
+ 
+[ InterfaceId ("33AD4F49-6699-11CF-B70C-00AA0060D393") ]
+' FIXME need to match vtable layout to VB6 version
+Public Interface _Clipboard Extends stdole.IUnknown        ' FIXME needs to suppot IDispatch
+    Sub Clear()
+    ' GetData           FIXME missing
+    ' SetData           FIXME missing
+    Function GetText([ TypeHint (ClipboardConstants) ] Optional ByVal Format As Variant) As String
+    Sub SetText(ByVal Str As String, [ TypeHint (ClipboardConstants) ] Optional ByVal Format As Variant)
+    Function GetFormat([ TypeHint (ClipboardConstants) ] ByVal Format As Integer) As Boolean
+End Interface
+
+[ InterfaceId ("33AD4F41-6699-11CF-B70C-00AA0060D393") ]
+' FIXME need to match vtable layout to VB6 version
+Public Interface _Screen Extends stdole.IUnknown        ' FIXME needs to suppot IDispatch
+    Property Get Height() As Single
+    Property Get FontCount() As Integer
+    Property Get Fonts(ByVal Index As Integer) As String
+    Property Get ActiveForm() As Form
+    Property Get ActiveControl() As Control
+    [ TypeHint (MousePointerConstants) ] Property Get MousePointer() As Integer
+    Property Let MousePointer([ TypeHint (MousePointerConstants) ] ByVal Value As Integer)
+    Function TwipsPerPixelX() As Single
+    Function TwipsPerPixelY() As Single
+    Property Let MouseIcon(ByVal Value As StdPicture)
+    Property Get MouseIcon() As StdPicture
+    Property Set MouseIcon(ByVal Value As StdPicture)
+    Property Get Width() As Single
+End Interface
+
+[ InterfaceId ("7AD780F0-BF29-4EE3-B58A-834A40C14F3B") ]    ' not official IID, VB6 uses this via IDispatch only
+Public Interface _Forms Extends stdole.IUnknown        ' FIXME needs to support IDispatch
+	Property Get Count() As Long
+    [ DispId (0) ] Property Get Item(ByVal Index As Long) As Form
+    Function Add(ByVal Name As String) As Form
+End Interface
+
+[ InterfaceId ("FCFB3D22-A0FA-1068-A738-08002B3371B5") ]
+' FIXME need to match vtable layout to VB6 version
+Public Interface VBGlobal Extends stdole.IUnknown
+    Property Get App() As App
+    Property Get Clipboard() As Clipboard
+    Property Get Screen() As Screen
+    Property Get Forms() As _Forms      ' VB6 uses late bound Object here
+    Function LoadResPicture(ByVal id As Variant, [ TypeHint (LoadResConstants) ] ByVal restype As Integer, Optional ByVal width As Long = 0, Optional ByVal height As Long) As stdole.IPictureDisp
+    Function LoadResData(ByVal id As Variant, ByVal Type As Variant) As Variant
+    Function LoadResString(ByVal id As Long) As String
+    Function LoadResIdList(ByVal Type As Variant) As Variant
+    Function LoadPicture(Optional ByVal FileName As Variant, [ TypeHint (LoadPictureSizeConstants) ] Optional ByVal Size As Variant, [ TypeHint (LoadPictureColorConstants) ] Optional ByVal ColorDepth As Variant, Optional ByVal X As Variant, Optional ByVal Y As Variant) As stdole.IPictureDisp
+    [ SpecialCompilerBinding(1) ] Sub Load(ByVal object As Object)
+    [ SpecialCompilerBinding(2) ] Sub Unload(ByVal object As Object)
+
+    [ Unimplemented ] Property Get Printer() As Printer
+    [ Unimplemented ] Property Let Printer(ByVal rhs As Printer)
+    [ Unimplemented ] Property Get Printers() As Object
+End Interface
+
+[ CoClassId ("33AD4F78-6699-11CF-B70C-00AA0060D393") ]
+[ COMCreatable (False) ]
+Public CoClass App
+    [ Default ] Interface _App
+    '[Default, Source] Interface AppEvents         ' FIXME empty events class
+End CoClass
+ 
+[ CoClassId ("33AD4F48-6699-11CF-B70C-00AA0060D393") ]
+[ COMCreatable (False) ]
+Public CoClass Clipboard
+    [ Default ] Interface _Clipboard
+    '[Default, Source] Interface ClipboardEvents         ' FIXME empty events class
+End CoClass
+
+[ CoClassId ("33AD4F40-6699-11CF-B70C-00AA0060D393") ]
+[ COMCreatable (False) ]
+Public CoClass Screen
+    [ Default ] Interface _Screen
+    '[Default, Source] Interface ScreenEvents         ' FIXME empty events class
+End CoClass
+
+[ CoClassId ("FCFB3D23-A0FA-1068-A738-08002B3371B5") ]
+[ CoClassCustomConstructor ("[_HiddenModule].CreateGlobalObject") ]
+[ AppObject ]
+Public CoClass Global
+    [ Default ] Interface VBGlobal
+End CoClass

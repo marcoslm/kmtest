@@ -1,0 +1,473 @@
+[ Description ("A Win32 native Image") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Image??.png") ]
+[ ClassId ("33AD4F90-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("42D5A8E1-CA7E-4A5F-B9A0-B7564740A0A5") ]    ' FIXME implement {33AD4F91-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Image
+             
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlWindowlessNoFocus Via _BaseControl = New WinNativeFormsBase.BaseControlWindowlessNoFocus(ControlTypeConstants.vbImage)
+        Implements IUnsupportedInterface ' must be LAST interface
+        
+    #End Region
+        
+    #Region "STATE"
+
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbNoBorder
+        [ Description ("") ]
+            Public Stretch As Boolean = False
+        [ Description ("") ]
+            Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+            Public ToolTipText As String                ' FIXME, needs to be supported in the engine
+            Public Enabled As Boolean = True
+
+        [ Serialize (False) ]
+            Private InternalPicture As StdPicture
+            
+        [ Serialize (True, "Picture") ]
+        [ CustomDesigner ("designer_PictureBytes") ]
+            Private ReadOnly PictureINIT() As Byte
+            Private IsRegisteredWithContainerForOLEDragDrop As Boolean = False
+            
+            Public PictureDpiScaling As Boolean = True
+            
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+            
+        [ Unimplemented ]
+            Public DataField As String
+        [ Unimplemented ]
+            Public DataFormat As StdDataFormat
+        [ Unimplemented ]
+            Public DataMember As String
+        [ Unimplemented ]
+        [ Serialize (True, "DataSource") ]          ' Any string value is allowed, gets resolved at runtime to a Form.Controls(DataSourceName)
+            Public DataSourceINIT As String
+
+        Public OLEDragMode As VBRUN.OLEDragConstants
+        Public OLEDropMode As VBRUN.OLEDropConstants
+        Public WhatsThisHelpID As Long
+
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataChanged As Boolean
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataSource As DataSource         ' See DataSourceINIT
+            
+        [ Description ("") ]
+            Public MousePointer As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+        [ Serialize (True, "MouseIcon") ]
+        [ CustomDesigner ("designer_IconBytes") ]
+            Private ReadOnly MouseIconINIT() As Byte
+        [ Serialize (False) ]
+            Public MouseIcon As StdPicture
+
+        Public Sub OLEDrag()
+            CommonOLEDrag(Me)
+        End Sub
+                    
+        Public Sub ShowWhatsThis()
+            HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+        End Sub
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Click()
+        [ Description ("") ]
+            Event DblClick()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                'InitializeDefaultValues
+            End If
+            
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext)
+            Me.RootWindowElement.RequiresWindowlessPainting(True)
+            
+            If IsArrayInitialized(Me.PictureINIT) AndAlso (UBound(Me.PictureINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                Set InternalPicture = Global.LoadPicture(Me.PictureINIT)
+            End If
+            
+            If IsArrayInitialized(Me.MouseIconINIT) AndAlso (UBound(Me.MouseIconINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                On Error Resume Next
+                Set Me.MouseIcon = Global.LoadPicture(Me.MouseIconINIT)
+            End If
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+            
+            If IsRegisteredWithContainerForOLEDragDrop = True Then
+                On Error Resume Next
+                Me.Container.RegisterOLEDragDrop(False)
+                IsRegisteredWithContainerForOLEDragDrop = False
+            End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            SyncOLEDropMode()
+            RaiseEvent Initialize()
+        End Sub
+                
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+                
+            If Visible = False And Me.IsDesignMode = False Then Exit Sub
+                
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API 
+                            
+                Dim rect As WinNativeFormsBASE.RECT
+                rect.Left = Me.PixelsLeft * RootWindowElement.UnitPixelScale
+                rect.Top = Me.PixelsTop * RootWindowElement.UnitPixelScale
+                rect.Right = rect.Left + (Me.PixelsWidth * RootWindowElement.UnitPixelScale)
+                rect.Bottom = rect.Top + (Me.PixelsHeight * RootWindowElement.UnitPixelScale)
+
+                If (rect.Right > rect.Left) And (rect.Bottom > rect.Top) Then
+                    Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, 1)
+                    
+                    If BorderStyle = vbFixedSingleBorder Then
+                        Dim bfStyle As Long = BorderStyles.BDR_SUNKENOUTER Or BorderStyles.BDR_SUNKENINNER
+                        Dim bfFlags As Long = BorderFlags.BF_RECT Or BorderFlags.BF_ADJUST
+                        bfFlags += If(Appearance = vbAppearFlat, BorderFlags.BF_MONO, 0)
+                        WinNativeFormsBASE.DrawEdge(ps.hdc, rect, bfStyle, bfFlags)
+                    End If
+                    
+                    If Me.InternalPicture IsNot Nothing Then
+                        
+                        Dim Picture As OlePicture = Me.InternalPicture
+                        
+                        Const STRETCH_HALFTONE = 4
+                        Dim OldStretchMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(ps.hdc, STRETCH_HALFTONE)
+                        WinNativeFormsBASE.WindowsAPI.GDI32_SetBrushOrigin(ps.hdc, 0, 0, 0)
+                        
+                        Dim hrgn As LongPtr = WinNativeFormsBASE.CreateRectRgn(rect.Left, rect.Top, rect.Right, rect.Bottom)
+                        WinNativeFormsBASE.SelectClipRgn(ps.hdc, hrgn)
+        
+                        Dim DrawWidth As Long = rect.Right - rect.Left
+                        Dim DrawHeight As Long = rect.Bottom - rect.Top
+                        
+                        If Stretch = False Then
+                            If (Picture.Type = vbPicTypeEMetafile) Or (Picture.Type = vbPicTypeMetafile) Then
+                                ' Picture.Height/Width are not DPI scaled by OLE here.  They are just a guide anyway, so we just use it as an aspect ratio
+                                Dim aspectRatio As Double = Picture.Height / Picture.Width
+                                DrawHeight = DrawWidth * aspectRatio
+                            Else
+                                ScaleOLEPictureDimensionsToPixels(Picture.Type, Picture.Width, DrawWidth, Picture.Height, DrawHeight)
+                                If PictureDpiScaling = True Then
+                                    DrawWidth *= Me.RootWindowElement.UnitPixelScale
+                                    DrawHeight *= Me.RootWindowElement.UnitPixelScale
+                                End If
+                            End If
+                        End If
+                        
+                        Picture.Render CLngPtr(ps.hdc), rect.Left, rect.Top, DrawWidth, DrawHeight, 0&, Picture.Height, Picture.Width, -Picture.Height, ByVal CLngPtr(0&)
+                        
+                        WinNativeFormsBASE.SelectClipRgn(ps.hdc, 0)
+                        WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(ps.hdc, OldStretchMode)
+
+                    Else
+                        
+                        If Me.IsDesignMode Then
+                            Dim brush As LongPtr = GDI32_CreateHatchBrush(HS_DIAGCROSS, vbRed)
+                            Dim invisiblePen As LongPtr = GDI32_CreatePen(PS_NULL, 1, 0)
+                            Dim origPen2 As LongPtr = WinNativeFormsBASE.SelectObject(ps.hdc, invisiblePen)
+                            Dim oldBrush2 As LongPtr = WinNativeFormsBASE.SelectObject(ps.hdc, If(brush <> 0, brush, GDI32_GetStockObject(NULL_BRUSH)))
+                            WinNativeFormsBASE.Rectangle(ps.hdc, rect.Left, rect.Top, rect.Right, rect.Bottom)
+                            WinNativeFormsBASE.SelectObject(ps.hdc, oldBrush2)
+                            WinNativeFormsBASE.SelectObject(ps.hdc, origPen2)
+                            WinNativeFormsBASE.DeleteObject(invisiblePen)
+                        End If
+                        
+                    End If
+                
+                End If
+                
+            Me.RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+        End Sub
+        
+        Private Sub HandleCommand(ByVal NotificationCode As StaticNotifications, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+                
+            Select Case NotificationCode
+                Case StaticNotifications.STN_CLICKED
+                    If Me.Enabled = True Then RaiseEvent Click()
+            End Select
+        End Sub
+
+        Private Sub HandleMouseDoubleClick(ByVal Button As VBRUN.MouseButtonConstants, _
+                                            ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDoubleClick
+                
+            If Me.Enabled = True Then RaiseEvent DblClick()
+        End Sub
+
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+                BeginMouseCapture(Me.RootWindowElement)
+                If Me.Enabled = True Then RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+                
+                If Me.OLEDragMode = vbOLEDragAutomatic Then
+                	If Me.Picture IsNot Nothing Then
+                        Dim mousePoint As POINT
+                        WinNativeFormsBASE.GetCursorPos(mousePoint)
+                        WinNativeFormsBASE.ScreenToClient(Me.RootWindowElement.ContainerHWND, mousePoint)
+
+                        If WinNativeFormsBASE.DragDetect(Me.RootWindowElement.ContainerHWND, mousePoint.x And &HFFFF&, mousePoint.y And &HFFFF&) <> 0 Then
+                            If CommonOLEDrag(Me, Me.Picture, False, True) = vbDropEffectMove Then
+                            	Set Me.Picture = Nothing
+                            End If
+                            'SwallowMessage = True
+                        Else
+                            'MouseDownNeedsManualRelease = True
+                        End If
+                    End If
+                End If
+            End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            If Me.Enabled = True Then RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+
+            Dim WasCaptured As Boolean = EndMouseCapture()
+            If Me.Enabled = True Then RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            If WasCaptured And IsInRect(X / Me.ControlContext.GetScaleModePixelsMultiplierX, Y / Me.ControlContext.GetScaleModePixelsMultiplierY) And (Me.Enabled = True) Then RaiseEvent Click()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+                
+        Private Sub SignificantChange() _
+                Handles Appearance.OnPropertyLet, _
+                        BorderStyle.OnPropertyLet, _
+                        Enabled.OnPropertyLet, _
+                        Stretch.OnPropertyLet, _
+                        PictureDpiScaling.OnPropertyLet
+            
+            Me.Refresh
+        End Sub
+
+        Public Sub Refresh()
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.ControlContext.WindowlessRefresh()
+            
+            'Me.ControlContext.EnsureFormIsLoaded()
+            'WinNativeFormsBASE.WindowsAPI.USER32_RedrawWindow(Me.RootWindowElement, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE)
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BorderStyle.OnPropertyGet, _
+        	            Stretch.OnPropertyGet, _
+                        InternalPicture.OnPropertyGet
+                        
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Picture() As StdPicture
+            Return InternalPicture
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Set Picture(Value As StdPicture)
+            Set InternalPicture = Value
+            SignificantChange()
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Picture(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+            Set InternalPicture = Value
+            SignificantChange()
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Variant
+            If Me.Picture IsNot Nothing Then
+            	Return Me.Picture
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(ByVal Value As Variant)
+            Set Me.Picture = Value
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Set _Default(ByVal Value As Variant)
+            Set Me.Picture = Value
+        End Property
+        
+        Private Sub ToolTipChanged() Handles ToolTipText.OnPropertyLet
+            Me.RootWindowElement.ToolTipChanged()
+        End Sub
+        
+        Private Sub MousePointerChanged() _
+                Handles MousePointer.OnPropertyLet, _
+                        MouseIcon.OnPropertyLet, _
+                        MouseIcon.OnPropertySet
+                        
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.MousePointerChanged()
+        End Sub
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            On Error Resume Next
+            If Me.OLEDropMode <> OLEDropConstants.vbOLEDropNone Then
+            	If IsRegisteredWithContainerForOLEDragDrop = False Then
+                	Me.Container.RegisterOLEDragDrop(True)
+                    IsRegisteredWithContainerForOLEDragDrop = True
+            	End If
+            Else
+            	If IsRegisteredWithContainerForOLEDragDrop = True Then
+                	Me.Container.RegisterOLEDragDrop(False)
+                    IsRegisteredWithContainerForOLEDragDrop = False
+            	End If
+            End If
+        End Sub
+
+        Private Sub HandleResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, _
+                                               ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long) _
+                    Handles RootWindowElement.ResizeWindowless
+                    
+            Dim containerHwnd As LongPtr = Me.Container.hwnd
+            If containerHwnd = 0 Then
+                ' Windowless UC container...  FIXME need to pass on the RECTs to refine the InvalidateRect passed to the UC site
+                On Error Resume Next
+                Me.Container.InternalRaiseViewChanged()
+                Exit Sub
+            End If
+
+            Dim rect As WinNativeFormsBASE.RECT
+            
+            If oldWidth <> 0 And oldHeight <> 0 Then
+                rect.Left = oldLeft
+                rect.Top = oldTop
+                rect.Right = oldLeft + oldWidth
+                rect.Bottom = oldTop + oldHeight
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+
+            If newWidth <> 0 And newHeight <> 0 Then
+                rect.Left = newLeft
+                rect.Top = newTop
+                rect.Right = newLeft + newWidth
+                rect.Bottom = newTop + newHeight
+                WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+            End If
+        End Sub
+        
+        Private Sub IUnsupportedInterface_UnsupportedInterfaceRequested(ByRef iid As WinNativeFormsBASE.GUID2, ByRef out As stdole.IUnknown) Implements IUnsupportedInterface.UnsupportedInterfaceRequested
+            Dim guidString As String = GuidToString(iid)
+            
+            ' We should really implement the interfaces properly, but for now this will do
+            If guidString = "{7BF80980-BF32-101A-8BBB-00AA00300CAB}" Then       ' IPicture  FIXME shit
+                Dim iPicture As stdole.IPicture = Me.Picture
+                Set out = iPicture
+            ElseIf guidString = "{7BF80981-BF32-101A-8BBB-00AA00300CAB}" Then       ' IPictureDisp FIXME shit
+                Dim iPictureDisp As stdole.IPictureDisp = Me.Picture
+                Set out = iPictureDisp
+            End If
+        End Sub
+        
+    #End Region
+    
+End Class

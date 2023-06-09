@@ -1,0 +1,281 @@
+[ ClassId ("628679CC-8C97-4AA2-9C60-F112F1E82FFD") ]
+[ InterfaceId ("BC11FDD9-D213-454D-AF5A-2CDA348D18CB") ]
+[ COMCreatable (False) ]
+Private Class BaseControlFocusableNoFont
+
+    Implements BaseControlRect Via BaseControlRect
+
+    [ Serialize (False) ]
+        Private RootWindowElementBase As WindowsControls.WindowElement
+    [ Description ("Determines how the sides of this control are anchored to its container") ]
+        Public ReadOnly Anchors As Anchors = New Anchors
+    [ Description ("Adjusts how the control is docked inside of its container") ]
+        Public ReadOnly Dock As VBRUN.DockModeConstants = VBRUN.DockModeConstants.vbDockNone
+    [ Description ("Adjusts the TAB key order of this control at runtime") ]
+        Public TabIndex As Long
+    [ Description ("") ]
+        Public MousePointer As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+    [ Serialize (True, "MouseIcon") ]
+    [ CustomDesigner ("designer_IconBytes") ]
+        Private ReadOnly MouseIconINIT() As Byte
+    [ Serialize (False) ]
+        Private InternalMouseIcon As StdPicture
+        Private IgnoreMousePointerChanged As Boolean
+        
+    [ Serialize (True, "DragIcon") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+    [ Description ("") ]
+        Private ReadOnly DragIconINIT() As Byte
+    [ Serialize (False) ]
+    [ Description ("") ]
+        Public DragIcon As StdPicture
+        Public DragMode As VBRUN.DragModeConstants
+        
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    [ Serialize (True, "Visible") ]
+        Private VisibleINIT As Boolean = True
+    [ Description ("") ]
+    [ Serialize (True, "Enabled") ]
+        Private EnabledINIT As Boolean = True
+    [ Description ("Indicates if the user can use the TAB key to focus on this control at runtime") ]
+    [ Serialize (True, "TabStop") ]
+        Friend TabStopINIT As Boolean = True
+        
+        Private CurrentBackBrush As LongPtr
+        Private CurrentBackBrushColor As OLE_COLOR
+        
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControlRect = New BaseControlRect(ControlType)
+    End Sub
+    
+    Sub Class_Terminate()
+       WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+    End Sub
+
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                        ByVal ClassName As String, ByVal Caption As String, _
+                                        ByVal WindowStyles As Long, ByVal ExtendedStyles As Long, _
+                                        Optional ByVal SubClass As Boolean = False) As WindowElement
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        WindowStyles += If(Me.EnabledINIT, 0, WS_DISABLED)
+        WindowStyles += If(Me.VisibleINIT, WS_VISIBLE, 0)
+        WindowStyles += If(Me.TabStopINIT, WS_TABSTOP, 0)
+        Set Me.RootWindowElementBase = ControlContext.CreateWindowElement(ClassName, Caption, WindowStyles, ExtendedStyles, SubClass)
+
+        If IsArrayInitialized(Me.MouseIconINIT) AndAlso (UBound(Me.MouseIconINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            IgnoreMousePointerChanged = True
+            Set Me.MouseIcon = [_HiddenModule].LoadPictureInternal(Me.MouseIconINIT)
+            IgnoreMousePointerChanged = False
+        End If
+        
+        If IsArrayInitialized(Me.DragIconINIT) AndAlso (UBound(Me.DragIconINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set Me.DragIcon = [_HiddenModule].LoadPictureInternal(Me.DragIconINIT)
+        End If
+        
+        Return Me.RootWindowElementBase
+    End Function
+         
+    [ Serialize (False) ]
+    [ Description ("") ]
+    [ DispId (-854) ]
+    Property Get TabStop() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_TABSTOP)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    [ DispId (-854) ]
+    Property Let TabStop(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_SetStyleFlag(Me.RootWindowElementBase, WS_TABSTOP, Value)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Get Enabled() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return Not WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_DISABLED)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Let Enabled(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_EnableWindow(Me.RootWindowElementBase, Value)
+    End Property
+
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Get Visible() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_VISIBLE)
+    End Property
+    
+    Private DeclareWide PtrSafe Function UpdateWindow Lib "user32" (ByVal hwnd As LongPtr) As Long
+    
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Let Visible(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_ShowWindow(Me.RootWindowElementBase, CLng(If(Value, SW_NORMAL, SW_HIDE)))
+        
+        If Dock <> DockModeConstants.vbDockNone Then
+            ' FIXME bodge, this forces layout to be recalculated
+            WindowsAPI.USER32_SendMessageHandle(WindowsAPI.USER32_GetParent(Me.RootWindowElementBase), WM_SIZE, -1, 0)
+        End If
+        
+        If Value Then
+            UpdateWindow(Me.RootWindowElementBase.Handle)
+        End If
+    End Property
+    
+    Public Sub SetFocus()
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_SetFocus(Me.RootWindowElementBase)
+    End Sub
+    
+    ' Public Sub Refresh()
+    '     Me.ControlContext.EnsureFormIsLoaded()
+    '     WindowsAPI.USER32_RedrawWindow(Me.RootWindowElementBase, 0, 0, RDW_ERASE Or RDW_INVALIDATE Or RDW_UPDATENOW)
+    ' End Sub
+
+    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+
+    [ DispId (-856) ]
+    Public Property Get Container() As Object
+        On Error Resume Next
+        Me.ControlContext.EnsureFormIsLoaded()
+    	Return Me.RootWindowElementBase.Container
+    End Property
+    
+    Private Sub MousePointerChanged() _
+            Handles MousePointer.OnPropertyLet
+            
+        If IgnoreMousePointerChanged Then Exit Sub
+        Me.ControlContext.EnsureFormIsLoaded()
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.MousePointerChanged()
+    End Sub
+
+    Private Sub OnTouchedFormProperties() _
+            Handles Anchors.OnPropertyGet, _
+                    Dock.OnPropertyGet, _
+                    TabIndex.OnPropertyGet, _
+                    TabIndex.OnPropertyLet, _
+                    MousePointer.OnPropertyGet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
+        Me.ControlContext.EnsureFormIsLoaded()
+        If InternalMove(Me, Left, Top, Width, Height) Then
+        	Me.ControlContext.ChangedPosition()
+        End If
+    End Sub
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Get Left() As Double
+        Return Me.ControlContext.GetScaledLeft
+    End Property
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Let Left(ByVal Value As Double)
+        Me.ControlContext.SetScaledLeft(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Top() As Double
+        Return Me.ControlContext.GetScaledTop
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Top(ByVal Value As Double)
+        Me.ControlContext.SetScaledTop(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Width() As Double
+        Return Me.ControlContext.GetScaledWidth
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Width(ByVal Value As Double)
+        Me.ControlContext.SetScaledWidth(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Height() As Double
+        Return Me.ControlContext.GetScaledHeight
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Height(ByVal Value As Double)
+        Me.ControlContext.SetScaledHeight(Value)
+    End Property
+    
+    Public Sub Drag([ TypeHint (DragConstants) ] Optional ByVal Action As Variant)
+    	If IsMissing(Action) Then Action = DragConstants.vbBeginDrag
+        Select Case Action
+        	Case DragConstants.vbBeginDrag
+                Me.RootWindowElementBase.StartDrag
+            Case DragConstants.vbCancel
+                Me.RootWindowElementBase.CancelDrag
+            Case DragConstants.vbEndDrag
+                Me.RootWindowElementBase.EndDrag
+            Case Else
+                Err.Raise 5
+        End Select
+    End Sub
+    
+    Friend Sub BaseSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, ByRef DragDropHandler As OLEDragDropHandler, ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+        CommonSyncOLEDropMode(RootThis, OLEDropMode, DragDropHandler, ControlContext, RootWindowElementBase, IsContainer, AllowedAutomatic)
+    End Sub
+    
+    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+        CommonZOrder(Position, Me.RootWindowElementBase.Handle)
+    End Sub
+    
+    Public Sub InternalOLEDrag(ByVal RootThis As Object)
+        CommonOLEDrag(RootThis)
+    End Sub
+    
+    [ Serialize (False) ]
+    Public Property Get MouseIcon() As StdPicture
+        Return InternalMouseIcon
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+    
+    Friend Function CreateBackBrush(ByVal Color As OLE_COLOR) As LongPtr
+        If Color <> Me.CurrentBackBrushColor Then
+            If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+                Me.CurrentBackBrush = WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(Color))
+                Me.CurrentBackBrushColor = Color
+        End If
+        Return Me.CurrentBackBrush
+    End Function
+
+End Class

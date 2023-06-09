@@ -1,0 +1,610 @@
+[ Description ("A Win32 native Label") ]
+[ WindowsControl ("/miscellaneous/ICONS??/Label??.png") ]
+[ ClassId ("33AD4ED8-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("A44614D4-CFFF-4E35-AFE1-CC2AF376B234") ]    ' FIXME implement {33AD4ED9-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Label
+
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlWindowlessNoFocus Via _BaseControl = New WinNativeFormsBase.BaseControlWindowlessNoFocus(ControlTypeConstants.vbLabel)
+    
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbNoBorder    ' FIXME
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vb3DFace   ' FIXME this is linked to Appearance
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonText   ' FIXME this is linked to Appearance
+        [ Description ("") ]
+            Public UseMnemonic As Boolean = True
+        [ Description ("") ]
+        [ Serialize (True, "Caption") ]
+            Public CaptionINIT As String
+        [ Description ("") ]
+            Public Alignment As VBRUN.AlignmentConstants = VBRUN.AlignmentConstants.vbLeftJustify
+
+        [ Serialize (False) ]
+            Public WithEvents Font As StdFont
+            
+            [ Serialize (True, "FontBold") ]
+            Private FontBoldINIT As Boolean = False
+            [ Serialize (True, "FontItalic") ]
+            Private FontItalicINIT As Boolean = False
+            [ Serialize (True, "FontName") ]
+            Private FontNameINIT As String = "Segoe UI"
+            [ Serialize (True, "FontSize") ]
+            Private FontSizeINIT As Single = 8
+            [ Serialize (True, "FontStrikethru") ]
+            Private FontStrikethruINIT As Boolean = False
+            [ Serialize (True, "FontUnderline") ]
+            Private FontUnderlineINIT As Boolean = False
+            
+            Public Property Get FontBold() As Boolean
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Bold
+            End Property
+            Public Property Let FontBold(ByVal Value As Boolean)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Bold = Value
+            End Property
+            
+            Public Property Get FontItalic() As Boolean
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Italic
+            End Property
+            Public Property Let FontItalic(ByVal Value As Boolean)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Italic = Value
+            End Property
+            
+            Public Property Get FontName() As String
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Name
+            End Property
+            Public Property Let FontName(ByVal Value As String)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Name = Value
+            End Property
+            
+            Public Property Get FontSize() As Single
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Size
+            End Property
+            Public Property Let FontSize(ByVal Value As Single)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Size = Value
+            End Property
+            
+            Public Property Get FontStrikethru() As Boolean
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Strikethrough
+            End Property
+            Public Property Let FontStrikethru(ByVal Value As Boolean)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Strikethrough = Value
+            End Property
+            
+            Public Property Get FontUnderline() As Boolean
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.Font.Underline
+            End Property
+            Public Property Let FontUnderline(ByVal Value As Boolean)
+                If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+                Me.Font.Underline = Value
+            End Property
+            
+            [ Description ("Adjusts the TAB key order of this control at runtime") ]
+            [ Unimplemented ]
+            Public TabIndex As Long     ' despite not being focusable, useful for use with mnemonic access keys, so tabbing is still in order
+
+            Public ToolTipText As String                ' FIXME, needs to be supported in the engine
+            Public Enabled As Boolean = True
+
+        [ Description ("") ]
+            Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d   ' FIXME
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+            Private FontHandle As LongPtr
+            Private InternalCaption As String
+            Private IsRegisteredWithContainerForOLEDragDrop As Boolean = False
+            
+        [ Unimplemented ]
+            Public AutoSize As Boolean = False  ' this is correct for import purposes.
+
+            Public BackStyle As BackFillStyleConstants = BackFillStyleConstants.vbBFOpaque
+        [ Unimplemented ]
+            Public DataField As String
+        [ Unimplemented ]
+            Public DataFormat As StdDataFormat
+        [ Unimplemented ]
+            Public DataMember As String
+        [ Unimplemented ]
+        [ Serialize (True, "DataSource") ]          ' Any string value is allowed, gets resolved at runtime to a Form.Controls(DataSourceName)
+            Public DataSourceINIT As String
+        [ Unimplemented ]
+            Public LinkItem As String
+        [ Unimplemented ]
+            Public LinkMode As VBRUN.LinkModeConstants
+        [ Unimplemented ]
+            Public LinkTopic As String
+        [ Unimplemented ]
+            Public LinkTimeout As Long = 50
+        
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+        [ Unimplemented ]
+            Public RightToLeft As Boolean
+
+            Public WhatsThisHelpID As Long
+
+        [ Unimplemented ]
+            Public WordWrap As Boolean
+
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataChanged As Boolean
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public DataSource As DataSource         ' See DataSourceINIT
+
+        [ Description ("") ]
+            Public MousePointer As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+        [ Serialize (True, "MouseIcon") ]
+        [ CustomDesigner ("designer_IconBytes") ]
+            Private ReadOnly MouseIconINIT() As Byte
+        [ Serialize (False) ]
+            Public MouseIcon As StdPicture
+            
+        [ Unimplemented ]
+            Public Sub LinkExecute(ByVal Command As String)
+            End Sub
+
+        [ Unimplemented ]
+            Public Sub LinkPoke()
+            End Sub
+            
+        [ Unimplemented ]
+            Public Sub LinkRequest()
+            End Sub
+
+        [ Unimplemented ]
+            Public Sub LinkSend()
+            End Sub
+
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+            
+        Public Sub ShowWhatsThis()
+            HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+        End Sub
+            
+    #End Region
+
+    #Region "EVENTS"
+
+        [ Description ("") ]
+            Event Change()
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Click()
+        [ Description ("") ]
+            Event DblClick()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        [ Unimplemented ] Event LinkClose()
+        [ Unimplemented ] Event LinkError(LinkErr As Integer)
+        [ Unimplemented ] Event LinkNotify()
+        [ Unimplemented ] Event LinkOpen(Cancel As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+
+    #End Region
+               
+    #Region "MEMBERS"
+    
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	CaptionINIT = "Label"
+            AutoSize = True     ' for new controls, this should be True, as per VB
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext)
+            Me.RootWindowElement.RequiresWindowlessPainting(True)
+            
+            Me.InternalCaption = CaptionINIT
+            
+            If IsArrayInitialized(Me.MouseIconINIT) AndAlso (UBound(Me.MouseIconINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                On Error Resume Next
+                Set Me.MouseIcon = Global.LoadPicture(Me.MouseIconINIT)
+            End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+            
+            SyncOLEDropMode()
+            InitializeOLEFont()
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+'            Stop
+            If Me.FontHandle <> 0 Then WinNativeFormsBASE.GDI32_DeleteObject(Me.FontHandle)
+            Me.FontHandle = 0
+            Set Me.Font = Nothing
+            ' disconnect anything that causes a circular reference here
+            
+            If IsRegisteredWithContainerForOLEDragDrop = True Then
+                On Error Resume Next
+                Me.Container.RegisterOLEDragDrop(False)
+                IsRegisteredWithContainerForOLEDragDrop = False
+            End If
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+                                
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As String
+            Return Me.Caption
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(ByVal Value As String)
+            Me.Caption = Value
+        End Property
+        
+        Private Sub ColorsChanged() _
+                Handles BackColor.OnPropertyLet, _
+                        ForeColor.OnPropertyLet, _
+                        BackStyle.OnPropertyLet, _
+                        UseMnemonic.OnPropertyLet, _
+                        Alignment.OnPropertyLet, _
+                        Appearance.OnPropertyLet, _
+                        BackStyle.OnPropertyLet, _
+                        BorderStyle.OnPropertyLet, _
+                        Enabled.OnPropertyLet
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.ControlContext.WindowlessRefresh()
+        End Sub
+        
+              
+        [ Serialize (False) ]
+        Public Property Get Caption() As String
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return Me.InternalCaption
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Caption(ByVal NewValue As String)
+            Me.ControlContext.EnsureFormIsLoaded()
+            If Me.InternalCaption <> NewValue Then
+                Me.InternalCaption = NewValue
+                Me.ControlContext.WindowlessRefresh()
+                RaiseEvent Change
+            End If
+        End Property
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BackColor.OnPropertyGet, _
+        	            ForeColor.OnPropertyGet, _
+        	            BorderStyle.OnPropertyGet, _
+                        UseMnemonic.OnPropertyGet, _
+                        Font.OnPropertyGet, _
+                        Enabled.OnPropertyGet
+
+            'Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+                
+        Private Sub InitializeOLEFont()
+            Dim NewFont As StdFont = New StdFont
+            With NewFont
+                .Bold = Me.FontBoldINIT
+                .Italic = Me.FontItalicINIT
+                .Name = Me.FontNameINIT
+                .Size = Me.FontSizeINIT
+                .Strikethrough = Me.FontStrikethruINIT
+                .Underline = Me.FontUnderlineINIT
+            End With
+            Dim ifont As IFont = NewFont
+            ifont.SetRatio(RootWindowElement.DPI, 2540)
+            Set Me.Font = NewFont
+            SyncFontHandle()
+        End Sub
+        
+        Private Function GetFontMetrics() As WinNativeFormsBASE.TEXTMETRIC
+            If Me.Font Is Nothing Then
+                InitializeOLEFont
+            End If
+            
+            Dim font As IFont = Me.Font
+            Dim hdc As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_CreateCompatibleDC()
+            font.SetRatio(RootWindowElement.DPI, 2540)
+            Dim oldFont As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_SelectObject(hdc, font.hFont)
+            WinNativeFormsBASE.WindowsAPI.GDI32_GetTextMetrics(hdc, GetFontMetrics)
+            WinNativeFormsBASE.WindowsAPI.GDI32_SelectObject(hdc, oldFont)
+            WinNativeFormsBASE.WindowsAPI.GDI32_DeleteDC(hdc)
+        End Function
+        
+        Private Sub SyncFontProperties()
+            If Me.Font Is Nothing Then
+                InitializeOLEFont
+            End If
+            SyncFontHandle()
+            Me.ControlContext.WindowlessRefresh()
+        End Sub
+
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+
+            If Visible = False And Me.IsDesignMode = False Then Exit Sub
+
+            Dim brush As LongPtr = 0
+            If Me.BackStyle = vbBFOpaque Then
+                brush = WinNativeFormsBASE.CreateSolidBrush(TranslateColor(BackColor))
+            End If
+            
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API directly
+                
+                Dim rect As WinNativeFormsBASE.RECT
+                rect.Left = Me.PixelsLeft * RootWindowElement.UnitPixelScale
+                rect.Top = Me.PixelsTop * RootWindowElement.UnitPixelScale
+                rect.Right = rect.Left + (Me.PixelsWidth * RootWindowElement.UnitPixelScale)
+                rect.Bottom = rect.Top + (Me.PixelsHeight * RootWindowElement.UnitPixelScale)
+
+                If (rect.Right > rect.Left) And (rect.Bottom > rect.Top) Then
+                    Dim _width As Long = rect.Right - rect.Left
+
+                    'If BorderStyle = vbNoBorder Then
+                        If brush <> 0 Then
+                            WinNativeFormsBASE.USER32_FillRectangle(ps.hdc, rect, brush)
+                        End If
+                    'End If
+                    
+                    Dim actualForeColor As Long = If(Me.Enabled, TranslateColor(ForeColor), TranslateColor(vbGrayText))
+                    Dim oldTextColor As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(ps.hdc, actualForeColor)
+                    Dim oldBackColor As Long = WinNativeFormsBASE.WindowsAPI.SetBkColor(ps.hdc, TranslateColor(BackColor))
+                    Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, 1)
+                    
+                    If BorderStyle = vbFixedSingleBorder Then
+                        Dim bfStyle As Long
+                        Dim bfFlags As Long = BorderFlags.BF_RECT Or BorderFlags.BF_ADJUST
+                        
+                        If Appearance = vbAppearFlat Then
+                            bfFlags += BorderFlags.BF_MONO
+                            bfStyle = BorderStyles.BDR_SUNKENOUTER
+                        Else
+                            bfStyle = BorderStyles.BDR_SUNKENOUTER Or BorderStyles.BDR_SUNKENINNER
+                        End If
+                        WinNativeFormsBASE.DrawEdge(ps.hdc, rect, bfStyle, bfFlags)
+                    End If
+                                    
+                    If Me.FontHandle = 0 Then
+                        InitializeOLEFont()
+                    End If
+                    
+                    Dim oldFont As LongPtr = WinNativeFormsBASE.SelectObject(ps.hdc, Me.FontHandle)
+                    
+                    ' FIXME we should cache the render path                             
+                    Dim render As TextRenderPath = New TextRenderPath(ps.hdc, Me.Caption, True, Me.Alignment, rect.Right - rect.Left)
+                    
+                    If render.HasMnemomnics Then
+                        render.RenderWithMnemonics(ps.hdc, rect, 0, 0, GetFontMetrics().TMAscent, RootWindowElement.UnitPixelScale)
+                    Else
+                        render.Render(ps.hdc, rect, 0, 0)
+                    End If
+                    
+                    
+                ' Debug.Print "---------------------------------"
+                    
+                    WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps.hdc, oldBkMode)
+                    WinNativeFormsBASE.WindowsAPI.SetBkColor(ps.hdc, oldBackColor)
+                    WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(ps.hdc, oldTextColor)
+                    WinNativeFormsBASE.SelectObject(ps.hdc, oldFont)
+                
+                End If
+                
+            Me.RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+
+            If brush <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(brush)
+
+        End Sub
+        
+        Private Sub HandleCommand(ByVal NotificationCode As StaticNotifications, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+                
+            Select Case NotificationCode
+                Case StaticNotifications.STN_CLICKED
+                    If Me.Enabled = True Then RaiseEvent Click()
+            End Select
+        End Sub
+
+        Private Sub HandleMouseDoubleClick(ByVal Button As VBRUN.MouseButtonConstants, _
+                                            ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDoubleClick
+                
+            If Me.Enabled = True Then RaiseEvent DblClick()
+        End Sub
+
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+                BeginMouseCapture(Me.RootWindowElement)
+                If Me.Enabled = True Then RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+            End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            If Me.Enabled = True Then RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+
+            Dim WasCaptured As Boolean = EndMouseCapture()
+            If Me.Enabled = True Then RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+            If WasCaptured And IsInRect(X / Me.ControlContext.GetScaleModePixelsMultiplierX, Y / Me.ControlContext.GetScaleModePixelsMultiplierY) And (Me.Enabled = True) Then RaiseEvent Click()
+        End Sub
+        
+        Private Sub ToolTipChanged() Handles ToolTipText.OnPropertyLet
+            Me.RootWindowElement.ToolTipChanged()
+        End Sub
+        
+        Private Sub MousePointerChanged() _
+                Handles MousePointer.OnPropertyLet, _
+                        MouseIcon.OnPropertyLet, _
+                        MouseIcon.OnPropertySet
+                        
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.MousePointerChanged()
+        End Sub
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            On Error Resume Next
+            If Me.OLEDropMode = OLEDropConstants.vbOLEDropManual Then
+            	If IsRegisteredWithContainerForOLEDragDrop = False Then
+                	Me.Container.RegisterOLEDragDrop(True)
+                    IsRegisteredWithContainerForOLEDragDrop = True
+            	End If
+            ElseIf Me.OLEDropMode = OLEDropConstants.vbOLEDropNone Then
+            	If IsRegisteredWithContainerForOLEDragDrop = True Then
+                	Me.Container.RegisterOLEDragDrop(False)
+                    IsRegisteredWithContainerForOLEDragDrop = False
+            	End If
+            Else
+                Err.Raise 5
+            End If
+        End Sub
+        
+        Private Sub HandleResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, _
+                                               ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long) _
+                    Handles RootWindowElement.ResizeWindowless
+                 
+                Dim containerHwnd As LongPtr = Me.Container.hwnd
+                If containerHwnd = 0 Then
+                	' Windowless UC container...  FIXME need to pass on the RECTs to refine the InvalidateRect passed to the UC site
+                    On Error Resume Next
+                    Me.Container.InternalRaiseViewChanged()
+                    Exit Sub
+                End If
+                    
+                Dim rect As WinNativeFormsBASE.RECT
+                If oldWidth <> 0 And oldHeight <> 0 Then
+                    rect.Left = oldLeft
+                    rect.Top = oldTop
+                    rect.Right = oldLeft + oldWidth
+                    rect.Bottom = oldTop + oldHeight
+                    WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+                End If
+
+                If newWidth <> 0 And newHeight <> 0 Then
+                    rect.Left = newLeft
+                    rect.Top = newTop
+                    rect.Right = newLeft + newWidth
+                    rect.Bottom = newTop + newHeight
+                    WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+                End If
+
+        End Sub
+        
+        Private Sub SyncFontHandle()
+        	Dim ifont As stdole.IFont = Me.Font
+            Dim LF As WinNativeFormsBASE.LOGFONT
+            WinNativeFormsBASE.GetObjectW(ifont.hFont, LenB(LF), LF)
+            LF.LFQuality = WinNativeFormsBASE.CLEARTYPE_QUALITY
+            
+            If Me.FontHandle <> 0 Then WinNativeFormsBASE.GDI32_DeleteObject(Me.FontHandle)
+            Me.FontHandle = WinNativeFormsBASE.CreateFontIndirectW(LF)
+        End Sub
+        
+        Private Sub SyncFont(ByVal PropertyName As String) _
+                Handles Font.FontChanged
+
+            SyncFontHandle()
+            Me.ControlContext.WindowlessRefresh()
+        End Sub
+    
+    #End Region
+
+End Class

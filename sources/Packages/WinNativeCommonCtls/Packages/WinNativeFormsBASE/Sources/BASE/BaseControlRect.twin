@@ -1,0 +1,134 @@
+[ ClassId ("8B0BA607-69F9-4F00-8A79-A28449E7182B") ]
+[ InterfaceId ("39333942-9249-43E7-BABC-EFD97CF98074") ]
+[ COMCreatable (False) ]
+Private Class BaseControlRect
+    
+    Implements BaseControl Via BaseControl
+
+    [ Description ("Adjusts the left position of this control, in pixels, relative to the container") ]
+'    [ BindOnlyIfNoArguments ]
+'    [ DispId (-850) ]
+    [ Serialize (True, "Left") ]
+        Public PixelsLeft As Double
+        Attribute PixelsLeft.VB_VarUserMemId = -850
+    [ Description ("Adjusts top position of this control, in pixels, relative to the container") ]
+'    [ DispId (-851) ]
+    [ Serialize (True, "Top") ]
+        Public PixelsTop As Double
+        Attribute PixelsTop.VB_VarUserMemId = -851
+    [ Description ("Adjusts the width of this control, in pixels") ]
+'    [ DispId (-852) ]
+    [ Serialize (True, "Width") ]
+        Public PixelsWidth As Double
+        Attribute PixelsWidth.VB_VarUserMemId = -852
+    [ Description ("Adjusts the height of this control, in pixels") ]
+'    [ DispId (-853) ]
+    [ Serialize (True, "Height") ]
+        Public PixelsHeight As Double
+        Attribute PixelsHeight.VB_VarUserMemId = -853
+
+        Private LeftCached As Double
+        Private TopCached As Double
+        Private WidthCached As Double
+        Private HeightCached As Double
+     
+    Public Function IsInRect(ByVal X As Double, ByVal Y As Double) As Boolean
+    	Return (X >= 0) AndAlso (Y >= 0) AndAlso (X <= PixelsWidth) AndAlso (Y <= PixelsHeight)
+    End Function
+     
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControl = New BaseControl(ControlType)
+    End Sub
+
+
+    Private Sub OnPropertyChanged_LEFT() _
+            Handles PixelsLeft.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsLeft <> LeftCached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            LeftCached = PixelsLeft
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_TOP() _
+            Handles PixelsTop.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsTop <> TopCached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            TopCached = PixelsTop
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_WIDTH() _
+            Handles PixelsWidth.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsWidth <> WidthCached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            WidthCached = PixelsWidth
+        End If
+    End Sub
+
+    Private Sub OnPropertyChanged_HEIGHT() _
+            Handles PixelsHeight.OnPropertyLet
+
+        Me.ControlContext.EnsureFormIsLoaded()
+        If PixelsHeight <> HeightCached Then
+            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
+            HeightCached = PixelsHeight
+        End If
+    End Sub
+
+    Friend Sub InternalChangeSizeNoEvents(Control As Object, ByVal Width As Double, ByVal Height As Double)
+        PixelsWidth = Width
+    	WidthCached = Width
+        PixelsHeight = Height
+    	HeightCached = Height
+    End Sub
+    
+    Friend Function InternalMove(Control As Object, ByVal Left As Single, ByVal Top As Variant, ByVal Width As Variant, ByVal Height As Variant) As Boolean
+    	If IsMissing(Top) Then
+        	Top = Control.Top
+        End If
+
+        If IsMissing(Width) Then
+        	Width = Control.Width
+        End If
+        
+        If IsMissing(Height) Then
+        	Height = Control.Height
+        End If
+
+'        Stop
+        Dim leftDiff As Double = Abs(Control.Left - Left)
+        Dim topDiff As Double = Abs(Control.Top - Top)
+        Dim widthDiff As Double = Abs(Control.Width - Width)
+        Dim heightDiff As Double = Abs(Control.Height - Height)
+    
+        ' FIXME should take the ScaleMode into account
+        If (leftDiff > 0.05) OrElse _   
+            (topDiff > 0.05) OrElse _
+            (widthDiff > 0.05) OrElse _
+            (heightDiff > 0.05) Then
+            
+        'If (Control.Left <> Left) OrElse _   
+            (Control.Top <> Top) OrElse _
+            (Control.Width <> Width) OrElse _
+            (Control.Height <> Height) Then
+            
+            Control.Left = Left
+            LeftCached = Left
+            Control.Top = Top
+            TopCached = Top
+            Control.Width = Width
+            WidthCached = Width
+            Control.Height = Height
+            HeightCached = Height
+
+            Return True
+        End If
+    End Function
+
+End Class

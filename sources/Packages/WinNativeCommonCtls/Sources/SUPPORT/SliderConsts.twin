@@ -1,0 +1,80 @@
+Module SliderConsts
+
+    Public Enum SliderStyles
+        TBS_AUTOTICKS = &H0001
+        TBS_VERT = &H0002
+        TBS_HORZ = &H0000
+        TBS_TOP = &H0004
+        TBS_BOTTOM = &H0000
+        TBS_LEFT = &H0004
+        TBS_RIGHT = &H0000
+        TBS_BOTH = &H0008
+        TBS_NOTICKS = &H0010
+        TBS_ENABLESELRANGE = &H0020
+        TBS_FIXEDLENGTH = &H0040
+        TBS_NOTHUMB = &H0080
+        TBS_TOOLTIPS = &H0100
+        TBS_REVERSED = &H0200
+        TBS_DOWNISLEFT = &H0400  ' Down=Left and Up=Right (default is Down=Right and Up=Left)
+        TBS_NOTIFYBEFOREMOVE = &H0800  ' Trackbar should notify parent before repositioning the slider due to user action (enables snapping)
+        TBS_TRANSPARENTBKGND = &H1000  ' Background is painted by the parent via WM_PRINTCLIENT
+    End Enum
+    
+    Public Enum SliderMessages
+    	TBM_GETPOS = &H0400
+        TBM_GETRANGEMIN = &H0401
+        TBM_GETRANGEMAX = &H0402
+        TBM_GETTIC = &H0403
+        TBM_SETTIC = &H0404
+        TBM_SETPOS = &H0405
+        TBM_SETRANGE = &H0406
+        TBM_SETRANGEMIN = &H0407
+        TBM_SETRANGEMAX = &H0408
+        TBM_CLEARTICS = &H0409
+        TBM_SETSEL = &H040A
+        TBM_SETSELSTART = &H040B
+        TBM_SETSELEND = &H040C
+        TBM_GETPTICS = &H040E
+        TBM_GETTICPOS = &H040F
+        TBM_GETNUMTICS = &H0410
+        TBM_GETSELSTART = &H0411
+        TBM_GETSELEND = &H0412
+        TBM_CLEARSEL = &H0413
+        TBM_SETTICFREQ = &H0414
+        TBM_SETPAGESIZE = &H0415
+        TBM_GETPAGESIZE = &H0416
+        TBM_SETLINESIZE = &H0417
+        TBM_GETLINESIZE = &H0418
+        TBM_GETTHUMBRECT = &H0419
+        TBM_GETCHANNELRECT = &H041A
+        TBM_SETTHUMBLENGTH = &H041B
+        TBM_GETTHUMBLENGTH = &H041C
+        TBM_SETTOOLTIPS = &H041D
+        TBM_GETTOOLTIPS = &H041E
+        TBM_SETTIPSIDE = &H041F
+        
+        TBM_SETBUDDY = &H0420
+        TBM_GETBUDDY = &H0421
+        TBM_SETPOSNOTIFY = &H0422
+    End Enum
+
+    Public Enum SliderTipSideFlags
+        TBTS_TOP = 0
+        TBTS_LEFT = 1
+        TBTS_BOTTOM = 2
+        TBTS_RIGHT = 3
+    End Enum
+
+    Public Enum SliderTipScroll
+        TB_LINEUP = 0
+        TB_LINEDOWN = 1
+        TB_PAGEUP = 2
+        TB_PAGEDOWN = 3
+        TB_THUMBPOSITION = 4
+        TB_THUMBTRACK = 5
+        TB_TOP = 6
+        TB_BOTTOM = 7
+        TB_ENDTRACK = 8
+    End Enum
+
+End Module

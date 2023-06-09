@@ -1,0 +1,123 @@
+[ COMCreatable (False) ]
+[ ClassId ("8022DE7C-D804-4C08-A5E6-0BC352D5C67F") ]
+[ InterfaceId ("649F9C68-332C-4F02-8819-92534480A12A") ]
+Class ListItems
+    Public ContainerList As ListView
+    Private InternalCollection As Collection = New Collection
+    
+    Public Sub New(lv As ListView)
+    	Set Me.ContainerList = lv
+    End Sub
+    
+    Private Sub Class_Terminate()
+        'Debug.Print "ListItems Class_Terminate"
+    End Sub
+    
+    Friend Function GetInternalCollection() As Collection
+    	Set GetInternalCollection = InternalCollection
+    End Function
+    
+    [ Enumerator ]      ' FIXME currently has to be PUBLIC for [ Enumerator ] to work
+    Public Function _NewEnum() As stdole.IUnknown
+    	Return InternalCollection.[_NewEnum]
+    End Function
+    
+    [ Description ("Adds an item to the listview") ]
+    Public Function Add(Optional ByVal Index As Variant, _ 
+                    Optional ByVal Key As Variant, _
+                    Optional ByVal Text As Variant, _
+                    Optional ByVal Icon As Variant, _
+                    Optional ByVal SmallIcon As Variant) As ListItem
+        Dim AppendToEnd As Boolean
+        If IsMissing(Index) Then
+            Index = &H7FFFFFFF
+            AppendToEnd = True
+        Else
+            Index = CLng(Index)
+            Dim currentCollectionCount As Long = Me.InternalCollection.Count
+            If (Index < 1) Or (Index > (currentCollectionCount + 1)) Then
+            	Err.Raise 35600, , "Index out of bounds"
+            End If
+            If Index = (currentCollectionCount + 1) Then AppendToEnd = True
+        End If
+        Dim keyStr As String = If(IsMissing(Key), vbNullString, Key)
+        Dim textStr As String = If(IsMissing(Text), vbNullString, Text)
+    	Dim NewItem As ListItem = New ListItem(Me.ContainerList, keyStr)
+        If AddItemInternal(NewItem, Index, textStr, 0, 0) = False Then
+        	Err.Raise 5
+        End If
+        If AppendToEnd Then
+        	Me.InternalCollection.Add(NewItem, Key)
+        Else
+            Dim newIndex As Long = NewItem.Index
+            If newIndex > 1 Then
+                Me.InternalCollection.Add(NewItem, Key, , newIndex - 1)
+            Else
+                Me.InternalCollection.Add(NewItem, Key, 1)
+            End If
+            SyncIndices()
+        End If
+        Return NewItem
+    End Function
+    
+    ' Friend Sub DumpContents()      
+    '     Debug.Print "ListItems.DumpContents START ----------------------"
+    '     Dim collectionItem As ListItem
+    '     For Each collectionItem In Me.InternalCollection
+    '         Debug.Print collectionItem.Text & " [Index " & collectionItem.Index & "]"
+    '     Next
+    '     Debug.Print "ListItems.DumpContents END ------------------------"
+    ' End Sub
+    
+    Private Function AddItemInternal(ByRef NewItem As ListItem, ByVal Index As Long, Optional ByVal Text As String, Optional ByVal ImageIndex As Long, Optional ByVal SelectedImageIndex As Long) As Boolean
+        Dim lvi As LVITEMW
+        lvi.mask = LVIF_TEXT Or LVIF_IMAGE Or LVIF_STATE Or LVIF_PARAM
+        lvi.pszText = StrPtrSafe(Text)
+        lvi.iItem = Index - 1       ' zero-based
+        
+        lvi.lParam = ObjPtr(NewItem)           ' this is safe because the synced collection holds a reference to it
+        Dim newIndex As Long = CLng(WinNativeFormsBASE.SendMessageW(ContainerList.hWnd, ListViewConsts.LVM_INSERTITEMW, 0, VarPtr(lvi)))
+        If newIndex = -1 Then
+        	Return False
+        End If
+        NewItem.ChangeIndexInternal(newIndex)
+        Return True
+    End Function
+    
+    [ Description ("Removes all items from the listview") ]
+    Public Sub Clear()
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_DELETEALLITEMS, 0, 0)
+    
+    	Set Me.InternalCollection = New Collection
+    End Sub
+    
+    [ Description ("Removes the count of all items that have been added to the listview") ]
+    Public Property Get Count() As Long
+    	Return Me.InternalCollection.Count
+    End Property
+    
+    [ DefaultMember ]
+    [ Description ("Provides access to the added listview items collection, using either the Key of an item as originally passed to Add(), or the Index of the item") ]
+    Public Property Get Item(ByRef Index As Variant) As ListItem
+    	Return Me.InternalCollection.Item(Index)
+    End Property
+    
+    [ Description ("Removes an entry from the listview, given the Index or Key of the item") ]
+    Public Sub Remove(ByRef Index As Variant)
+        Dim itemToRemove As ListItem = Me.InternalCollection.Item(Index)
+        Me.InternalCollection.Remove(Index)
+        SyncIndices()
+        
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_DELETEITEM, itemToRemove.Index - 1, 0)
+    End Sub
+    
+    Private Sub SyncIndices()
+    	Dim collectionItem As ListItem
+        Dim collectionItemIndex As Long = 0
+        For Each collectionItem In Me.InternalCollection
+            collectionItem.ChangeIndexInternal(collectionItemIndex)
+            collectionItemIndex += 1
+        Next
+    End Sub
+    
+End Class

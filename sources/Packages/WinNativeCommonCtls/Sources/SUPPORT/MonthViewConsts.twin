@@ -1,0 +1,135 @@
+Module MonthViewConsts
+
+    Public Enum MonthViewStyles
+        MCS_DAYSTATE = &H0001
+        MCS_MULTISELECT = &H0002
+        MCS_WEEKNUMBERS = &H0004
+        MCS_NOTODAYCIRCLE = &H0008
+        MCS_NOTODAY = &H0010
+        MCS_NOTRAILINGDATES = &H0040
+        MCS_SHORTDAYSOFWEEK = &H0080
+        MCS_NOSELCHANGEONNAV = &H0100
+    End Enum
+    
+    Public Enum MonthViewColorArea
+        MCSC_BACKGROUND = 0 ' the background color (between months)
+        MCSC_TEXT = 1   ' the dates
+        MCSC_TITLEBK = 2   ' background of the title
+        MCSC_TITLETEXT = 3
+        MCSC_MONTHBK = 4   ' background within the month cal
+        MCSC_TRAILINGTEXT = 5   ' the text color of header & trailing days
+    End Enum
+    
+    Public Enum MonthViewMessages
+    	MCM_GETCURSEL = &H1001
+        MCM_SETCURSEL = &H1002
+        MCM_GETMAXSELCOUNT = &H1003
+        MCM_SETMAXSELCOUNT = &H1004
+        MCM_GETSELRANGE = &H1005
+        MCM_SETSELRANGE = &H1006
+        MCM_GETMONTHRANGE = &H1007
+        MCM_SETDAYSTATE = &H1008
+        MCM_GETMINREQRECT = &H1009
+        MCM_SETCOLOR = &H100A
+        MCM_GETCOLOR = &H100B
+        MCM_SETTODAY = &H100C
+        MCM_GETTODAY = &H100D
+        MCM_HITTEST = &H100E
+        MCM_SETFIRSTDAYOFWEEK = &H100F
+        MCM_GETFIRSTDAYOFWEEK = &H1010
+        MCM_GETRANGE = &H1011
+        MCM_SETRANGE = &H1012
+        MCM_GETMONTHDELTA = &H1013
+        MCM_SETMONTHDELTA = &H1014
+        MCM_GETMAXTODAYWIDTH = &H1015
+        'MCM_SETUNICODEFORMAT CCM_SETUNICODEFORMAT
+        'MCM_GETUNICODEFORMAT CCM_GETUNICODEFORMAT
+        MCM_GETCURRENTVIEW = &H1016
+        MCM_GETCALENDARCOUNT = &H1017
+        MCM_GETCALENDARGRIDINFO = &H1018
+        MCM_GETCALID = &H101B
+        MCM_SETCALID = &H101C
+        MCM_SIZERECTTOMIN = &H101D
+        MCM_SETCALENDARBORDER = &H101E
+        MCM_GETCALENDARBORDER = &H101F
+        MCM_SETCURRENTVIEW = &H1020
+    End Enum
+    
+    Public Enum MonthViewNotifications
+        MCN_SELCHANGE = -749
+        MCN_GETDAYSTATE = -747
+        MCN_SELECT = -746
+        MCN_VIEWCHANGE = -750
+    End Enum
+    
+    Public Const GDTR_MIN As Long = 1
+    Public Const GDTR_MAX As Long = 2
+    
+    Public Type SYSTEMTIME
+        wYear As Integer
+        wMonth As Integer
+        wDayOfWeek As Integer
+        wDay As Integer
+        wHour As Integer
+        wMinute As Integer
+        wSecond As Integer
+        wMilliseconds As Integer
+    End Type
+    
+    Public Type NMSELCHANGE
+        hdr As NMHDR
+        STSelStart As SYSTEMTIME
+        STSelEnd As SYSTEMTIME
+    End Type
+        
+    Public Type NMDAYSTATE
+        hdr As NMHDR
+        stStart As SYSTEMTIME
+        cDayState As Long
+        prgDayState As LongPtr
+    End Type
+    
+    ' Public Type NMVIEWCHANGE
+    '     hdr As NMHDR
+    '     dwOldView As MvwViewConstants
+    '     dwNewView As MvwViewConstants
+    ' End Type
+    
+    ' Public Enum MvwViewConstants
+    '     MvwViewMonth = MCMV_MONTH
+    '     MvwViewYear = MCMV_YEAR
+    '     MvwViewDecade = MCMV_DECADE
+    '     MvwViewCentury = MCMV_CENTURY
+    ' End Enum
+    
+    Public Type MCHITTESTINFO
+        cbSize As Long
+        PT As WinNativeFormsBase.POINT
+        uHit As MonthViewHitTestValues
+        ST As SYSTEMTIME
+    End Type
+    
+    Public Enum MonthViewHitTestValues
+        MCHT_TITLE = &H00010000
+        MCHT_CALENDAR = &H00020000
+        MCHT_TODAYLINK = &H00030000
+        MCHT_CALENDARCONTROL = &H00100000
+        MCHT_NEXT = &H01000000
+        MCHT_PREV = &H02000000
+        MCHT_NOWHERE = &H00000000
+        MCHT_TITLEBK = (MCHT_TITLE)
+        MCHT_TITLEMONTH = (MCHT_TITLE Or &H0001)
+        MCHT_TITLEYEAR = (MCHT_TITLE Or &H0002)
+        MCHT_TITLEBTNNEXT = (MCHT_TITLE Or MCHT_NEXT Or &H0003)
+        MCHT_TITLEBTNPREV = (MCHT_TITLE Or MCHT_PREV Or &H0003)
+        MCHT_CALENDARBK = (MCHT_CALENDAR)
+        MCHT_CALENDARDATE = (MCHT_CALENDAR Or &H0001)
+        MCHT_CALENDARDATENEXT = (MCHT_CALENDARDATE Or MCHT_NEXT)
+        MCHT_CALENDARDATEPREV = (MCHT_CALENDARDATE Or MCHT_PREV)
+        MCHT_CALENDARDAY = (MCHT_CALENDAR Or &H0002)
+        MCHT_CALENDARWEEKNUM = (MCHT_CALENDAR Or &H0003)
+        MCHT_CALENDARDATEMIN = (MCHT_CALENDAR Or &H0004)
+        MCHT_CALENDARDATEMAX = (MCHT_CALENDAR Or &H0005)
+    End Enum
+    
+End Module

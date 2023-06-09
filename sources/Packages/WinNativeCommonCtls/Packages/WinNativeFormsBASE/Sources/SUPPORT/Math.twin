@@ -1,0 +1,9 @@
+' Module Math
+'     Function Max(Of T)(A As T, B As T) As T
+'         Return If(A > B, A, B)
+'     End Function
+    
+'     Function Min(Of T)(A As T, B As T) As T
+'         Return If(A < B, A, B)
+'     End Function
+' End Module

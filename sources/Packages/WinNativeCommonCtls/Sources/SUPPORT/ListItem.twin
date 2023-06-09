@@ -1,0 +1,244 @@
+[ COMCreatable (False) ]
+[ ClassId ("90D0C2C1-71A2-4629-B25B-FE97725B0B3C") ]
+[ InterfaceId ("4A4A6788-ADB0-4B20-8FD9-69BC7716D491") ]
+Class ListItem
+	
+    ' FIXME could make this more lightweight
+    
+    Private CachedKey As String
+    Private ContainerList As ListView
+    Private InternalIndex As Long
+    
+    Public Tag As Variant
+            
+    Public Icon As Variant      ' FIXME
+    Public SmallIcon As Variant      ' FIXME
+    
+    ' Public ListSubItems As ListSubItems  FIXME
+
+    Public Property Get SubItems(ByVal Index As Integer) As String
+        If Index < 1 Then Err.Raise 380
+        Return GetLvItemText(Index)
+    End Property
+    
+    Public Property Let SubItems(ByVal Index As Integer, ByVal Value As String)
+        If Index < 1 Then Err.Raise 380
+        SetLvItemText(Index, Value)
+    End Property
+    
+    Public ToolTipText As String
+
+    [ Description ("Determines if the item is rendered in a bold font") ]
+    Public Bold As Boolean = False
+    [ Description ("The back color used when rendering this item") ]
+    Public BackColor As OLE_COLOR = -1     ' CLR_NONE, new in tB
+    [ Description ("The fore color (font color) used when rendering this item") ]
+    Public ForeColor As OLE_COLOR = SystemColorConstants.vbWindowText
+    
+    Private Sub HandleChanges() _
+    	    Handles Bold.OnPropertyLet, _
+                    BackColor.OnPropertyLet, _
+                    ForeColor.OnPropertyLet
+        
+        ContainerList.Refresh       ' FIXME should be more refined
+    End Sub
+
+    Public Sub New(lv As ListView, Key As String)
+    	Set Me.ContainerList = lv
+        Me.CachedKey = Key
+    End Sub
+    
+    Friend Sub ChangeIndexInternal(Value As Long)
+        Me.InternalIndex = Value
+    End Sub
+
+    [ Description ("The index of the item within the root listview collection of items") ]
+    Public Property Get Index() As Long
+    	Return Me.InternalIndex + 1
+    End Property
+    Public Property Let Index(ByVal Value As Long)
+    	Err.Raise 383, , "Property is read-only"
+    End Property
+    
+    [ Description ("The key of the item used in the root listview collection of items") ]
+    Public Property Get Key() As String
+    	Return Me.CachedKey
+    End Property
+
+    [ Description ("The key of the item used in the root listview collection of items") ]
+    Public Property Let Key(ByVal NewKey As String)
+        ' FIXME this is shit, could be a feature offered by the collection instead
+        Dim index As Long = Me.Index
+        Dim collection As Collection = Me.ContainerList.ListItems.GetInternalCollection()
+        Dim Item As ListItem = collection(index)
+        If NewKey = vbNullString Then
+            collection.Add(Item, , index)
+        Else
+            collection.Add(Item, NewKey, index)
+        End If
+        Me.CachedKey = NewKey
+        collection.Remove(index + 1)
+    End Property
+    
+    Private Sub Class_Terminate()
+        'Debug.Print "ListItem Class_Terminate"
+    End Sub
+    
+    Private Function GetLvItemText(ByRef Index As Integer) As String            ' FIXME check vbNullString vs ""
+        Dim lvItem As LVITEMW
+        With lvItem
+            .mask = LVIF_TEXT
+            .iItem = Me.InternalIndex
+            .iSubItem = Index
+            .pszText = Me.ContainerList.InternalGetStringBuffer
+            .cchTextMax = Me.ContainerList.InternalBufferLen
+        End With
+        If WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETITEMW, 0, VarPtr(lvItem)) <> 0 Then
+            Return WinNativeFormsBASE.OLEAUT32_SysAllocString(lvItem.pszText)
+        End If
+    End Function
+
+    Private Sub SetLvItemText(ByRef Index As Integer, ByRef Value As String)        ' FIXME check vbNullString vs ""
+        Dim lvItem As LVITEMW
+        With lvItem
+            .mask = LVIF_TEXT
+            .iItem = Me.InternalIndex
+            .iSubItem = Index
+            .pszText = StrPtrSafe(Value)
+            .cchTextMax = Len(Value) + 1
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETITEMW, 0, VarPtr(lvItem))
+    End Sub
+
+    [ DefaultMember ]
+    [ Description ("The text (label) of the item that appears when the item is rendered") ]
+    Public Property Get Text() As String
+        Return GetLvItemText(0)
+    End Property
+    
+    [ DefaultMember ]
+    [ Description ("The text (label) of the item that appears when the item is rendered") ]
+    Public Property Let Text(ByVal Value As String)
+        SetLvItemText(0, Value)
+    End Property
+    
+    Private Function GetItemStateFlags(ByVal StateFlag As Long) As Long
+        Dim lvItem As LVITEMW
+        With lvItem
+            .mask = LVIF_STATE
+            .iItem = Me.InternalIndex
+            .stateMask = StateFlag
+            WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETITEMW, 0, VarPtr(lvItem))
+            Return .state And StateFlag
+        End With
+    End Function
+    
+    Private Sub SetItemStateFlags(ByVal StateFlag As Long, ByVal Value As Long)
+        Dim lvItem As LVITEMW
+        With lvItem
+            .mask = LVIF_STATE
+            .iItem = Me.InternalIndex
+            .stateMask = StateFlag
+            .state = Value
+            WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETITEMW, 0, VarPtr(lvItem))
+        End With
+    End Sub
+    
+    Private Function GetItemStateFlag(ByVal StateFlag As Long) As Boolean
+        Return (GetItemStateFlags(StateFlag) And StateFlag) <> 0
+    End Function
+    
+    Private Sub SetItemStateFlag(ByVal StateFlag As Long, ByVal Value As Boolean)
+        SetItemStateFlags(StateFlag, If(Value, StateFlag, 0))
+    End Sub
+    
+    [ Description ("This ensures the item is visible within the listview, by scrolling the listview if necessary") ]
+    Public Sub EnsureVisible()
+    	WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_ENSUREVISIBLE, Me.InternalIndex, 0)
+    End Sub
+    
+    [ Description ("Returns/Sets whether the list item is checked when TreeView.CheckBoxes = True") ]
+    Public Property Get Checked() As Boolean
+        Return StateImageMaskToIndex(GetItemStateFlags(ListViewConsts.LVMisc.LVIS_STATEIMAGEMASK)) = IIL_CHECKED
+    End Property
+
+    [ Description ("Returns/Sets whether the list item is checked when TreeView.CheckBoxes = True") ]
+    Public Property Let Checked(ByVal Value As Boolean)
+        If Me.Checked <> Value Then
+        	'Dim Ptr As Long
+            'Dim Node As TvwNode
+            'Dim Cancel As Boolean
+            'Dim Node As Node = GetNodeFromHandle(Handle)
+            'RaiseEvent NodeBeforeCheck(Node, Cancel)
+            'If Cancel = False Then
+                SetItemStateFlags(ListViewConsts.LVMisc.LVIS_STATEIMAGEMASK, If(Value, IndexToStateImageMask(IIL_CHECKED), IndexToStateImageMask(IIL_UNCHECKED)))
+                'RaiseEvent NodeCheck(Node)
+            'End If
+        End If
+    End Property
+    
+    [ Description ("Returns/Sets whether the list item is currently selected") ]
+    Public Property Get Selected() As Boolean
+        Return GetItemStateFlag(ListViewConsts.LVMisc.LVIS_SELECTED)
+    End Property
+
+    [ Description ("Returns/Sets whether the list item is currently selected") ]
+    Public Property Let Selected(ByVal Value As Boolean)
+        SetItemStateFlag(ListViewConsts.LVMisc.LVIS_SELECTED, Value)
+    End Property
+    
+    [ Description ("Returns/Sets whether the list item is currently ghosted (cut)") ]
+    Public Property Get Ghosted() As Boolean
+        Return GetItemStateFlag(ListViewConsts.LVMisc.LVIS_CUT)
+    End Property
+
+    [ Description ("Returns/Sets whether the list item is currently ghosted (cut)") ]
+    Public Property Let Ghosted(ByVal Value As Boolean)
+        SetItemStateFlag(ListViewConsts.LVMisc.LVIS_CUT, Value)
+    End Property
+    
+    [ Unimplemented ]
+    Function CreateDragImage() As IPictureDisp      ' FIXME    	
+    End Function
+    
+    Property Get Left() As Single
+        Dim point As WinNativeFormsBASE.POINT
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMPOSITION, Me.InternalIndex, VarPtr(point))
+        Return point.X * Me.ContainerList.InternalGetPixelsMultiplierX
+    End Property
+
+    Property Let Left(ByVal Value As Single)
+        Dim point As WinNativeFormsBASE.POINT
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMPOSITION, Me.InternalIndex, VarPtr(point))
+        point.X = Value / Me.ContainerList.InternalGetPixelsMultiplierX
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_SETITEMPOSITION32, Me.InternalIndex, VarPtr(point))
+    End Property
+
+    Property Get Top() As Single
+        Dim point As WinNativeFormsBASE.POINT
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMPOSITION, Me.InternalIndex, VarPtr(point))
+        Return point.Y * Me.ContainerList.InternalGetPixelsMultiplierY
+    End Property
+
+    Property Let Top(ByVal Value As Single)
+        Dim point As WinNativeFormsBASE.POINT
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMPOSITION, Me.InternalIndex, VarPtr(point))
+        point.Y = Value / Me.ContainerList.InternalGetPixelsMultiplierY
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_SETITEMPOSITION32, Me.InternalIndex, VarPtr(point))
+    End Property
+    
+    Property Get Width() As Single
+        Dim rect As WinNativeFormsBASE.RECT
+        rect.Left = LVIR_SELECTBOUNDS
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMRECT, Me.InternalIndex, VarPtr(rect))
+        Return (rect.Right - rect.Left) * Me.ContainerList.InternalGetPixelsMultiplierX
+    End Property
+    
+    Property Get Height() As Single
+        Dim rect As WinNativeFormsBASE.RECT
+        rect.Left = LVIR_SELECTBOUNDS
+        WinNativeFormsBASE.SendMessageW(Me.ContainerList.hWnd, LVM_GETITEMRECT, Me.InternalIndex, VarPtr(rect))
+        Return (rect.Bottom - rect.Top) * Me.ContainerList.InternalGetPixelsMultiplierY
+    End Property
+                    
+End Class

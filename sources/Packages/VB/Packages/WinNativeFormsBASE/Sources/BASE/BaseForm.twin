@@ -1,0 +1,316 @@
+[ ClassId ("2C4F67FE-4D35-46D6-BAEA-E69A81EDB1B6") ]
+[ InterfaceId ("8FECAC17-CC3D-4401-B270-D2F957DF456E") ]
+[ COMCreatable (False) ]
+Private Class BaseForm
+
+    Implements BaseControlRect Via BaseControlRect
+
+    [ Serialize (False) ]
+        Private FormControlContext As WindowsControls.WindowsFormContext
+    [ Serialize (False) ]
+        Private WithEvents RootWindowElementBase As WindowsControls.WindowElement
+    [ Description ("A unique GUID that is used for associating a class with a form") ]
+        Public FormDesignerId As String             ' FIXME should support GUID datatype
+    [ Serialize (False), Description ("A collection of all controls attached to this form") ]
+        ' FIXME currently can't be ReadOnly because of how this is populated internally through IDispatch
+        Public Controls As Object 'WindowsControls.WindowsControlsCollection  changed to Object to avoid unnecessary COM exposure of WindowsControls.WindowsControlsCollection
+    [ Description ("Adjusts the left position of this form, only if the StartupPosition is tbStartUpManual") ]
+        Public ReadOnly HasDC As Boolean = True
+    [ Description ("") ]
+        Public MousePointer As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+    [ Serialize (True, "MouseIcon") ]
+    [ CustomDesigner ("designer_IconBytes") ]
+        Private ReadOnly MouseIconINIT() As Byte
+    [ Serialize (False) ]
+        Private InternalMouseIcon As StdPicture
+        Private IgnoreMousePointerChanged As Boolean = False
+
+    [ Description ("") ]
+        ' VB6 allows changing the BorderStyle value at RUNTIME, but it seems to do nothing?
+        Public BorderStyle As FormBorderStyleConstants = FormBorderStyleConstants.vbSizable
+    [ Description ("") ]
+        Public ReadOnly StartupPosition As StartUpPositionConstants = StartUpPositionConstants.vbStartUpScreen
+    [ Description ("") ]
+        Public ReadOnly ControlBox As Boolean = True
+    [ Description ("") ]
+        Public ReadOnly MaxButton As Boolean = True
+    [ Description ("") ]
+        Public ReadOnly MinButton As Boolean = True
+    [ Description ("") ]
+        Public ReadOnly ShowInTaskbar As Boolean = True
+    [ Description ("") ]
+        Public Moveable As Boolean = True
+    [ Description ("") ]
+        Public KeyPreview As Boolean = False
+    [ Description ("") ]
+        ' Exists in VB6, but doesn't seem to have an effect on forms.
+        Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    [ Serialize (True, "Visible") ]
+        Private VisibleINIT As Boolean = True
+    [ Description ("") ]
+    [ Serialize (True, "Enabled") ]
+        Private EnabledINIT As Boolean = True
+    [ Description ("") ]
+    [ Serialize (True, "Caption") ]
+        Private CaptionINIT As String
+    [ Description ("") ]
+    [ Serialize (True, "WindowState") ]
+        ' FIXME this currently has to be public due to the way the form engine accesses it.
+        Public WindowStateINIT As FormWindowStateConstants = FormWindowStateConstants.vbNormal
+
+        Private CurrentBackBrush As LongPtr
+        Private CurrentBackBrushColor As OLE_COLOR
+
+    Sub New()
+        'Debug.Print "BaseForm.New"
+        Me.VisibleINIT = True
+        Me.EnabledINIT = True
+        
+        Set Me.BaseControlRect = New BaseControlRect(ControlTypeConstants.vbForm)
+    End Sub
+    
+    Sub Class_Terminate()
+        If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+    End Sub
+    
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                                ByVal ClassName As String, _
+                                                ByVal WindowStyles As Long, ByVal ExtendedStyles As Long, _
+                                                Optional ByVal SubClass As Boolean = False) As WindowElement
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.FormControlContext = _ControlContext
+        WindowStyles += If(Me.EnabledINIT, 0, WS_DISABLED)
+        WindowStyles += If(Me.VisibleINIT, WS_VISIBLE, 0)
+        
+        Set Me.RootWindowElementBase = ControlContext.CreateWindowElement(ClassName, Me.CaptionINIT, WindowStyles, ExtendedStyles, SubClass)
+
+        If IsArrayInitialized(Me.MouseIconINIT) AndAlso (UBound(Me.MouseIconINIT) > -1) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            IgnoreMousePointerChanged = True
+            Set Me.MouseIcon = [_HiddenModule].LoadPictureInternal(Me.MouseIconINIT)
+            IgnoreMousePointerChanged = False
+        End If
+                
+        Return Me.RootWindowElementBase
+    End Function
+    
+    Friend Function CreateBackBrush(ByVal Color As OLE_COLOR) As LongPtr
+        If Color <> Me.CurrentBackBrushColor Then
+            If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+                Me.CurrentBackBrush = WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(Color))
+                Me.CurrentBackBrushColor = Color
+        End If
+        Return Me.CurrentBackBrush
+    End Function
+    
+    [ Serialize (False) ]
+    Public Property Get WindowState() As FormWindowStateConstants
+        Me.ControlContext.EnsureFormIsLoaded()
+        Dim placement As WINDOWPLACEMENT = USER32_GetWindowPlacement(Me.RootWindowElementBase)
+        Select Case placement.showCmd
+            Case SW_SHOWMAXIMIZED
+                WindowState = FormWindowStateConstants.vbMaximized
+            Case SW_SHOWMINIMIZED
+                WindowState = FormWindowStateConstants.vbMinimized
+            Case Else
+                WindowState = FormWindowStateConstants.vbNormal
+        End Select
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let WindowState(ByVal NewValue As FormWindowStateConstants)
+        Me.ControlContext.EnsureFormIsLoaded()
+        Select Case NewValue
+            Case FormWindowStateConstants.vbMaximized
+                USER32_ShowWindow(Me.RootWindowElementBase, SW_MAXIMIZE)
+            Case FormWindowStateConstants.vbMinimized
+                USER32_ShowWindow(Me.RootWindowElementBase, SW_MINIMIZE)
+            Case FormWindowStateConstants.vbNormal
+                USER32_ShowWindow(Me.RootWindowElementBase, SW_RESTORE)
+            Case Else
+                Err.Raise 5
+        End Select
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Get Caption() As String
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return WindowsAPI.USER32_GetWindowText(Me.RootWindowElementBase)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Let Caption(Value As String)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_SetWindowText(Me.RootWindowElementBase, Value)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Get Enabled() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return Not WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_DISABLED)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("") ]
+    Property Let Enabled(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_EnableWindow(Me.RootWindowElementBase, Value)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Get Visible() As Boolean
+        Me.ControlContext.EnsureFormIsLoaded()
+        Return WindowsAPI.USER32_GetStyleFlag(Me.RootWindowElementBase, WS_VISIBLE)
+    End Property
+    
+    [ Serialize (False) ]
+    [ Description ("Adjusts the visibility of this control at runtime") ]
+    Property Let Visible(Value As Boolean)
+        Me.ControlContext.EnsureFormIsLoaded()
+        If Me.Visible <> Value Then
+            If Value = True Then
+                Me.Show vbModeless
+                Refresh()
+            Else
+                WindowsAPI.ShowWindow(Me.RootWindowElementBase.Handle, SW_HIDE)
+            End If
+        End If
+    End Property
+    
+    Sub Hide()
+        Visible = False
+    End Sub
+
+    Sub Refresh()
+        Me.ControlContext.EnsureFormIsLoaded()
+        WindowsAPI.USER32_RedrawWindow(Me.RootWindowElementBase, 0, 0, RDW_ERASE Or RDW_INVALIDATE Or RDW_UPDATENOW)
+    End Sub
+
+    Public Sub Show([ TypeHint (FormShowConstants) ] Optional ByVal Modal As Variant, Optional ByVal OwnerForm As Variant)
+        Me.ControlContext.EnsureFormIsLoaded()
+        If IsMissing(Modal) Then Modal = vbModeless
+        If IsMissing(OwnerForm) Then Set OwnerForm = Nothing
+        Me.FormControlContext.Show(Modal = vbModal, OwnerForm)
+    End Sub
+            
+    Public Sub Close()
+        Me.ControlContext.EnsureFormIsLoaded()
+        Me.FormControlContext.Close()
+    End Sub
+
+    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+    
+    
+    Private Sub MousePointerChanged() _
+            Handles MousePointer.OnPropertyLet
+        
+        If IgnoreMousePointerChanged Then Exit Sub
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.MousePointerChanged()
+    End Sub
+        
+    Private Sub OnTouchedFormProperties() _
+            Handles Controls.OnPropertyGet, _
+                    HasDC.OnPropertyGet, _
+                    MousePointer.OnPropertyGet, _
+                    BorderStyle.OnPropertyGet, _
+                    BorderStyle.OnPropertyLet, _
+                    StartupPosition.OnPropertyGet, _
+                    ControlBox.OnPropertyGet, _
+                    MaxButton.OnPropertyGet, _
+                    MinButton.OnPropertyGet, _
+                    ShowInTaskbar.OnPropertyGet, _
+                    Moveable.OnPropertyGet, _
+                    Moveable.OnPropertyLet, _
+                    KeyPreview.OnPropertyGet, _
+                    KeyPreview.OnPropertyLet, _
+                    Appearance.OnPropertyGet, _
+                    Appearance.OnPropertyLet
+
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Get Left() As Double
+        Return Me.ControlContext.GetScaledLeft
+    End Property
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Let Left(ByVal Value As Double)
+        Me.ControlContext.SetScaledLeft(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Top() As Double
+        Return Me.ControlContext.GetScaledTop
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Top(ByVal Value As Double)
+        Me.ControlContext.SetScaledTop(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Width() As Double
+        Return Me.ControlContext.GetScaledWidth
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Width(ByVal Value As Double)
+        Me.ControlContext.SetScaledWidth(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Height() As Double
+        Return Me.ControlContext.GetScaledHeight
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Height(ByVal Value As Double)
+        Me.ControlContext.SetScaledHeight(Value)
+    End Property
+
+    Friend Sub BaseSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, ByRef DragDropHandler As OLEDragDropHandler, ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+        CommonSyncOLEDropMode(RootThis, OLEDropMode, DragDropHandler, ControlContext, RootWindowElementBase, IsContainer, AllowedAutomatic)
+    End Sub
+    
+    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+        CommonZOrder(Position, Me.RootWindowElementBase.Handle)
+    End Sub
+    
+    Public Sub InternalOLEDrag(ByVal RootThis As Object)
+        CommonOLEDrag(RootThis)
+    End Sub
+    
+    [ Serialize (False) ]
+    Public Property Get MouseIcon() As StdPicture
+        Return InternalMouseIcon
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Set MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+
+    [ Serialize (False) ]
+    Public Property Let MouseIcon(Value As StdPicture)
+        Set InternalMouseIcon = Value
+        MousePointerChanged()
+    End Property
+    
+End Class

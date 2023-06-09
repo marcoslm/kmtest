@@ -1,0 +1,658 @@
+Private Module DriveListBoxGlobals
+	Public DriveListBoxImages() As OlePicture
+End Module
+
+[ Description ("A Win32 native DriveListBox") ]
+[ WindowsControl ("/miscellaneous/ICONS??/DriveListBox??.png") ]
+[ ClassId ("33AD4F50-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("6ACFB26B-CDFB-4A9B-8BF7-8D6D185790E6") ]  ' FIXME implement {33AD4F51-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class DriveListBox
+              
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbDriveListBox)
+ 
+    #End Region
+        
+    #Region "STATE"
+    
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowBackground
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowText
+        [ Description ("VB6 doesn't trigger the Scroll event for mouse-wheel events.  Set this to True to generate Scroll events in response to mouse-wheel notifications") ]
+            Public WheelScrollEvent As Boolean = True
+        [ Serialize (False) ]
+        [ Description ("") ]
+            Public NewIndex As Long = -1
+
+            Private CachedTopIndex As Long
+            Private IsInitializing As Boolean = True
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private WithEvents WindowHandleLIST As WindowsControls.WindowElement
+            Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            Private IsRefreshing As Boolean
+            Private CachedSelectedIndex As Long = -1
+            
+            Public CausesValidation As Boolean = True
+
+            Public HelpContextID As Long
+        
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+            Public WhatsThisHelpID As Long
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+                        
+        Public Sub ShowWhatsThis()
+            HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+        End Sub
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Change()
+        [ Description ("") ]
+            Event DropDown()
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event KeyDown(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("") ]
+            Event KeyUp(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event Scroll()
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event CloseUp()
+
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        Event Validate(Cancel As Boolean)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        
+
+    #End Region
+
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	'Me.FontSize = 12
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+    
+        Private Sub InitImages()
+            On Error Resume Next
+
+            ' Here we map a package resource into a constant Variant
+            ' so that we can continue to use resources in the package, yet access them just like byte arrays at runtime
+            ' This is very efficient.  The resource will not exist as an ordinary resource in the output PE file.
+            Const ImageData_DRIVE_UNKNOWN As Variant = LoadResDataInternal("DRIVE_UNKNOWN.gif", "OTHER")
+            Const ImageData_DRIVE_FIXED As Variant = LoadResDataInternal("DRIVE_FIXED.gif", "OTHER")
+            Const ImageData_DRIVE_RAMDISK As Variant = LoadResDataInternal("DRIVE_RAMDISK.gif", "OTHER")
+            Const ImageData_DRIVE_REMOVABLE As Variant = LoadResDataInternal("DRIVE_REMOVABLE.gif", "OTHER")
+            Const ImageData_DRIVE_CDROM As Variant = LoadResDataInternal("DRIVE_CDROM.gif", "OTHER")
+            Const ImageData_DRIVE_REMOTE As Variant = LoadResDataInternal("DRIVE_REMOTE.gif", "OTHER")
+
+            If IsArrayInitialized(DriveListBoxGlobals.DriveListBoxImages) = False Then
+                ReDim DriveListBoxGlobals.DriveListBoxImages(0 To 6) As OlePicture
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_UNKNOWN) = Global.LoadPicture(ImageData_DRIVE_UNKNOWN)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_NO_ROOT_DIR) = DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_UNKNOWN)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_REMOVABLE) = Global.LoadPicture(ImageData_DRIVE_REMOVABLE)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_FIXED) = Global.LoadPicture(ImageData_DRIVE_FIXED)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_REMOTE) = Global.LoadPicture(ImageData_DRIVE_REMOTE)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_CDROM) = Global.LoadPicture(ImageData_DRIVE_CDROM)
+                Set DriveListBoxGlobals.DriveListBoxImages(WinNativeFormsBASE.DriveType.DRIVE_RAMDISK) = Global.LoadPicture(ImageData_DRIVE_RAMDISK)
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            InitImages()
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+                styles += ComboBoxStyles.CBS_HASSTRINGS
+                styles += ComboBoxStyles.CBS_AUTOHSCROLL
+                styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_BORDER
+                styles += ComboBoxStyles.CBS_DROPDOWNLIST
+                styles += ComboBoxStyles.CBS_OWNERDRAWFIXED
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderComboBox", "", styles, extendedStyles)
+            Me.RootWindowElement.ActivatePrePostMessages(True)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+                
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            ' disconnect anything that causes a circular reference here
+        End Sub
+
+        Private Sub PostProcessMessage(ByVal Message As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef ReturnValue As LongPtr, ByVal PostMessageCookie As Long) _
+                Handles RootWindowElement.PostProcessMessage
+
+            If IsInitializing = True Then Exit Sub
+                
+            Select Case Message
+                Case ComboBoxMessages.CB_ADDSTRING, _
+                        ComboBoxMessages.CB_INSERTSTRING, _
+                        ComboBoxMessages.CB_DELETESTRING, _
+                        ComboBoxMessages.CB_RESETCONTENT
+                    SyncScrollBar
+                    
+                Case WinNativeFormsBASE.WM_SETFONT
+                    If Me.WindowHandleLIST IsNot Nothing Then
+                        'Debug.Print "COMBO: Got WM_SETFONT"
+                        ' We have to send a matching font change to the LIST, otherwise item height does not get reported properly
+                        WinNativeFormsBASE.WindowsAPI.USER32_SetFont(Me.WindowHandleLIST, Me.Font)
+                        SyncScrollBar
+                    End If
+            End Select
+        End Sub
+        
+        Private Function GetCustomDrawnHeight() As Long
+            Dim TextMetrics As WinNativeFormsBASE.TEXTMETRIC = GetFontMetrics()
+            Const FontPadding As Long = 4
+            Return TextMetrics.TMHeight + TextMetrics.TMExternalLeading + FontPadding
+        End Function
+        
+        Private Sub MeasureItem(ByRef Info As WinNativeFormsBASE.MEASUREITEMSTRUCT, ByRef Handled As Boolean) _
+                Handles RootWindowElement.MeasureItem
+ 
+            ' Careful! This occurs BEFORE the Create event, so the windows font has not yet been set!
+            Info.ItemHeight = GetCustomDrawnHeight()
+        End Sub
+                 
+        Private Sub DrawItem(ByRef Info As WinNativeFormsBASE.DRAWITEMSTRUCT, ByRef Handled As Boolean) _
+                Handles RootWindowElement.DrawItem
+ 
+            If Info.CtlType = WinNativeFormsBASE.OwnerDrawTypes.ODT_COMBOBOX And Info.ItemID > -1 Then
+                
+                Dim itemHeight As Long = Info.RCItem.Bottom - Info.RCItem.Top
+                
+                Dim backColor As OLE_COLOR
+                Dim textColor As OLE_COLOR
+                If Info.ItemState And WinNativeFormsBASE.OwnerDrawState.ODS_DISABLED Then
+                    backColor = Me.BackColor
+                    textColor = vbGrayText
+                ElseIf Info.ItemState And WinNativeFormsBASE.OwnerDrawState.ODS_SELECTED Then
+                    backColor = vbHighlight
+                    textColor = vbHighlightText
+                Else
+                    backColor = Me.BackColor
+                    textColor = Me.ForeColor
+                End If
+                
+                Dim backBrush As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(backColor))
+                WinNativeFormsBASE.WindowsAPI.USER32_FillRectangle(Info.hDC, Info.RCItem, backBrush)
+                WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(backBrush)
+                
+                Const VPADDING_IMAGE As Long = 5
+                Const HPADDING_IMAGE As Long = 10
+                Const HPADDING_TEXT As Long = 5
+                
+                Dim driveType As WinNativeFormsBASE.DriveType = CLng(Info.ItemData)
+                If (driveType >= driveType.DRIVE_UNKNOWN) And (driveType <= driveType.DRIVE_RAMDISK) Then
+                    With DriveListBoxGlobals.DriveListBoxImages(driveType)
+                        ' The icon is scaled to the item height
+                        Dim horzProportional As Double = .Width / .Height
+                        Dim iconWidth As Long = (itemHeight - (VPADDING_IMAGE * 2)) * horzProportional
+                        .Render(Info.hDC, HPADDING_IMAGE, VPADDING_IMAGE + Info.RCItem.Top, iconWidth, itemHeight - (VPADDING_IMAGE * 2), 0, .Height, .Width, -.Height, 0&)
+                    End With
+                End If
+                
+                Info.RCItem.Left += HPADDING_IMAGE + HPADDING_TEXT + iconWidth
+                  
+                Dim itemText As String = Me.List(Info.ItemID)
+                
+                Dim oldTextColor As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, TranslateColor(textColor))
+                Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, 1)
+                
+                WinNativeFormsBASE.WindowsAPI.GDI32_TextOut(Info.hDC, Info.RCItem.Left + (1 * (RootWindowElement.DPI / 96)), Info.RCItem.Top, itemText)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, oldBkMode)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, oldTextColor)
+            End If
+            
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+            
+            ' Subclass the OS provided list and edit controls for this combo.
+            Dim info As WinNativeFormsBASE.COMBOBOXINFO = WinNativeFormsBASE.WindowsAPI.USER32_GetComboBoxInfo(Me.RootWindowElement)
+            If info.hwndList <> 0 Then Set Me.WindowHandleLIST = Me.SubClassWindowElement(info.hwndList)
+            
+            If Me.WindowHandleLIST IsNot Nothing Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SetStyleFlag(Me.WindowHandleLIST, WinNativeFormsBASE.WS_VSCROLL, True)
+            End If
+             
+            SyncDrives()
+            SyncOLEDropMode()
+            
+            RaiseEvent Initialize()
+            IsInitializing = False
+        End Sub
+    
+        Sub SyncDrives()
+        	
+            If IsRefreshing = True Then Exit Sub
+            IsRefreshing = True
+            
+            Clear()
+            Dim countOfDrives As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessageHandle(hWnd, ComboBoxMessages.CB_DIR, ComboBoxConsts.DriveInfo.DDL_EXCLUSIVE Or ComboBoxConsts.DriveInfo.DDL_DRIVES, StrPtr("*.*")))
+            
+            ' CB_DIR fills the combo with a list of drives in the format of "[-x-]"
+            Dim driveBuffer As String = Space(6)
+            Dim volumeNameBuffer As String = Space(260)
+
+            Dim index As Long
+            While index <= countOfDrives
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessageHandle(hWnd, ComboBoxMessages.CB_GETLBTEXT, index, StrPtr(driveBuffer))
+                
+                Dim driveLetter As String = Mid(driveBuffer, 3, 1)
+                Dim driveDescription As String = driveLetter & ":"
+                
+                Dim driveType As WinNativeFormsBASE.DriveType = WinNativeFormsBASE.WindowsAPI.KERNEL32_GetDriveTypeW(driveDescription)
+                
+                Mid(volumeNameBuffer, 1, 1) = ""
+                Dim volumeNameLen As Long = 260
+                    
+                Select Case driveType
+                    
+                    Case driveType.DRIVE_REMOTE
+                        If WinNativeFormsBASE.WindowsAPI.MPR_WNetGetConnectionW(driveDescription, volumeNameBuffer, volumeNameLen) = 0 Then
+                            Dim networkName As String = WinNativeFormsBASE.WindowsAPI.OLEAUT32_SysAllocString(StrPtr(volumeNameBuffer))
+                            If Len(networkName) > 0 Then
+                                driveDescription += " [" & networkName & "]"
+                            End If
+                        End If
+                        
+                    Case Else
+                        WinNativeFormsBASE.WindowsAPI.KERNEL32_GetVolumeInformationW(driveDescription & "\", volumeNameBuffer, volumeNameLen, 0, 0, 0, vbNullString, 0)
+                        Dim volumeName As String = WinNativeFormsBASE.WindowsAPI.OLEAUT32_SysAllocString(StrPtr(volumeNameBuffer))
+                        If Len(volumeName) > 0 Then
+                            driveDescription += " [" & volumeName & "]"
+                        End If
+                    
+                End Select
+                
+                List(index) = driveDescription
+                ItemData(index) = driveType
+                index += 1
+            Wend
+            
+            If countOfDrives > 0 Then ListIndex = 0
+            IsRefreshing = False
+
+        End Sub
+        
+        Private Sub HandleWheel(ByVal Delta As Integer, ByVal Horizontal As Boolean) _
+                Handles WindowHandleLIST.MouseWheel
+
+            If Horizontal = False Then
+                CheckTopIndexChanged(WheelScrollEvent)
+            End If
+        End Sub
+        
+        Private Function CheckTopIndexChanged(Optional ByVal RaiseScrollEvent As Boolean = True) As Boolean
+            Dim topIndex As Long = Me.TopIndex
+            If CachedTopIndex <> topIndex Then
+                CachedTopIndex = topIndex
+                ' Sync the scrollbar
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollValue(WindowHandleLIST, Me.TopIndex, WinNativeFormsBASE.SB_VERT)
+                If RaiseScrollEvent Then RaiseEvent Scroll
+                Return True
+            End If
+            Return False
+        End Function
+        
+        Private Sub HandleScroll(ByVal ScrollType As WinNativeFormsBASE.SCROLLNOTIFY, ByVal IsHorizontal As Boolean) _
+                Handles WindowHandleLIST.Scroll
+                
+            Dim OldValue As Long = WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValue(Me.WindowHandleLIST, WinNativeFormsBASE.SB_VERT)
+            Dim NewValue As Long
+            Select Case ScrollType
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_TOP
+                    NewValue = 0
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_BOTTOM
+                    NewValue = 0
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_LINEUP
+                    NewValue = OldValue - 1
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_LINEDOWN
+                    NewValue = OldValue + 1
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_PAGEUP
+                    NewValue = OldValue - WinNativeFormsBASE.WindowsAPI.USER32_GetScrollPageSize(Me.WindowHandleLIST, WinNativeFormsBASE.SB_VERT)
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_PAGEDOWN
+                    NewValue = OldValue + WinNativeFormsBASE.WindowsAPI.USER32_GetScrollPageSize(Me.WindowHandleLIST, WinNativeFormsBASE.SB_VERT)
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_THUMBPOSITION
+                    NewValue = WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValue(Me.WindowHandleLIST, WinNativeFormsBASE.SB_VERT)
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_THUMBTRACK
+                    NewValue = WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValueHot(Me.WindowHandleLIST, WinNativeFormsBASE.SB_VERT)
+                Case Else
+                    Exit Sub
+            End Select
+             
+            If NewValue < 0 Then
+                NewValue = 0
+            End If
+
+            Dim maxValue As Long = Me.ListCount
+            If NewValue > maxValue Then
+                NewValue = maxValue
+            End If
+
+            If NewValue <> OldValue Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollValue(Me.WindowHandleLIST, NewValue, WinNativeFormsBASE.SB_VERT)
+                RaiseEvent Scroll
+            End If
+        End Sub
+        
+        Private Sub CheckIfChanged()
+            If (Me.IsRefreshing = False) And (Me.CachedSelectedIndex <> Me.ListIndex) Then
+                RaiseEvent Change()
+            End If
+            Me.CachedSelectedIndex = Me.ListIndex
+        End Sub
+        Private Sub HandleCommand(ByVal NotificationCode As ComboBoxNotifications, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+                
+            Select Case NotificationCode
+                Case CBN_SELCHANGE
+                    CheckTopIndexChanged()
+                    CheckIfChanged()
+                Case CBN_DROPDOWN
+                    SyncScrollBar
+                    RaiseEvent DropDown()
+                Case CBN_CLOSEUP
+                    RaiseEvent CloseUp()
+            End Select
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return RootWindowElement.Handle
+            End If
+        End Property
+        
+        [ Hidden ]
+        Public Sub AddItem(ByVal Value As String, Optional ByVal Index As Variant)
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            If IsMissing(Index) Then
+                Me.NewIndex = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_ADDSTRING, 0, StrPtrSafe(Value)))
+            Else
+                ' FIXME error when Index is out of range
+                Me.NewIndex = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_INSERTSTRING, Index, StrPtrSafe(Value)))
+            End If
+        End Sub
+        
+        [ Hidden ]
+        Public Sub RemoveItem(ByVal Index As Variant)
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_DELETESTRING, Index, 0)
+        End Sub
+        
+        [ Hidden ]
+        Public Sub Clear()
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_RESETCONTENT, 0, 0)
+        End Sub
+        
+        Private Sub SyncScrollBar()
+            If Me.WindowHandleLIST IsNot Nothing Then
+                Dim scrollPageSize As Long = WinNativeFormsBASE.WindowsAPI.USER32_GetListVisibleCount(Me.WindowHandleLIST)
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollRange(Me.WindowHandleLIST, 0, Me.ListCount - 1, WinNativeFormsBASE.SB_VERT)   ' FIXME combine the two SetScroll* calls
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollPageSize(Me.WindowHandleLIST, scrollPageSize, WinNativeFormsBASE.SB_VERT)
+            End If
+        End Sub
+                
+        [ Serialize (False) ]
+        Private Property Get ItemData(ByVal Index As Long) As LongPtr
+            ' FIXME error if out of range
+            ' Note Index is limited to 32767 due to Win95/98/ME support (see docs for CB_GETTEXT)
+            ' FIXME In the official matching _ListBox interface, we need to change Index to Integer
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETITEMDATA, Index, 0)
+        End Property
+        
+        [ Serialize (False) ]
+        Private Property Let ItemData(ByVal Index As Long, ByVal Value As LongPtr)
+            ' FIXME error if out of range
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_SETITEMDATA, Index, Value)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get List(ByVal Index As Long) As String
+            ' FIXME error if out of range
+            ' Note Index is limited to 32767 due to Win95/98/ME support (see docs for LB_GETTEXT)
+            ' FIXME In the official matching _ListBox interface, we need to change Index to Integer
+            Me.ControlContext.EnsureFormIsLoaded()
+            Dim itemLength As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETLBTEXTLEN, Index, 0))
+            Dim outValue As String = WinNativeFormsBASE.WindowsAPI.OLEAUT32_AllocateBSTR(vbNullString, itemLength)
+            Dim realLength As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETLBTEXT, Index, StrPtr(outValue)))
+            If realLength < itemLength Then outValue = VBA.Left(outValue, realLength) ' for completeness, see docs for LB_GETTEXTLEN
+            Return outValue
+        End Property
+        
+        [ Serialize (False) ]
+        Private Property Let List(ByVal Index As Long, ByVal Value As String)
+            ' FIXME error if out of range
+            RemoveItem(Index)
+            AddItem(Value, Index)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get ListCount() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETCOUNT, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get TopIndex() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETTOPINDEX, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let TopIndex(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_SETTOPINDEX, Value, 0)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get ListIndex() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_GETCURSEL, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let ListIndex(ByVal Value As Long)
+            If Me.ListIndex <> Value Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_SETCURSEL, Value, 0)
+                CheckIfChanged()
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As String
+            Return Drive
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As String)
+            Drive = Value
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Drive() As String
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_GetWindowText(Me.RootWindowElement)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Drive(ByVal Value As String)
+            Me.ControlContext.EnsureFormIsLoaded()
+            
+            Value = Left(Value, 1)  ' we only look at the first character passed in
+            
+            Dim index As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ComboBoxMessages.CB_FINDSTRING, -1, StrPtrSafe(Value)))
+            If index <> -1 Then
+                Me.ListIndex = index
+            End If
+        End Property
+        
+        Private Sub ColorsChanged() _
+                Handles BackColor.OnPropertyLet, _
+                        ForeColor.OnPropertyLet
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.Refresh
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BackColor.OnPropertyGet, _
+        	            ForeColor.OnPropertyGet, _
+                        NewIndex.OnPropertyGet, _
+                        NewIndex.OnPropertyLet, _
+                        WheelScrollEvent.OnPropertyGet, _
+                        WheelScrollEvent.OnPropertyLet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        Public Sub Refresh()
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.SyncDrives()
+            WinNativeFormsBASE.WindowsAPI.USER32_RedrawWindow(Me.RootWindowElement, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE)
+        End Sub
+
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode(Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, False)
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+
+    #End Region
+    
+End Class

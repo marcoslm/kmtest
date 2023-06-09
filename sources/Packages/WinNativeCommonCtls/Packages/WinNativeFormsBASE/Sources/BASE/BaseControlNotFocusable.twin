@@ -1,0 +1,24 @@
+[ ClassId ("E97AA5FD-7787-4818-B77E-5999646A5843") ]
+[ InterfaceId ("C1723E23-2BFB-4F5B-9409-85C2BF41134C") ]
+[ COMCreatable (False) ]
+Private Class BaseControlNotFocusable
+
+    Implements BaseControlRect Via BaseControlRect
+        
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControlRect = New BaseControlRect(ControlType)
+    End Sub
+    
+    Friend Sub Initialize(_ControlContext As stdole.IUnknown)
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+    End Sub
+
+    Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+    
+End Class

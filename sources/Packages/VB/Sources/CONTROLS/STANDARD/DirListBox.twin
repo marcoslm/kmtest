@@ -1,0 +1,670 @@
+Private Module DirListBoxGlobals
+	Public DirListBoxImages() As OlePicture
+End Module
+
+[ Description ("A Win32 native DirListBox") ]
+[ WindowsControl ("/miscellaneous/ICONS??/DirListBox??.png") ]
+[ ClassId ("33AD4F58-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("52C476A1-862E-407D-94FF-3BFD93774E4A") ]  ' FIXME implement {33AD4F51-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class DirListBox
+              
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbDirListBox)
+ 
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbFixedSingleBorder
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowBackground
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Description ("") ]
+            Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbWindowText
+        [ Serialize (False) ]
+        [ Description ("") ]
+            Public NewIndex As Long = -1
+
+            Private CachedTopIndex As Long
+            Private IsInitializing As Boolean = True
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            Private IsRefreshing As Boolean
+            Private DirLevel As Long
+            Private CachedPath As String
+            
+        Public CausesValidation As Boolean = True
+
+        Public HelpContextID As Long
+        Public OLEDragMode As VBRUN.OLEDragConstants            ' Not implemented, but doesn't work in VB6 anyway
+        
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+
+            Public WhatsThisHelpID As Long
+
+        [ Description ("VB6 doesn't trigger the Scroll event for mouse-wheel events.  Set this to True to generate Scroll events in response to mouse-wheel notifications") ]
+            Public WheelScrollEvent As Boolean = True
+
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+                        
+            Public Sub ShowWhatsThis()
+                HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+            End Sub
+                        
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Event Click()
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Change()
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event KeyDown(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("") ]
+            Event KeyUp(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+           Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        Event Validate(Cancel As Boolean)
+        Event Scroll()
+        
+    #End Region
+
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        	'Me.FontSize = 12
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+    
+        Private Sub InitImages()
+            On Error Resume Next
+
+            ' Here we map a package resource into a constant Variant
+            ' so that we can continue to use resources in the package, yet access them just like byte arrays at runtime
+            ' This is very efficient.  The resource will not exist as an ordinary resource in the output PE file.
+            Const ImageData_FOLDER_CLOSED As Variant = LoadResDataInternal("FOLDER_CLOSED.gif", "OTHER")
+            Const ImageData_FOLDER_OPEN As Variant = LoadResDataInternal("FOLDER_OPEN.gif", "OTHER")
+
+            If IsArrayInitialized(DirListBoxGlobals.DirListBoxImages) = False Then
+                ReDim DirListBoxGlobals.DirListBoxImages(0 To 2) As OlePicture
+                Set DirListBoxGlobals.DirListBoxImages(0) = Global.LoadPicture(ImageData_FOLDER_CLOSED)
+                Set DirListBoxGlobals.DirListBoxImages(1) = Global.LoadPicture(ImageData_FOLDER_OPEN)
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+                
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            InitImages()
+                
+            Dim styles As Long
+            Dim extendedStyles As Long
+                 
+                extendedStyles += If(ControlContext.IsPlacedOnUserControl, 0, WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_NOPARENTNOTIFY)
+                styles += ListBoxStyles.LBS_NOTIFY
+                styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_VSCROLL  'If(Me.Columns > 0, ListBoxStyles.LBS_MULTICOLUMN Or GeneralConsts.WindowStyles.WS_HSCROLL, GeneralConsts.WindowStyles.WS_VSCROLL)
+                styles += LBS_OWNERDRAWFIXED Or ListBoxStyles.LBS_HASSTRINGS 'If(Me.Style = ListBoxConstants.vbListBoxCheckbox, ListBoxStyles.LBS_OWNERDRAWFIXED Or ListBoxStyles.LBS_HASSTRINGS, 0)
+                
+                If Me.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+                    If Appearance = AppearanceConstants.vbAppear3d Then
+                        extendedStyles += WinNativeFormsBASE.WS_EX_CLIENTEDGE
+                    Else
+                        styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_BORDER
+                    End If
+                End If
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderListBox", "", styles, extendedStyles)
+            Me.RootWindowElement.ActivatePrePostMessages(True)
+        End Sub
+        
+        Private Sub HandleGetColors(ByVal hdc As LongPtr, ByRef BackBrushOut As LongPtr, ByVal ControlType As ControlTypeConstants) _
+                Handles RootWindowElement.GetColors
+                
+            WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(hdc, WinNativeFormsBASE.GDI32_TranslateColorFromHDC(Me.ForeColor, hdc))
+            WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(hdc, WinNativeFormsBASE.BackgroundModes.TRANSPARENT)
+            BackBrushOut = Me.CreateBackBrush(Me.BackColor)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Private Function GetCustomDrawnHeight() As Long
+            Dim TextMetrics As WinNativeFormsBASE.TEXTMETRIC = GetFontMetrics()
+            Const FontPadding As Long = 4
+            Return TextMetrics.TMHeight + TextMetrics.TMExternalLeading + FontPadding
+        End Function
+        
+        Private Sub MeasureItem(ByRef Info As WinNativeFormsBASE.MEASUREITEMSTRUCT, ByRef Handled As Boolean) _
+                Handles RootWindowElement.MeasureItem
+ 
+            ' Careful! This occurs BEFORE the Create event, so the windows font has not yet been set!
+            Info.ItemHeight = GetCustomDrawnHeight()
+        End Sub
+                 
+        Private Sub DrawItem(ByRef Info As WinNativeFormsBASE.DRAWITEMSTRUCT, ByRef Handled As Boolean) _
+                Handles RootWindowElement.DrawItem
+ 
+            If Info.CtlType = WinNativeFormsBASE.OwnerDrawTypes.ODT_LISTBOX And Info.ItemID > -1 Then
+                
+                'MsgBox "DrawItem" & List(0)
+                
+                Dim itemHeight As Long = Info.RCItem.Bottom - Info.RCItem.Top
+                
+                Dim backColor As OLE_COLOR
+                Dim textColor As OLE_COLOR
+                If Info.ItemState And WinNativeFormsBASE.OwnerDrawState.ODS_DISABLED Then
+                    backColor = Me.BackColor
+                    textColor = vbGrayText
+                ElseIf Info.ItemState And WinNativeFormsBASE.OwnerDrawState.ODS_SELECTED Then
+                    backColor = vbHighlight
+                    textColor = vbHighlightText
+                Else
+                    backColor = Me.BackColor
+                    textColor = Me.ForeColor
+                End If
+                
+                Dim backBrush As LongPtr = WinNativeFormsBASE.WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(backColor))
+                WinNativeFormsBASE.WindowsAPI.USER32_FillRectangle(Info.hDC, Info.RCItem, backBrush)
+                WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(backBrush)
+                
+                Const VPADDING_IMAGE As Long = 5
+                Const HPADDING_IMAGE As Long = 5
+                Const HPADDING_TEXT As Long = 5
+                
+                Dim dirLevel As Long = CLng(Info.ItemData)
+                With DirListBoxGlobals.DirListBoxImages(If(dirLevel = Me.DirLevel, 0, 1))
+                    ' The icon is scaled to the item height
+                    Dim horzProportional As Double = .Width / .Height
+                    Dim iconWidth As Long = (itemHeight - (VPADDING_IMAGE * 2)) * horzProportional
+                    Dim HPADDING_LEVEL As Long = iconWidth / 2
+
+                    .Render(Info.hDC, HPADDING_IMAGE + (HPADDING_LEVEL * dirLevel), VPADDING_IMAGE + Info.RCItem.Top, iconWidth, itemHeight - (VPADDING_IMAGE * 2), 0, .Height, .Width, -.Height, 0&)
+                End With
+                
+                Info.RCItem.Left += HPADDING_IMAGE + HPADDING_TEXT + (HPADDING_LEVEL * dirLevel) + iconWidth
+                  
+                Dim itemText As String = Me.List(Info.ItemID)
+                Dim oldTextColor As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, TranslateColor(textColor))
+                Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, 1)
+                
+                WinNativeFormsBASE.WindowsAPI.GDI32_TextOut(Info.hDC, Info.RCItem.Left + (1 * (RootWindowElement.DPI / 96)), Info.RCItem.Top, itemText)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(Info.hDC, oldBkMode)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(Info.hDC, oldTextColor)
+            End If
+            
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+             
+            SyncDirs(App.Path, False, False)
+               
+            SyncOLEDropMode()
+            RaiseEvent Initialize()
+            IsInitializing = False
+        End Sub
+    
+        Sub SyncDirs(Path As String, ForceRefresh As Boolean, ChangeSelected As Boolean)
+        	            
+            If IsRefreshing = True Then Exit Sub
+            If Left(Path, 4) = "\\?\" Then Path = Right(Path, Len(Path) - 4)
+                                   
+            ' Handle the cases of `c: [whatever]`, being passed directly from the DriveListBox
+            If (Mid(Path, 2, 3) = ": [") And (Right(Path, 1) = "]") Then
+            	Path = Left(Path, 2)
+            End If
+            
+            If Right(Path, 1) <> "\" Then Path += "\"
+
+            If ForceRefresh = False AndAlso Path = CachedPath Then Exit Sub
+            IsRefreshing = True
+
+            On Error GoTo InvalidPath
+            
+                ' Before emptying the list, first check the path is valid...
+                If (GetAttr(Path) And vbDirectory) = 0 Then Err.Raise 76
+                
+                Clear()
+                CachedPath = Path
+
+                Dim pathArray As Variant = Split(Path, "\")
+                Dim pathIndex As Long = 0
+                
+                If Len(pathArray(0)) = 0 Then
+                    If Len(pathArray(1)) = 0 Then
+                        ' a network path.  combine the first and second parts, e.g. '\\localhost\z', as that is how VB displays it
+                        pathArray(3) = "\\" & pathArray(2) & "\" & pathArray(3)
+                        pathIndex = 3
+                    End If
+                End If
+                
+                Me.DirLevel = 0
+                While pathIndex < UBound(pathArray)
+                    Dim pathPart As String = pathArray(pathIndex)
+                    If Len(pathPart) = 0 Then
+                        Err.Raise 76
+                    ElseIf pathPart = "." Then
+                        ' refers to the current directory, VB ignores this for display purposes.
+                    ElseIf pathPart = ".." Then
+                        ' refers to the parent directory
+                        RemoveItem(Me.ListCount - 1)        ' remove the last item
+                        Me.DirLevel -= 1
+                    Else
+                        If pathIndex = 0 And Right(pathPart, 1) = ":" Then pathPart += "\"
+                        AddItem(pathPart)
+                        ItemData(Me.ListCount - 1) = Me.DirLevel
+                        Me.DirLevel += 1
+                    End If
+                    pathIndex += 1
+                Wend
+ 
+                On Error Resume Next
+                Dim currentItem As String = Dir(Path & "*.*", vbDirectory)
+                While Len(currentItem) > 0
+                    If (currentItem <> ".") And (currentItem <> "..") Then
+                        If GetAttr(Path & currentItem) And vbDirectory Then
+                            AddItem(currentItem)
+                            ItemData(Me.ListCount - 1) = Me.DirLevel
+                        End If
+                    End If
+                    currentItem = Dir()
+                Wend
+                
+                If ChangeSelected Then
+                    Me.ListIndex = Me.DirLevel - 1
+                End If
+                
+                If IsInitializing = False Then
+                    RaiseEvent Change()
+                End If
+                
+        ExitCleanup:
+            IsRefreshing = False
+            Exit Sub
+            
+        InvalidPath:
+            Err.Raise 76, , "Path not found"
+            Resume ExitCleanup
+
+        End Sub
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleCommand(ByVal NotificationCode As ListBoxNotifications, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+                
+            Select Case NotificationCode
+                Case ListBoxNotifications.LBN_SELCHANGE
+                    CheckTopIndexChanged()
+                    RaiseEvent Click()
+                Case ListBoxNotifications.LBN_SELCANCEL
+                    RaiseEvent Click()
+                Case ListBoxNotifications.LBN_DBLCLK
+                    If Me.ListIndex < 0 Then Exit Sub
+                    SyncDirs(Me.PathSelected, False, True)
+            End Select
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return RootWindowElement.Handle
+            End If
+        End Property
+        
+        [ Hidden ]
+        Public Sub AddItem(ByVal Value As String, Optional ByVal Index As Variant)
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            If IsMissing(Index) Then
+                Me.NewIndex = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_ADDSTRING, 0, StrPtrSafe(Value)))
+            Else
+                ' FIXME error when Index is out of range
+                Me.NewIndex = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_INSERTSTRING, Index, StrPtrSafe(Value)))
+            End If
+        End Sub
+        
+        [ Hidden ]
+        Public Sub RemoveItem(ByVal Index As Variant)
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_DELETESTRING, Index, 0)
+        End Sub
+        
+        [ Hidden ]
+        Public Sub Clear()
+            If IsRefreshing = False Then
+  	            Err.Raise 438
+            End If
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_RESETCONTENT, 0, 0)
+        End Sub
+                
+        [ Serialize (False) ]
+        Private Property Get ItemData(ByVal Index As Long) As LongPtr
+            ' FIXME error if out of range
+            ' Note Index is limited to 32767 due to Win95/98/ME support (see docs for LB_GETTEXT)
+            ' FIXME In the official matching _ListBox interface, we need to change Index to Integer
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETITEMDATA, Index, 0)
+        End Property
+        
+        [ Serialize (False) ]
+        Private Property Let ItemData(ByVal Index As Long, ByVal Value As LongPtr)
+            ' FIXME error if out of range
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_SETITEMDATA, Index, Value)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get List(ByVal Index As Long) As String
+            ' FIXME error if out of range
+            ' Note Index is limited to 32767 due to Win95/98/ME support (see docs for LB_GETTEXT)
+            ' FIXME In the official matching _ListBox interface, we need to change Index to Integer
+            Me.ControlContext.EnsureFormIsLoaded()
+            Dim itemLength As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETTEXTLEN, Index, 0))
+            Dim outValue As String = WinNativeFormsBASE.WindowsAPI.OLEAUT32_AllocateBSTR(vbNullString, itemLength)
+            Dim realLength As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETTEXT, Index, StrPtr(outValue)))
+            If realLength < itemLength Then outValue = VBA.Left(outValue, realLength) ' for completeness, see docs for LB_GETTEXTLEN
+            Return outValue
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get ListCount() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETCOUNT, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get TopIndex() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETTOPINDEX, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let TopIndex(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_SETTOPINDEX, Value, 0)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get ListIndex() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_GETCURSEL, 0, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let ListIndex(ByVal Value As Long)
+            If Me.ListIndex <> Value Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, ListBoxMessages.LB_SETCURSEL, Value, 0)
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As String
+            Return Path
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As String)
+            Path = Value
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Path() As String
+            Me.ControlContext.EnsureFormIsLoaded()
+                        
+            Dim fullPath As String
+            Dim dirLevel As Long
+            While dirLevel < Me.DirLevel
+                Dim pathPart As String = List(dirLevel)
+                fullPath += pathPart & If(Right(pathPart, 1) <> "\", "\", "")
+                dirLevel += 1
+            Wend
+            If dirLevel > 1 Then
+                fullPath = Left(fullPath, Len(fullPath) - 1)
+            End If
+            Return fullPath
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get PathSelected() As String
+            Me.ControlContext.EnsureFormIsLoaded()
+            
+            If Me.ListIndex < 0 Then Return vbNullString
+            
+            Dim fullPath As String
+            Dim dirLevel As Long = CLng(ItemData(Me.ListIndex))
+            While dirLevel > 0
+                dirLevel -= 1
+                Dim pathPart As String = List(dirLevel)
+                fullPath = pathPart & If(Right(pathPart, 1) <> "\", "\", "") & fullPath
+            Wend
+            Return fullPath & List(Me.ListIndex)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Path(ByVal Value As String)
+            SyncDirs(Value, False, False)
+        End Property
+        
+        Private Sub ColorsChanged() _
+                Handles BackColor.OnPropertyLet, _
+                        ForeColor.OnPropertyLet
+            
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.Refresh
+        End Sub
+        
+        Private Sub BorderStyleChanged() _  
+        	    Handles BorderStyle.OnPropertyLet
+                
+            SyncBorderStyle(Me)
+        End Sub
+
+        Private Sub OnTouchedFormProperties() _
+                Handles BackColor.OnPropertyGet, _
+        	            ForeColor.OnPropertyGet, _
+                        NewIndex.OnPropertyGet, _
+                        NewIndex.OnPropertyLet
+
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        Public Sub Refresh()
+            Me.ControlContext.EnsureFormIsLoaded()
+            Me.SyncDirs(CachedPath, True, False)
+            WinNativeFormsBASE.WindowsAPI.USER32_RedrawWindow(Me.RootWindowElement, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Function CheckTopIndexChanged() As Boolean
+            Dim topIndex As Long = Me.TopIndex
+            If CachedTopIndex <> topIndex Then
+                CachedTopIndex = topIndex
+                RaiseEvent Scroll
+                Return True
+            End If
+            Return False
+        End Function
+
+        Private Sub PostProcessMessage(ByVal Message As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef ReturnValue As LongPtr, ByVal PostMessageCookie As Long) _
+                Handles RootWindowElement.PostProcessMessage
+
+            Select Case Message
+                Case ListBoxMessages.LB_SETTOPINDEX
+                    CheckTopIndexChanged()
+            End Select
+        End Sub
+        
+        Private Sub HandleScroll(ByVal ScrollType As WinNativeFormsBASE.SCROLLNOTIFY, ByVal IsHorizontal As Boolean) _
+                Handles RootWindowElement.Scroll
+                
+            CheckTopIndexChanged()
+        End Sub
+        
+        Private Sub HandleWheel(ByVal Delta As Integer, ByVal Horizontal As Boolean) _
+                Handles RootWindowElement.MouseWheel
+                
+            If Horizontal = False Then
+                If WheelScrollEvent Then CheckTopIndexChanged()
+            End If
+        End Sub
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode(Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, False)
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+        
+    #End Region
+    
+End Class

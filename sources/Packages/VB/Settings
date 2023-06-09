@@ -1,0 +1,57 @@
+{
+	"configuration.inherits": "Defaults",
+	"project.appTitle": "WinNativeForms Package",
+	"project.autoPrettify": true,
+	"project.buildPath": "${SourcePath}\\Build\\${ProjectName}_${Architecture}.${FileExtension}",
+	"project.buildType": "Package TWINPACK",
+	"project.description": "WinNativeForms Package",
+	"project.exportPathIsV2": true,
+	"project.id": "{F50B82D0-DCAB-43FE-9631-11959D4A4728}",
+	"project.licence": "MIT",
+	"project.name": "VB",
+	"project.optionExplicit": true,
+	"project.packageVisibility": "PUBLIC",
+	"project.references": [
+		{
+			"id": "{00020430-0000-0000-C000-000000000046}",
+			"lcid": 0,
+			"name": "OLE Automation",
+			"path32": "C:\\Windows\\SysWOW64\\stdole2.tlb",
+			"path64": "C:\\Windows\\System32\\stdole2.tlb",
+			"versionMajor": 2,
+			"versionMinor": 0
+		},
+		{
+			"id": "{566498A8-8F6E-4BC7-869E-2A50C8CB460B}",
+			"lcid": 0,
+			"name": "[twinBASIC Extension] Windows Controls DESIGNER Library",
+			"versionBuild": 0,
+			"versionMajor": 1,
+			"versionMinor": 0,
+			"versionRevision": 0
+		},
+		{
+			"id": "{AA5DF978-0351-48DB-9F35-3F83DEF5FBB7}",
+			"isCompilerPackage": true,
+			"licence": "MIT",
+			"name": "[COMPILER PACKAGE] WinNativeFormsBASE Package",
+			"path32": "",
+			"path64": "",
+			"publisher": "TWINBASIC-COMPILER",
+			"symbolId": "WinNativeFormsBASE",
+			"versionBuild": 0,
+			"versionMajor": 0,
+			"versionMinor": 0,
+			"versionRevision": 24
+		}
+	],
+	"project.versionBuild": 0,
+	"project.versionMajor": 0,
+	"project.versionMinor": 0,
+	"project.versionRevision": 31,
+	"project.warnings": {
+		"errors": [],
+		"ignored": []
+	},
+	"runtime.useUnicodeStandardLibrary": true
+}

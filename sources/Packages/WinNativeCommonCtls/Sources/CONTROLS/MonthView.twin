@@ -1,0 +1,1035 @@
+[ WindowsControl ("/miscellaneous/ICONS??/MonthView??.png") ]
+[ ClassId ("1AC604F6-CF3D-4661-BFE3-858DE6449E8C") ]
+[ InterfaceId ("8003392F-3351-4501-9F4B-6F7427BE1A69") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+Class MonthView
+	
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbMonthView)
+        
+    #End Region
+            
+    #Region "STATE"
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+            
+        Public ShowToday As Boolean = True
+        Public ShowTodayCircle As Boolean = True
+        Public ShowWeekNumbers As Boolean = False
+        Public ShowTrailingDates As Boolean = True
+                    
+        Public MonthColumns As Long = 1
+        Public MonthRows As Long = 1
+        Public ResizeToFit As Boolean = True
+        
+        [ Description ("") ]
+            Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbFixedSingleBorder
+        [ Description ("") ]
+            Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+        [ Serialize (True, "MinDate") ]
+            Public MinDate_INIT As Date = DateSerial(1753, 1, 1)
+        [ Serialize (True, "MaxDate") ]
+            Public MaxDate_INIT As Date = DateSerial(9999, 12, 31)
+            
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "BackColor") ]
+        Private BackColor_INIT As OLE_COLOR = vbWindowBackground
+
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "MonthBackColor") ]
+        Private MonthBackColor_INIT As OLE_COLOR = vbWindowBackground
+        
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "TitleBackColor") ]
+        Private TitleBackColor_INIT As OLE_COLOR = vbActiveTitleBar
+        
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "TitleForeColor") ]
+        Private TitleForeColor_INIT As OLE_COLOR = vbActiveTitleBarText
+        
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "TrailingForeColor") ]
+        Private TrailingForeColor_INIT As OLE_COLOR = vbGrayText
+        
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "ForeColor") ]
+        Private ForeColor_INIT As OLE_COLOR = vbButtonText
+        
+        [ Serialize (True, "Value") ]
+        Private Value_INIT As Date = Date()
+        
+        Public MultiSelect As Boolean = False
+        Public MaxSelCount As Long = 7
+        Public ScrollRate As Long = 0
+        Public StartOfWeek As VbDayOfWeek
+        
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            
+        Private IsInitialized As Boolean = False
+        Private IsNewControl As Boolean = False
+        Private LastSelectionStart As Variant
+        Private LastSelectionEnd As Variant
+        
+        Private IsDesignMode As Boolean = False
+        Private LastMouseUpX As Single = -1
+        Private LastMouseUpY As Single = -1
+        Private LastMouseUpTime As LongLong
+        
+        Private LastCachedDayStateStart As Date
+        Private LastCachedDayStateEnd As Date
+        Private LastCachedDayStateMonthCount As Long
+        Private LastCachedDayStateNumDays As Long
+        Private LastCachedDayStateDayStates() As Boolean
+        Private LastCachedDayStateBits() As Long
+        
+            Public CausesValidation As Boolean = True
+        [ Unimplemented ]
+            Public RightToLeft As Boolean = False
+
+            Public HelpContextID As Long
+            Public WhatsThisHelpID As Long
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ Description ("") ]
+            Public Event Click()
+        [ Description ("") ]
+            Public Event DateClick(ByVal DateClicked As Date)
+        [ Description ("") ]
+            Public Event DblClick()
+        [ Description ("") ]
+            Public Event DateDblClick(ByVal DateDblClicked As Date)
+        [ Description ("") ]
+            Public Event GetDayBold(ByVal StartDate As Date, ByVal Count As Integer, ByRef State() As Boolean)
+        [ Description ("") ]
+            Public Event SelChange(ByVal StartDate As Date, ByVal EndDate As Date, Cancel As Boolean)
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyDown(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("This event fires when the user presses a key") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("This event fires when the user releases a key") ]
+            Event KeyUp(KeyCode As Integer, ByVal Shift As Integer)
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        [ Description ("") ]
+            Event OLECompleteDrag(Effect As Long)
+        [ Description ("") ]
+            Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        [ Description ("") ]
+            Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        [ Description ("") ]
+            Event OLESetData(Data As DataObject, DataFormat As Integer)
+        [ Description ("") ]
+            Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        Event Validate(Cancel As Boolean)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+                IsNewControl = True
+            End If
+            IsDesignMode = Serializer.IsDesignMode
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+            StartOfWeek = GetSystemDayOfWeek()
+        End Sub
+        
+        Private Function GetSystemDayOfWeek() As VbDayOfWeek
+            Return ((7 - (Weekday(#02-Jan-2000#, vbUseSystemDayOfWeek) - 1)) Mod 7) + 1
+        End Function
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long = GetStyles()
+            Dim extendedStyles As Long = GetExtendedStyles()
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "SysMonthCal32", vbNullString, styles, extendedStyles, True)
+        End Sub
+        
+        Private Function GetStyles() As Long
+            Dim Styles As Long
+        	Styles += If(ShowToday, 0, MCS_NOTODAY)
+        	Styles += If(ShowTodayCircle, 0, MCS_NOTODAYCIRCLE)
+            Styles += If(ShowWeekNumbers, MCS_WEEKNUMBERS, 0)
+            Styles += If(ShowTrailingDates, 0, MCS_NOTRAILINGDATES)
+            Styles += If(MultiSelect, MCS_MULTISELECT, 0)
+            Styles += If(IsDesignMode = False, MCS_DAYSTATE, 0)
+            
+            If Me.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+                If Me.Appearance <> AppearanceConstants.vbAppear3d Then
+                    Styles += WinNativeFormsBASE.GeneralConsts.WindowStyles.WS_BORDER
+                End If
+            End If
+            Return Styles
+        End Function
+        
+        Private Function GetExtendedStyles() As Long
+            Dim Styles As Long
+        	If Me.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+                If Me.Appearance = AppearanceConstants.vbAppear3d Then
+                    Styles += WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_CLIENTEDGE
+                End If
+            End If
+            Return Styles
+        End Function
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+		
+        Private Sub HandleCommand(ByVal NotificationCode As Long, _
+                                    ByVal Identifier As Integer) _
+                Handles RootWindowElement.Command
+'            Debug.Print "HandleCommand NotificationCode: ", NotificationCode
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            ' NOTE: changing the property assignments here often means changes to SyncRecreate() too
+            Me.BackColor = BackColor_INIT
+            Me.MonthBackColor = MonthBackColor_INIT
+            Me.TitleBackColor = TitleBackColor_INIT
+            Me.TitleForeColor = TitleForeColor_INIT
+            Me.TrailingForeColor = TrailingForeColor_INIT
+            Me.ForeColor = ForeColor_INIT
+            Me.SetDateRange(MinDate_INIT, MaxDate_INIT)
+            Me.Value = Value_INIT
+            SyncMaxSelCount()
+            SyncScrollRate()
+            SyncStartOfWeek()
+            SyncOLEDropMode()
+            
+            InternalSyncFontNow()   ' has to be done before GetRequiredSize
+            SyncToRequiredSize()
+            
+            Dim simulatedNotification As NMDAYSTATE
+            Dim numVisibleMonths As Long = Me.GetMonthRange(True, LastCachedDayStateStart, LastCachedDayStateEnd)
+            simulatedNotification.cDayState = numVisibleMonths
+            HandleGetDayState(simulatedNotification)
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, MCM_SETDAYSTATE, LastCachedDayStateMonthCount, VarPtr(LastCachedDayStateBits(1)))
+        
+            RaiseEvent Initialize()
+            
+            IsInitialized = True
+        End Sub
+        
+        Private Sub SyncRecreate() _
+                Handles MultiSelect.OnPropertyLet
+                                        
+            Dim BackColor As Long = Me.BackColor
+            Dim MonthBackColor As Long = Me.MonthBackColor
+            Dim TitleBackColor As Long = Me.TitleBackColor
+            Dim TitleForeColor As Long = Me.TitleForeColor
+            Dim ForeColor As Long = Me.ForeColor
+            Dim MinDate As Date = Me.MinDate
+            Dim MaxDate As Date = Me.MaxDate
+            Dim Value As Date = Me.Value
+            Dim MaxSelCount As Long = Me.MaxSelCount
+            Dim ScrollRate As Long = Me.ScrollRate
+            Dim StartOfWeek As Long = Me.StartOfWeek
+            
+            ' changing these flags in the GWL_STYLE has no effect at runtime, so we have to recreate the control
+            RootWindowElement.RecreateWindow(GetStyles())
+            
+            Me.BackColor = BackColor
+            Me.MonthBackColor = MonthBackColor
+            Me.TitleBackColor = TitleBackColor
+            Me.TitleForeColor = TitleForeColor
+            Me.ForeColor = ForeColor
+            Me.SetDateRange(MinDate, MaxDate)
+            Me.Value = Value
+            Me.MaxSelCount = MaxSelCount
+            Me.ScrollRate = ScrollRate
+            Me.StartOfWeek = StartOfWeek
+                        
+            InternalSyncFontNow()   ' has to be done before GetRequiredSize
+            SyncToRequiredSize()
+            
+            Dim simulatedNotification As NMDAYSTATE
+            Dim numVisibleMonths As Long = Me.GetMonthRange(True, LastCachedDayStateStart, LastCachedDayStateEnd)
+            simulatedNotification.cDayState = numVisibleMonths
+            HandleGetDayState(simulatedNotification)
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, MCM_SETDAYSTATE, LastCachedDayStateMonthCount, VarPtr(LastCachedDayStateBits(1)))
+        End Sub
+        
+        Private Sub HandleKeyDown(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyDown
+            
+            RaiseEvent KeyDown(CInt(KeyCode), CInt(ShiftState))
+        End Sub
+        
+        Private Sub HandleKeyPress(KeyCode As Integer) _
+                Handles RootWindowElement.KeyPress
+            
+            RaiseEvent KeyPress(CInt(KeyCode))
+        End Sub
+        
+        Private Sub HandleKeyUp(KeyCode As Long, ByVal ShiftState As Long) _
+                Handles RootWindowElement.KeyUp
+            
+            RaiseEvent KeyUp(CInt(KeyCode), CInt(ShiftState))
+        End Sub
+        
+        Private Sub HandlePreMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single, SwallowMessage As Boolean) _
+                Handles RootWindowElement.PreMouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+                        
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub RootWindowElement_PreMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single, SwallowMessage As Boolean)
+
+            Dim ScaledPixX As Double = (X / Me.ControlContext.GetScaleModePixelsMultiplierX)
+            Dim ScaledPixY As Double = (Y / Me.ControlContext.GetScaleModePixelsMultiplierY)
+            Dim PixX As Long = ScaledPixX * Me.RootWindowElement.UnitPixelScale
+            Dim PixY As Long = ScaledPixY * Me.RootWindowElement.UnitPixelScale
+            Dim IsDateDblClick As Boolean = False
+            
+            Dim _X As Single = X
+            Dim _Y As Single = Y
+
+            If (LastMouseUpX = X) And (LastMouseUpY = Y) Then
+                Dim MouseUpTime As LongLong = GetTickCount()
+                Dim dblClickTime As Long = GetDoubleClickTime()
+                Dim MouseClickTime As LongLong = (MouseUpTime - LastMouseUpTime)
+                If MouseClickTime < dblClickTime Then
+                	RaiseEvent DblClick()
+                    _X = -1  ' prevent further double click messages
+                    _Y = -1
+                    
+                    Dim hitTest As MonthViewHitTestValues = Me.HitTest(PixX, PixY)
+                    If hitTest = MCHT_CALENDARDATE Then
+                        RaiseEvent DateDblClick(Me.Value)
+                        IsDateDblClick = True
+                    End If
+                End If
+            End If
+            
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+
+            If IsDateDblClick = False Then
+                If IsInRect(ScaledPixX, ScaledPixY) Then
+                    RaiseEvent Click()
+                End If
+            Else
+            	RaiseEvent DateClick(Me.Value)
+            End If
+            
+            LastMouseUpX = _X
+            LastMouseUpY = _Y
+            LastMouseUpTime = GetTickCount()
+            
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode (Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get BackColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_BACKGROUND, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let BackColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_BACKGROUND, TranslateColor(Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get MonthBackColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_MONTHBK, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let MonthBackColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_MONTHBK, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get TitleBackColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_TITLEBK, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let TitleBackColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_TITLEBK, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get TitleForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_TITLETEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let TitleForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_TITLETEXT, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get TrailingForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_TRAILINGTEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let TrailingForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_TRAILINGTEXT, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get ForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETCOLOR, MonthViewColorArea.MCSC_TEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let ForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETCOLOR, MonthViewColorArea.MCSC_TEXT, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Value() As Date
+        	Dim dates(0 To 1) As SYSTEMTIME
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, If(MultiSelect, MCM_GETSELRANGE, MCM_GETCURSEL), 0, VarPtr(dates(0)))
+            Return DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Value(NewValue As Date)
+        	Dim dates(0 To 1) As SYSTEMTIME
+            If Int(NewValue) >= MinDate And Int(NewValue) <= MaxDate Then
+                 NewValue = Int(NewValue)
+            Else
+                Err.Raise 35773, , "Date does not fall within the MinDate and MaxDate values"
+            End If
+            Dim OldDate As Date = Value
+            Dim Changed As Boolean = (OldDate <> NewValue)
+            
+            If Changed = True Then
+                With dates(0)
+                    .wYear = VBA.Year(NewValue)
+                    .wMonth = VBA.Month(NewValue)
+                    .wDay = VBA.Day(NewValue)
+                    .wDayOfWeek = VBA.Weekday(NewValue)
+                End With
+                LSet dates(1) = dates(0)
+                    
+                Dim Cancel As Boolean
+                RaiseEvent SelChange(NewValue, NewValue, Cancel)
+                If Cancel = False Then
+                    WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, If(MultiSelect, MCM_SETSELRANGE, MCM_SETCURSEL), 0, VarPtr(dates(0)))
+                End If
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get MinDate() As Date
+        	Dim dates(0 To 1) As SYSTEMTIME
+            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MIN Then
+                Return DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay)
+            End If
+        End Property
+        
+        Private Sub SetDateRange(ByVal minDate As Double, ByVal maxDate As Double)
+        	Dim dates(0 To 1) As SYSTEMTIME
+            With dates(0)
+            	.wYear = VBA.Year(minDate)
+                .wMonth = VBA.Month(minDate)
+                .wDay = VBA.Day(minDate)
+            End With
+            With dates(1)
+                .wYear = VBA.Year(maxDate)
+                .wMonth = VBA.Month(maxDate)
+                .wDay = VBA.Day(maxDate)
+            End With
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETRANGE, GDTR_MIN Or GDTR_MAX, VarPtr(dates(0)))
+        End Sub
+
+        [ Serialize (False) ]
+        Public Property Let MinDate(NewValue As Date)
+            If Int(NewValue) > Me.MaxDate Then
+                Err.Raise 35775, Description:="The value specified for the MinDate is higher than the current value of MaxDate"
+            Else
+                NewValue = Int(NewValue)
+            End If
+            
+            If Value < NewValue Then Value = NewValue
+            SetDateRange(NewValue, Me.MaxDate)
+        End Property
+    
+        [ Serialize (False) ]
+        Public Property Get MaxDate() As Date
+        	Dim dates(0 To 1) As SYSTEMTIME
+            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MAX Then
+                Return DateSerial(dates(1).wYear, dates(1).wMonth, dates(1).wDay)
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let MaxDate(NewValue As Date)
+            If Int(NewValue) < Me.MinDate Then
+                Err.Raise 35775, , "The value specified for MaxDate is lower than the current value of MinDate"
+            Else
+                NewValue = Int(NewValue)
+            End If
+            
+            If Value > NewValue Then Value = NewValue
+        	SetDateRange(Me.MinDate, NewValue)
+        End Property
+                	        
+        Private Sub SyncShowToday() _
+                Handles ShowToday.OnPropertyLet
+
+            WinNativeFormsBASE.USER32_SetStyleFlag(RootWindowElement, MCS_NOTODAY, Not ShowToday)
+            SyncToRequiredSize()
+        End Sub
+        
+        Private Sub SyncShowTodayCircle() _
+                Handles ShowTodayCircle.OnPropertyLet
+
+            WinNativeFormsBASE.USER32_SetStyleFlag(RootWindowElement, MCS_NOTODAYCIRCLE, Not ShowTodayCircle)
+            SyncToRequiredSize()
+        End Sub
+        
+        Private Sub SyncShowWeekNumbers() _
+                Handles ShowWeekNumbers.OnPropertyLet
+
+            WinNativeFormsBASE.USER32_SetStyleFlag(RootWindowElement, MCS_WEEKNUMBERS, ShowWeekNumbers)
+            SyncToRequiredSize()
+        End Sub
+        
+        Private Sub SyncShowTrailingDates() _
+                Handles ShowTrailingDates.OnPropertyLet
+
+            WinNativeFormsBASE.USER32_SetStyleFlag(RootWindowElement, MCS_NOTRAILINGDATES, Not ShowTrailingDates)
+            SyncToRequiredSize()
+        End Sub
+            
+        Private Sub SyncExtendedStyles()
+
+            WinNativeFormsBASE.SetWindowLongW(RootWindowElement.Handle, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE, GetExtendedStyles())
+        End Sub
+        
+        Private Sub SyncBorder() _
+        	    Handles BorderStyle.OnPropertyLet, _
+                        Appearance.OnPropertyLet
+                        
+            SyncExtendedStyles()
+                        
+            Dim HasBorder As Boolean = False
+            If Me.BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder Then
+                If Me.Appearance <> AppearanceConstants.vbAppear3d Then
+                    HasBorder = True
+                End If
+            End If
+            WinNativeFormsBASE.USER32_SetStyleFlag(RootWindowElement, WinNativeFormsBASE.WS_BORDER, HasBorder)
+        End Sub
+        
+        Private Sub SyncMaxSelCount() _
+                Handles MaxSelCount.OnPropertyLet
+                
+            If MultiSelect = True Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETMAXSELCOUNT, MaxSelCount, 0)
+            End If
+        End Sub
+        
+        Private Sub SyncScrollRate() _
+        	    Handles ScrollRate.OnPropertyLet
+                 
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETMONTHDELTA, ScrollRate, 0)
+        End Sub
+        
+        Private Sub SyncStartOfWeek() _
+                Handles StartOfWeek.OnPropertyLet
+        	
+            Dim startWeek As VbDayOfWeek = Me.StartOfWeek
+            If startWeek = vbUseSystemDayOfWeek Then startWeek = GetSystemDayOfWeek()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SETFIRSTDAYOFWEEK, 0, (startWeek + 5) Mod 7)
+        End Sub
+        
+        Private Sub GetRequiredSize(ByRef out As WinNativeFormsBASE.SIZE, ByVal MonthCols As Long, ByVal MonthRows As Long)
+            Dim singleMinRect As WinNativeFormsBASE.RECT
+            Dim maxRect As WinNativeFormsBASE.RECT
+            
+            Static supportsSizeRectToMin As Variant
+            If IsEmpty(supportsSizeRectToMin) Then
+                maxRect.Right = 65535
+                maxRect.Bottom = 65535
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SIZERECTTOMIN, 0, VarPtr(maxRect))
+            	supportsSizeRectToMin = (maxRect.Right <> 65535)
+            End If
+            
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETMINREQRECT, 0, VarPtr(singleMinRect))
+            If supportsSizeRectToMin Then
+                maxRect.Right = (singleMinRect.Right - singleMinRect.Left) * MonthCols
+                maxRect.Bottom = (singleMinRect.Bottom - singleMinRect.Top) * MonthRows
+                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_SIZERECTTOMIN, 0, VarPtr(maxRect))
+                out.cx = (maxRect.Right - maxRect.Left)
+                out.cy = (maxRect.Bottom - maxRect.Top)
+            Else
+                ' This algorithm looks to be correct, at least on Win 11
+                ' FIXME need to test this on XP.  With VisualStyles=False, the border should be the same when comparing MonthRows = 1 and MonthRows = 12
+                Dim padding As Long = If(BorderStyle = vbFixedSingleBorder, If(Appearance = vbAppear3d, 6, 4), 2)
+                
+                Dim todayWidth As Long = 0
+                If ShowToday Then
+                    todayWidth = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_GETMAXTODAYWIDTH, 0, 0))
+                    If todayWidth > (singleMinRect.Right - singleMinRect.Left) Then
+                        singleMinRect.Right = singleMinRect.Left + todayWidth
+                    End If
+                End If
+                out.cx = (singleMinRect.Right * MonthCols) - ((MonthCols - 1) * padding)
+                If ShowToday = True Then
+                    Dim fontLineHeight As Long = GetFontMetrics().TMHeight + 13
+                    out.cy = (((singleMinRect.Bottom - fontLineHeight) * MonthRows) + fontLineHeight) + ((MonthRows - 1) * (9 - padding))
+                Else
+                    out.cy = (singleMinRect.Bottom * MonthRows) - ((MonthRows - 1) * padding)
+                End If
+            End If
+        End Sub
+        
+        Public Sub SyncToRequiredSize() _
+        	    Handles MonthColumns.OnPropertyLet, _
+                        MonthRows.OnPropertyLet
+                        
+            If ResizeToFit = True Then
+                Dim size As WinNativeFormsBASE.SIZE
+                GetRequiredSize(size, Me.MonthColumns, Me.MonthRows)
+'                Debug.Print "GetRequiredSize(Width): ", size.cx, Me.RootWindowElement.ScaleX(size.cx, vbPixels, vbScaledPixels)
+                Me.PixelsWidth = Me.RootWindowElement.ScaleX(size.cx, vbPixels, vbScaledPixels)
+                Me.PixelsHeight = Me.RootWindowElement.ScaleY(size.cy, vbPixels, vbScaledPixels)
+            End If
+        End Sub
+        
+        Private Sub HandleResize() _
+        	    Handles RootWindowElement.Resize
+            
+            ScheduleCallback(Me)
+        End Sub
+        
+        Implements IScheduledCallback
+        Private Sub IScheduledCallback_Execute()
+            SyncToRequiredSize()
+        End Sub
+        
+        Private Sub HandleSelect(ByRef Notification As NMSELCHANGE)
+            With Notification.STSelStart
+                Dim StartDate As Date = DateSerial(.wYear, .wMonth, .wDay)
+            End With
+            RaiseEvent DateClick(StartDate)
+        End Sub
+
+        Private Sub HandleSelChange(ByRef Notification As NMSELCHANGE, MutedReturnValue As Variant)
+            Dim StartDate As Date
+            Dim EndDate As Date
+            With Notification.STSelStart
+                StartDate = DateSerial(.wYear, .wMonth, .wDay)
+            End With
+            If MultiSelect Then
+                With Notification.STSelEnd
+                    EndDate = DateSerial(.wYear, .wMonth, .wDay)
+                End With
+            Else
+                EndDate = StartDate
+            End If
+            Dim Cancel As Boolean = False
+            RaiseEvent SelChange(StartDate, EndDate, Cancel)
+            If Cancel Then
+                If IsEmpty(LastSelectionStart) Then
+                    ' FIXME how to unselect ?
+                Else
+                    ' FIXME this causes mouse capture to be released, which is different behaviour to the Ax common controls
+                    Dim dates(0 To 1) As SYSTEMTIME
+                    With dates(0)
+                        .wYear = VBA.Year(LastSelectionStart)
+                        .wMonth = VBA.Month(LastSelectionStart)
+                        .wDay = VBA.Day(LastSelectionStart)
+                        .wDayOfWeek = VBA.Weekday(LastSelectionStart)
+                    End With
+                    With dates(1)
+                        .wYear = VBA.Year(LastSelectionEnd)
+                        .wMonth = VBA.Month(LastSelectionEnd)
+                        .wDay = VBA.Day(LastSelectionEnd)
+                        .wDayOfWeek = VBA.Weekday(LastSelectionEnd)
+                    End With
+                    WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, If(MultiSelect, MCM_SETSELRANGE, MCM_SETCURSEL), 0, VarPtr(dates(0)))
+                    Exit Sub
+                End If
+            End If
+            LastSelectionStart = StartDate
+            LastSelectionEnd = EndDate
+        End Sub
+        
+        Public Function GetMonthRange(ByVal IncludeTrailing As Boolean, Optional ByRef StartDate As Date, Optional ByRef EndDate As Date) As Long
+            Dim dates(1) As SYSTEMTIME
+            Const GMR_VISIBLE As Long = 0
+            Const GMR_DAYSTATE As Long = 1
+            Dim Flags As Long = If(IncludeTrailing, GMR_DAYSTATE, GMR_VISIBLE)
+            GetMonthRange = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, MCM_GETMONTHRANGE, Flags, VarPtr(dates(0))))
+            With dates(0)
+                StartDate = DateSerial(.wYear, .wMonth, .wDay)
+            End With
+            With dates(1)
+                EndDate = DateSerial(.wYear, .wMonth, .wDay)
+            End With
+        End Function
+        
+        [ Serialize (False) ]
+        Public Property Get VisibleDays(ByVal sIndex As Long) As Date
+            If sIndex < 1 Then Err.Raise 380
+            Dim StartDate As Date
+            Dim EndDate As Date
+            Me.GetMonthRange(True, StartDate, EndDate)
+            Dim retVal As Date = DateAdd("d", sIndex - 1, StartDate)
+            If retVal > EndDate Then Err.Raise 380
+            Return retVal
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get DayBold(ByVal date As Date) As Boolean
+            date = Int(date)
+            If date < LastCachedDayStateStart Then Err.Raise 380
+            If date > LastCachedDayStateEnd Then Err.Raise 380
+            Dim dateIndex As Long = DateDiff("d", LastCachedDayStateStart, date)
+            Return LastCachedDayStateDayStates(dateIndex + 1)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let DayBold(ByVal date As Date, ByVal Value As Boolean)
+            date = Int(date)
+            If date < LastCachedDayStateStart Then Err.Raise 380
+            If date > LastCachedDayStateEnd Then Err.Raise 380
+            Dim dateIndex As Long = DateDiff("d", LastCachedDayStateStart, date)
+            LastCachedDayStateDayStates(dateIndex + 1) = Value
+            UpdateCachedDayStateBits()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, MCM_SETDAYSTATE, LastCachedDayStateMonthCount, VarPtr(LastCachedDayStateBits(1)))
+        End Property
+        
+        Private Sub UpdateCachedDayStateBits()
+            ' Convert State boolean array to a bitfield array
+            ReDim LastCachedDayStateBits(LastCachedDayStateMonthCount) As Long
+            Dim CurrentDate As Date = LastCachedDayStateStart
+            Dim CurrentDayIndex As Long
+            Dim StartDay As Long = VBA.Day(CurrentDate)
+            Dim Month As Long
+            Dim Day As Long
+            For Month = 1 To LastCachedDayStateMonthCount
+                Dim LastDayInMonth As Long = VBA.Day(DateSerial(VBA.Year(CurrentDate), VBA.Month(CurrentDate) + 1, 0))
+                For Day = StartDay To LastDayInMonth
+                    CurrentDayIndex += 1
+                    CurrentDate = VBA.DateAdd("d", 1, CurrentDate)
+                    If CurrentDayIndex <= UBound(LastCachedDayStateDayStates) Then
+                        If LastCachedDayStateDayStates(CurrentDayIndex) Then
+                            LastCachedDayStateBits(Month) = LastCachedDayStateBits(Month) Or (2 ^ (Day - 1))
+                        End If
+                    End If
+                Next
+                StartDay = 1
+            Next
+        End Sub
+                
+        Private Sub HandleGetDayState(ByRef Notification As NMDAYSTATE)
+            
+            ' We don't use Notification.stStart, as we don't get told the end date, so instead use the MCM_GETMONTHRANGE lookup
+            Me.GetMonthRange(True, LastCachedDayStateStart, LastCachedDayStateEnd)
+            
+            LastCachedDayStateMonthCount = Notification.cDayState
+            LastCachedDayStateNumDays = VBA.DateDiff("d", LastCachedDayStateStart, LastCachedDayStateEnd) + 1
+            
+            ReDim LastCachedDayStateDayStates(1 To LastCachedDayStateNumDays) As Boolean
+            RaiseEvent GetDayBold(LastCachedDayStateStart, LastCachedDayStateNumDays, LastCachedDayStateDayStates())
+            
+            UpdateCachedDayStateBits()
+            If Notification.prgDayState <> 0 Then
+                WinNativeFormsBASE.KERNEL32_CopyMemory(Notification.prgDayState, VarPtr(LastCachedDayStateBits(1)), LastCachedDayStateMonthCount * 4)
+            End If
+        End Sub
+        
+        Private Sub RootWindowElement_Notify(ByRef Notification As NMHDR, MutedReturnValue As Variant)
+            'Debug.Print Now() & " " & CurrentProcedureName & " " & Hex(Notification.Code)
+            Select Case Notification.Code
+            	Case MCN_SELECT
+                    HandleSelect(VarPtr(Notification))
+                Case MCN_SELCHANGE
+                    HandleSelChange(VarPtr(Notification), MutedReturnValue)
+                Case MCN_GETDAYSTATE
+                    HandleGetDayState(VarPtr(Notification))
+            End Select
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarCount() As Byte
+            CalendarCount = CByte(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, MCM_GETCALENDARCOUNT, 0, 0))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get DayCount() As Long
+            Return VBA.Day(DateSerial(Me.Year, Me.Month + 1, 0))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get SelStart() As Date
+            Return Me.Value
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let SelStart(ByVal NewValue As Date)
+            Dim dates(0 To 1) As SYSTEMTIME
+            If Int(NewValue) >= MinDate And Int(NewValue) <= MaxDate Then
+                 NewValue = Int(NewValue)
+            Else
+                Err.Raise 35773, , "Date does not fall within the MinDate and MaxDate values"
+            End If
+            Dim OldDate As Date = Me.SelStart
+            Dim Changed As Boolean = (OldDate <> NewValue)
+            
+            If Changed = True Then
+                With dates(0)
+                    .wYear = VBA.Year(NewValue)
+                    .wMonth = VBA.Month(NewValue)
+                    .wDay = VBA.Day(NewValue)
+                    .wDayOfWeek = VBA.Weekday(NewValue)
+                End With
+                Dim selEnd As Date = Me.SelEnd
+                If selEnd < NewValue Then selEnd = NewValue
+                With dates(1)
+                    .wYear = VBA.Year(selEnd)
+                    .wMonth = VBA.Month(selEnd)
+                    .wDay = VBA.Day(selEnd)
+                    .wDayOfWeek = VBA.Weekday(selEnd)
+                End With
+                    
+                Dim Cancel As Boolean
+                RaiseEvent SelChange(NewValue, selEnd, Cancel)
+                If Cancel = False Then
+                    WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, If(MultiSelect, MCM_SETSELRANGE, MCM_SETCURSEL), 0, VarPtr(dates(0)))
+                End If
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get SelEnd() As Date
+            Dim dates(0 To 1) As SYSTEMTIME
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, If(MultiSelect, MCM_GETSELRANGE, MCM_GETCURSEL), 0, VarPtr(dates(0)))
+            If MultiSelect = False Then
+                Return DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay)
+            Else
+            	Return DateSerial(dates(1).wYear, dates(1).wMonth, dates(1).wDay)
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let SelEnd(ByVal NewValue As Date)
+            Dim dates(0 To 1) As SYSTEMTIME
+            If Int(NewValue) >= MinDate And Int(NewValue) <= MaxDate Then
+                 NewValue = Int(NewValue)
+            Else
+                Err.Raise 35773, , "Date does not fall within the MinDate and MaxDate values"
+            End If
+            Dim OldDate As Date = Me.SelEnd
+            Dim Changed As Boolean = (OldDate <> NewValue)
+            
+            If Changed = True Then
+                Dim selStart As Date = Me.SelStart
+                If selStart > NewValue Then selStart = NewValue
+
+                With dates(0)
+                    .wYear = VBA.Year(selStart)
+                    .wMonth = VBA.Month(selStart)
+                    .wDay = VBA.Day(selStart)
+                    .wDayOfWeek = VBA.Weekday(selStart)
+                End With
+                With dates(1)
+                    .wYear = VBA.Year(NewValue)
+                    .wMonth = VBA.Month(NewValue)
+                    .wDay = VBA.Day(NewValue)
+                    .wDayOfWeek = VBA.Weekday(NewValue)
+                End With
+                    
+                Dim Cancel As Boolean
+                RaiseEvent SelChange(selStart, NewValue, Cancel)
+                If Cancel = False Then
+                    WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, If(MultiSelect, MCM_SETSELRANGE, MCM_SETCURSEL), 0, VarPtr(dates(0)))
+                End If
+            End If
+        End Property
+        
+        Private Function HitTest(ByVal X As Long, ByVal Y As Long) As MonthViewHitTestValues
+            Dim hitTestInfo As MCHITTESTINFO
+            hitTestInfo.cbSize = LenB(hitTestInfo)
+            hitTestInfo.PT.X = X
+            hitTestInfo.PT.Y = Y
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, MCM_HITTEST, 0, VarPtr(hitTestInfo))
+            Return hitTestInfo.uHit
+        End Function
+        
+        [ Serialize (False) ]
+        Public Property Get Year() As Integer
+            Return VBA.Year(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Year(ByVal Value As Integer)
+            Me.Value = DateSerial(Value, VBA.Month(Me.Value), VBA.Day(Me.Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Month() As Integer
+            Return VBA.Month(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Month(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 13 Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), Value, VBA.Day(Me.Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Week() As Integer
+            Dim DayOfWeek As VbDayOfWeek = StartOfWeek
+            Dim DateValue As Date = Me.Value
+            Week = DatePart("ww", DateValue, DayOfWeek, vbFirstFourDays)
+            If Week > 52 Then
+                ' from VBCCR: DatePart function can return wrong week number (see https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/200299)
+                If DatePart("ww", DateAdd("d", 7, DateValue), DayOfWeek, vbFirstFourDays) = 2 Then
+                    Week = 1
+                End If
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Week(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 54 Then Err.Raise 380
+            Dim changeDelta As Long = Value - Me.Week
+            If changeDelta <> 0 Then Me.Value = DateAdd("ww", changeDelta, Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Day() As Integer
+            Return VBA.Day(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Day(ByVal Value As Integer)
+            If Value <= 0 Or Value > Me.DayCount Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), Value)
+        End Property
+                    
+        [ Serialize (False) ]
+        Public Property Get DayOfWeek() As VbDayOfWeek
+            Return Weekday(Me.Value)
+        End Property
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+    #End Region
+	
+End Class

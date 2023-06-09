@@ -1,0 +1,146 @@
+[ COMCreatable (False) ]
+[ ClassId ("073DDC73-2326-449E-8A02-F22E7B6B7203") ]
+[ InterfaceId ("4B49AD54-5B45-479A-B474-C63F3E6AB594") ]
+Class ColumnHeader
+	
+    Enum ListColumnAlignmentConstants
+    	lvwColumnLeft = 0
+        lvwColumnRight = 1
+        lvwColumnCenter = 2
+    End Enum
+    
+    Private CachedKey As String
+    Private ContainerList As ListView
+    Private InternalIndex As Long
+        
+    Public Tag As Variant
+            
+    Public Icon As Variant      ' FIXME
+
+    Public Sub New(lv As ListView, Key As String)
+    	Set Me.ContainerList = lv
+        Me.CachedKey = Key
+    End Sub
+    
+    Friend Sub ChangeIndexInternal(Value As Long)
+        Me.InternalIndex = Value
+    End Sub
+
+    [ Description ("The index of the item within the root listview collection of header items") ]
+    Public Property Get Index() As Long
+    	Return Me.InternalIndex + 1
+    End Property
+    Public Property Let Index(ByVal Value As Long)
+    	Err.Raise 383, , "Property is read-only"
+    End Property
+    
+    [ Description ("The key of the item used in the root listview collection of header items") ]
+    Public Property Get Key() As String
+    	Return Me.CachedKey
+    End Property
+
+    [ Description ("The key of the item used in the root listview collection of header items") ]
+    Public Property Let Key(ByVal NewKey As String)
+        ' FIXME this is shit, could be a feature offered by the collection instead
+        Dim index As Long = Me.Index
+        Dim collection As Collection = Me.ContainerList.ColumnHeaders.GetInternalCollection()
+        Dim Item As ColumnHeader = collection(index)
+        If NewKey = vbNullString Then
+            collection.Add(Item, , index)
+        Else
+            collection.Add(Item, NewKey, index)
+        End If
+        Me.CachedKey = NewKey
+        collection.Remove(index + 1)
+    End Property
+    
+    Private Sub Class_Terminate()
+        'Debug.Print "ListItem Class_Terminate"
+    End Sub
+    
+    [ DefaultMember ]
+    [ Description ("The text (label) of the header that appears when the item is rendered") ]
+    Public Property Get Text() As String
+        Dim lvColumn As LVCOLUMNW
+        With lvColumn
+            .mask = LVCF_TEXT
+            .pszText = Me.ContainerList.InternalGetStringBuffer
+            .cchTextMax = Me.ContainerList.InternalBufferLen
+        End With
+        If WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn)) <> 0 Then
+            Return WinNativeFormsBASE.OLEAUT32_SysAllocString(lvColumn.pszText)
+        End If
+    End Property
+    
+    [ DefaultMember ]
+    [ Description ("The text (label) of the header that appears when the item is rendered") ]
+    Public Property Let Text(ByVal Value As String)
+        Dim lvColumn As LVCOLUMNW
+        With lvColumn
+            .mask = LVCF_TEXT
+            .pszText = StrPtrSafe(Value)
+            .cchTextMax = Len(Value) + 1
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+    End Property
+        
+    Property Get Left() As Single
+        Dim i As Long
+        While i < Me.InternalIndex
+            Left += Me.ContainerList.ColumnHeaders(i + 1).Width
+            i += 1
+        Wend
+        Return Left
+    End Property
+
+    Property Get Width() As Single
+        Dim lvColumn As LVCOLUMNW
+        lvColumn.mask = LVCF_WIDTH
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        Return lvColumn.cx * Me.ContainerList.InternalGetPixelsMultiplierX
+    End Property
+    
+    Public Property Get Alignment() As ListColumnAlignmentConstants
+        Dim lvColumn As LVCOLUMNW
+        lvColumn.mask = LVCF_FMT
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        Return lvColumn.fmt
+    End Property
+    
+    Public Property Let Alignment(ByVal Value As ListColumnAlignmentConstants)
+        Dim lvColumn As LVCOLUMNW
+        With lvColumn
+            .mask = LVCF_FMT
+            .fmt = Value
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+    End Property
+    
+    Public Property Get Position() As Long
+        Dim lvColumn As LVCOLUMNW
+        lvColumn.mask = LVCF_ORDER
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        Return lvColumn.iOrder + 1
+    End Property
+    
+    Public Property Let Position(ByVal Value As Long)
+        If (Value < 1) OrElse (Value > Me.ContainerList.ColumnHeaders.Count) Then
+            Err.Raise 380
+        End If
+        Dim lvColumn As LVCOLUMNW
+        With lvColumn
+            .mask = LVCF_ORDER
+            .iOrder = Value - 1
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        Me.ContainerList.Refresh
+    End Property
+    
+    Public Property Get SubItemIndex() As Long
+        Dim lvColumn As LVCOLUMNW
+        lvColumn.mask = LVCF_SUBITEM
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        Return lvColumn.iSubItem
+    End Property
+                        
+End Class

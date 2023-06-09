@@ -1,0 +1,774 @@
+[ WindowsControl ("/miscellaneous/ICONS??/Frame??.png") ]
+[ ClassId ("33AD4F38-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("1F9211B8-91CD-43CD-82AF-EF3D9F0690B4") ]    ' FIXME implement {33AD4F39-6699-11CF-B70C-00AA0060D393} for backcompat
+' WARNING: above InterfaceId is referred to as IID_ITBForm in tB Sources
+[ COMCreatable (False) ]
+[ COMExtensible (True) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Form
+        
+     #Region "INHERITANCE"
+     
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBASE.BaseForm Via _BaseForm = New WinNativeFormsBASE.BaseForm
+        Implements GraphicsBase Via _BaseGraphics = New GraphicsBase
+
+    #End Region
+        
+    #Region "STATE"
+
+        ' [ CustomDesigner ("designer_SpectrumWindows") ]
+        ' [ Description ("") ]
+        '     Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vb3DFace       ' FIXME this is linked to Appearance
+        ' [ CustomDesigner ("designer_SpectrumWindows") ]
+        '     Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonText
+            
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            Private IsInitialized As Boolean
+            Private IsDesignMode As Boolean
+            Private RegisteredChildOLEDropCount As Long = 0
+            Private IsRegisteredItselfForOLEDragDrop As Boolean = False
+            
+        [ Serialize (True, "Picture") ]
+        [ CustomDesigner ("designer_PictureBytes") ]
+            Private ReadOnly PictureINIT() As Byte
+        [ Serialize (True, "Icon") ]
+        [ CustomDesigner ("designer_IconBytes") ]
+            Private ReadOnly IconINIT() As Byte
+
+        Public ReadOnly TopMost As Boolean = False                      ' FIXME could make this not ReadOnly
+        Public ReadOnly AlwaysShowKeyboardCues As Boolean = False
+        
+        [ Description ("Opacity, given as a percentage, 0 - 100") ]
+        Public Opacity As Double = 100
+        
+        [ CustomDesigner ("designer_SpectrumWindowsOrClear") ]
+        [ Description ("A color, when set, that will appear fully transparent in the window") ]
+        Public TransparencyKey As OLE_COLOR = -1
+
+        [ Unimplemented ]
+        [ Serialize (True, "Palette") ]
+        [ CustomDesigner ("designer_PictureBytes") ]
+            Private ReadOnly PaletteINIT() As Byte
+        [ Unimplemented ]
+        [ Serialize (False) ]
+            Public Palette As StdPicture
+
+            Public HelpContextID As Long
+        [ Unimplemented ]
+            Public LinkMode As VBRUN.LinkModeConstants
+        [ Unimplemented ]
+            Public LinkTopic As String
+        
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+        [ Unimplemented ]
+            Public PaletteMode As VBRUN.PaletteModeConstants
+        [ Unimplemented ]
+            Public RightToLeft As Boolean
+
+        [ Description ("Displays '?' icon in the titlebar, only if MinButton=False, MaxButton=False, ControlBox=True and BorderStyle is not a toolwindow") ]
+            Public WhatsThisButton As Boolean
+
+            Public WhatsThisHelp As Boolean
+        [ Unimplemented ]
+            Public MDIChild As Boolean
+        [ Unimplemented ]
+            Public NegotiateMenus As Boolean
+            
+            Public MinWidth As Double = 0
+            Public MinHeight As Double = 0
+            Public MaxWidth As Double = 0
+            Public MaxHeight As Double = 0
+            
+        [ Serialize (False) ]
+        [ Unimplemented ]
+            Public ReadOnly Image As StdPicture          ' persistent bitmap
+        
+        [ Description ("If set to True, TextBox content will be auto-selected when TAB key is used to focus their controls, provided the TextBox control has the TabFocusAutoSelect property set to True") ]
+            Public TabFocusAutoSelect As Boolean = False
+            
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+            
+        [ Unimplemented ]
+            Public Sub PrintForm()
+            End Sub
+            
+        [ Unimplemented ]
+            Public Function Point(ByVal X As Single, ByVal Y As Single) As Long
+            End Function
+                        
+        [ Unimplemented ]
+            Public Sub ValidateControls()
+            End Sub
+            
+            Public Sub WhatsThisMode()
+                If Me.WhatsThisHelp Then
+                    Const SC_CONTEXTHELP As Long = 61824
+                    WinNativeFormsBASE.SendMessageW(Me.hWnd, WinNativeFormsBASE.WM_SYSCOMMAND, SC_CONTEXTHELP, 0)
+                End If
+            End Sub
+                        
+    #End Region
+
+    #Region "EVENTS"
+    
+        Event Activate()
+        Event Deactivate()
+        Event Initialize()
+        [ DefaultDesignerEvent ] Event Load()
+        Event Click()
+        Event DblClick()
+        Event GotFocus()
+        Event KeyDown(KeyCode As Integer, Shift As Integer)
+        Event KeyPress(KeyAscii As Integer)
+        Event KeyUp(KeyCode As Integer, Shift As Integer)
+        Event LostFocus()
+        Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event Paint()
+        Event Resize()
+        Event Terminate()
+        Event Unload(Cancel As Integer)
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        [ Unimplemented ] Event LinkClose()
+        [ Unimplemented ] Event LinkError(LinkErr As Integer)
+        [ Unimplemented ] Event LinkExecute(CmdStr As String, Cancel As Integer)
+        [ Unimplemented ] Event LinkOpen(Cancel As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        [ Unimplemented ] Event QueryUnload(Cancel As Integer, UnloadMode As Integer)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            'Debug.Print "Form.New"
+            ' FIXME Deserializing here is not quite correct for proper VB6 back compat
+            ' (it needs to be done on first access to any member, and again on NEXT member access AFTER a close in a re-open scenario)
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+            'RaiseEvent Initialize()         cant fire in constructor, as not assigned yet
+            
+            IsDesignMode = Serializer.IsDesignMode
+
+            ' This allows dispatch calls to pass on to the outer form controller, allowing for extensibility            
+            Dim tbInternal As ITwinBasicInternalClassSupport = Me
+            tbInternal.OverrideDispatchHandler Serializer.GetRootClassDispatch  ' this causes a circular reference that needs to be manually broken in IOleObject_Close
+
+            If IsArrayInitialized(Me.PictureINIT) AndAlso (UBound(Me.PictureINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                On Error Resume Next
+                Set Me.Picture = Global.LoadPicture(Me.PictureINIT)
+            End If
+            
+            If IsArrayInitialized(Me.IconINIT) AndAlso (UBound(Me.IconINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                On Error Resume Next
+                Set Me.Icon = Global.LoadPicture(Me.IconINIT)
+            End If
+            
+        End Sub
+        
+        ' Private Sub OnTouchedFormProperties() _
+        '         Handles BackColor.OnPropertyGet, _
+        ' 	            ForeColor.OnPropertyGet, _
+        '                 ForeColor.OnPropertyLet
+
+        '     Me.ControlContext.EnsureFormIsLoaded()
+        ' End Sub
+         
+        Private Sub Class_Terminate()
+    	    RaiseEvent Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+            styles += If(Me.ClipControls = True, WinNativeFormsBASE.WS_CLIPCHILDREN, 0)
+            extendedStyles += If(TopMost = True, WinNativeFormsBASE.WS_EX_TOPMOST, 0)
+                                                                                        
+            If Opacity > 100 Then Opacity = 100
+            If Opacity < 0 Then Opacity = 0
+                                                   
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, If(Me.HasDC, "ThunderFormDC", "ThunderForm"), styles, extendedStyles)
+            _BaseGraphics.Init(Me.RootWindowElement)
+'            Me.[_BaseGraphics].SyncScaleMode(Me, Me.RootWindowElement)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            'Debug.Print "Form::HandleDestroy"
+            If IsRegisteredItselfForOLEDragDrop = True Then
+                On Error Resume Next
+                Me.RegisterOLEDragDrop(False)
+                IsRegisteredItselfForOLEDragDrop = False
+            End If
+            Set Me.[_BaseGraphics] = Nothing
+            
+'            Debug.Print "Form.HandleDestroy"
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+            BackColor = SystemColorConstants.vbButtonFace
+        End Sub
+        
+        Private Sub HandleLoad() _
+                Handles RootWindowElement.Load
+
+            If ((Opacity >= 0) And (Opacity < 100)) Or (TransparencyKey <> -1) Then
+                SyncOpacity
+            End If
+
+            If IsInitialized = False Then InitializeMe
+            RaiseEvent Load()
+        End Sub
+        
+        Private Sub HandlePreLoad() _
+                Handles RootWindowElement.PreLoadForm
+
+            ' At this point the HWND is available, but not correct size etc.
+            If IsDesignMode = False Then
+                PrepareMenus()
+                RebuildMenus()
+                IconChanged()
+            End If
+            
+            Me.[_BaseGraphics].SyncScaleMode(Me, Me.RootWindowElement)
+            SyncOLEDropMode()
+            
+            ' This has to happen here, as it can be accessed via ActiveX ambient properties during creation
+            InternalSyncFontProperties(True)
+            
+            RaiseEvent Initialize()
+            
+        End Sub
+        
+        Private Menus() As Menu
+        Private MenusPrepared As Boolean = False
+        
+        Private Sub PrepareMenus()
+        	If MenusPrepared = False Then
+            	
+                ' Count number of menus
+                Dim MenuCount As Long = 0
+                Dim Control As Control
+                For Each Control In Me.Controls
+                    If TypeOf Control Is Menu Then
+                        MenuCount += 1
+                    End If
+                Next
+                
+                If MenuCount > 0 Then
+                    ReDim Menus(MenuCount - 1) As Menu
+                    
+                    For Each Control In Me.Controls
+                        If TypeOf Control Is Menu Then
+                            Dim ControlMenu As Menu = Control
+                            ControlMenu.InternalCachedMasterId = MenuCount      ' assign a unique ID to each menu
+                            MenuCount -= 1          ' populate backwards
+                            Set Menus(MenuCount) = ControlMenu
+                        End If
+                    Next
+                End If
+                                
+                MenusPrepared = True
+        	End If
+        End Sub
+        
+        Private totalMenuId As Long = 1
+        Friend Function BuildMenus(Container As Control, Level As Long, IsPopUp As Boolean, BoldMenuItem As Menu) As LongPtr
+        	            
+            If Level <> 0 Then
+                'Debug.Print String(Level * 3, "-") & " MENU: " & Container.Name
+            End If
+        
+            Dim retVal As LongPtr
+            Dim menuPositionId As Long
+            
+            Dim ControlMenu As Menu
+            For Each ControlMenu In Menus
+                If (ControlMenu.Visible = True) And (ControlMenu.Container Is Container) Then
+
+                    Dim itemInfo As MENUITEMINFO
+                    itemInfo.cbSize = LenB(itemInfo)
+                    itemInfo.fMask = MIIM_STRING Or MIIM_SUBMENU Or MIIM_STATE Or MIIM_FTYPE Or MIIM_ID
+                    itemInfo.wID = ControlMenu.InternalCachedMasterId
+                    itemInfo.dwTypeData = ControlMenu.Caption
+                    itemInfo.hSubMenu = BuildMenus(ControlMenu, Level + 1, IsPopUp, BoldMenuItem)
+                    itemInfo.fState = 0
+                    itemInfo.fType = 0
+                    itemInfo.hbmpItem = 0
+                   
+                    If ControlMenu.Picture IsNot Nothing Then
+                        If ControlMenu.Picture.Type <> vbPicTypeIcon Then
+                            itemInfo.fMask += MIIM_BITMAP
+                            itemInfo.hbmpItem = ControlMenu.Picture.Handle
+                        End If
+                    End If
+
+                    If ControlMenu.Checked = True Then itemInfo.fState += MFS_CHECKED
+                    If ControlMenu.Enabled = False Then itemInfo.fState += MFS_DISABLED
+                    If ControlMenu.Caption = "-" Then itemInfo.fType = MFT_SEPARATOR
+                    If ControlMenu Is BoldMenuItem Then itemInfo.fState += MFS_DEFAULT
+                    
+                    'Debug.Print "CREATED MENU ITEM: " & itemInfo.dwTypeData & " [position: " & menuPositionId & "]"
+                    If retVal = 0 Then
+                        If IsPopUp Then
+                            retVal = CreatePopupMenu()
+                        Else
+                            retVal = CreateMenu()
+                        End If
+                    End If
+                    InsertMenuItemW(retVal, menuPositionId, 1, itemInfo)
+                    
+                    
+                    If IsPopUp = False Then
+                        ControlMenu.InternalCachedContainerMenuHandle = retVal
+                    Else
+                        ControlMenu.InternalCachedPopupMenuHandle = retVal
+                    End If
+                    ControlMenu.InternalCachedPositionId = menuPositionId
+                    menuPositionId += 1
+                    totalMenuId += 1
+                End If
+            Next
+
+            Return retVal
+        End Function
+        
+        Private Sub RemovePopUpMenuCachedData()
+            Dim ControlMenu As Menu
+            For Each ControlMenu In Menus
+            	ControlMenu.InternalCachedPopupMenuHandle = 0
+                'Debug.Print "REMOVED POPUP CACHED DATA: " & ControlMenu.Name
+            Next
+        End Sub
+        
+        Public Sub PopUpMenu(ByVal Menu As Object, Optional ByVal Flags As Variant, Optional ByVal X As Variant, Optional ByVal Y As Variant, Optional ByVal DefaultMenu As Variant)
+            Dim xMissing As Boolean = IsMissing(X)
+            Dim yMissing As Boolean = IsMissing(Y)
+            If xMissing Or yMissing Then
+                Dim point As POINTL
+                WinNativeFormsBASE.GetCursorPos(point)
+                If xMissing Then X = point.x
+                If yMissing Then Y = point.y
+            End If
+            
+            If xMissing = False Then
+                point.x = (X * RootWindowElement.UnitPixelScale) / Me.ControlContext.GetScaleModePixelsMultiplierX
+            	WinNativeFormsBASE.ClientToScreen(Me.hWnd, point)
+                X = point.x
+            End If
+            
+            If yMissing = False Then
+                point.y = (Y * RootWindowElement.UnitPixelScale) / Me.ControlContext.GetScaleModePixelsMultiplierY
+            	WinNativeFormsBASE.ClientToScreen(Me.hWnd, point)
+                Y = point.y
+            End If
+            
+            If IsMissing(Flags) Then
+                Flags = 0
+            End If
+            
+            Dim defMenu As Menu
+            If IsMissing(DefaultMenu) = False Then
+            	Set defMenu = DefaultMenu
+            End If
+            
+            ' The passed in Menu does NOT need to be a menu situated on THIS form
+            Dim parentForm As Form = Menu.Parent
+            Dim menuHandle As LongPtr = parentForm.BuildMenus(Menu, 0, True, defMenu)
+            SetForegroundWindow(RootWindowElement.Handle)
+            TrackPopupMenu(menuHandle, CLng(Flags), CLng(X), CLng(Y), 0, parentForm.hWnd, 0)
+            Const WM_NULL As Long = 0
+            PostMessageW(RootWindowElement.Handle, WM_NULL, 0, 0)
+            Me.RemovePopUpMenuCachedData()
+            DestroyMenu(menuHandle)
+        End Sub
+        
+        Private Function GetMenuBarHeight() As Long
+            Const OBJID_MENU As Long = &HFFFFFFFD
+        	Dim barInfo As MENUBARINFO
+            barInfo.cbSize = LenB(barInfo)
+            GetMenuBarInfo(RootWindowElement.Handle, OBJID_MENU, 0, barInfo)
+            Return barInfo.rcBar.Bottom - barInfo.rcBar.Top
+        End Function
+        
+        Friend Sub RebuildMenus()
+        
+            'Dim menuBarHeightBefore As Long = GetMenuBarHeight()
+            Dim oldMenu As LongPtr = GetMenu(RootWindowElement.Handle)
+            
+        	Dim rootMenu As LongPtr = BuildMenus(Me, 0, False, Nothing)
+            SetMenu(RootWindowElement.Handle, rootMenu)
+            
+            If oldMenu <> 0 Then
+                DestroyMenu(oldMenu)
+            End If
+            
+            'Dim menuBarHeightAfter As Long = GetMenuBarHeight()
+            'Dim menuBarHeightChangedDelta As Long = menuBarHeightAfter - menuBarHeightBefore
+            
+            'If menuBarHeightChangedDelta <> 0 Then
+            	'RootWindowElement.NotifyMenuHeightChanged(menuBarHeightAfter)
+                'RootWindowElement.CreateControlsEnumerator
+                'Me.Height += menuBarHeightChangedDelta / RootWindowElement.UnitPixelScale
+            'End If
+        
+        End Sub
+        
+        Private Sub HandleActivate() _
+            Handles RootWindowElement.Activate
+                
+            RaiseEvent Activate()
+        End Sub
+
+        Private Sub HandleDeactivate() _
+                Handles RootWindowElement.Deactivate
+                
+            RaiseEvent Deactivate()
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+            Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        ' Private Sub HandleEraseBackground(ByVal hdc As LongPtr, ByRef Handled As Boolean) _
+        '         Handles RootWindowElement.EraseBackground
+                
+        '     WinNativeFormsBASE.WindowsAPI.USER32_FillWithBrush(Me.RootWindowElement, hdc, Me.CreateBackBrush(BackColor))
+        '     Handled = True     ' swallow up the event
+        ' End Sub
+        
+        Private Sub InitializeMe()
+            
+            Me.[_BaseGraphics].SyncScaleMode(Me, Me.RootWindowElement)
+            
+            ' FIXME this is in lieu of having a working Create event here
+            _BaseGraphics.ChangeHDC(0, Me.hWnd, Me.RootWindowElement, Me.Picture, Me, True)
+            IsInitialized = True
+            
+        End Sub
+           
+        'Private Declare PtrSafe Sub Sleep Lib "kernel32.dll" (ByVal dwMilliseconds As Long)
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+                
+            'Debug.Print Now() & " Form.Paint"
+            'Sleep(2000)
+            
+            ' Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            ' Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API directly
+            '     ' FIXME check paint order
+            '     RootWindowElement.PaintContainedWindowlessElements(ps.hdc)
+            '     RaiseEvent Paint()
+            ' Me.RootWindowElement.EndPaint(ps)
+            ' Handled = True     ' swallow up the event
+            
+            If IsInitialized = False Then InitializeMe
+    
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            Me.RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API 
+                
+                Me.[_BaseGraphics].OnPaint(ps.hdc)
+            
+            Me.RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+        End Sub
+        
+        ' Private Sub HandleResize() _
+        '         Handles RootWindowElement.Resize
+                
+        '     RaiseEvent Resize()
+        ' End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+        
+        Private Sub HandleMouseDoubleClick(ByVal Button As VBRUN.MouseButtonConstants, _
+                                            ByVal X As Single, ByVal Y As Single) _
+            Handles RootWindowElement.MouseDoubleClick
+
+            RaiseEvent DblClick()
+        End Sub
+
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+                
+            BeginMouseCapture(Me.RootWindowElement)
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X + Me.ScaleLeft, Y + Me.ScaleTop)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X + Me.ScaleLeft, Y + Me.ScaleTop)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+
+            Dim WasCaptured As Boolean = EndMouseCapture()
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X + Me.ScaleLeft, Y + Me.ScaleTop)
+            If WasCaptured And IsInRect(X / Me.ControlContext.GetScaleModePixelsMultiplierX, Y / Me.ControlContext.GetScaleModePixelsMultiplierY) Then RaiseEvent Click()
+        End Sub
+        
+        ' Private Sub ColorsChanged() _
+        '         Handles BackColor.OnPropertyLet
+            
+        '     Me.Refresh
+        ' End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+        
+        Private Sub CanClose(ByRef Cancel As Integer) _
+                Handles RootWindowElement.CanClose
+            
+            RaiseEvent Unload(Cancel)
+            
+            If Cancel = False Then
+    	        Dim tbInternal As ITwinBasicInternalClassSupport = Me
+                tbInternal.OverrideDispatchHandler Nothing  ' this breaks the circular reference
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get DpiScaleFactorX() As Double ' exposed as X/Y for future 
+        	Return RootWindowElement.UnitPixelScale
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get DpiScaleFactorY() As Double ' exposed as X/Y for future 
+        	Return RootWindowElement.UnitPixelScale
+        End Property
+        
+        Friend Sub InternalRaiseResize()
+        	RaiseEvent Resize()
+        End Sub
+
+        Friend Sub InternalRaisePaint()
+        	RaiseEvent Paint()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get ActiveControl() As Control
+            Return Me.RootWindowElement.FormActiveControl
+        End Property
+        
+        Private Sub HandleMenuCommand(ByVal CommandID As Long) Handles RootWindowElement.MenuCommand
+            Dim ControlMenu As Menu = Menus(CommandID - 1)
+            RaiseEventByName ControlMenu, "Click"
+        End Sub
+        
+        Private Sub HandleShowMenuHelp(ByVal CommandID As Long) Handles RootWindowElement.ShowMenuHelp
+            Dim ControlMenu As Menu = Menus(CommandID - 1)
+            HelpSystem.ShowControlHelp(Me, ControlMenu, False)
+        End Sub
+
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Object
+        	Return Me.Controls
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Count() As Long
+        	Return Me.Controls.Count
+        End Property
+        
+        Private Sub SyncOpacity() _ 
+        	    Handles Opacity.OnPropertyLet, _
+                        TransparencyKey.OnPropertyLet
+
+            Dim TransparencyColorIsSet As Boolean = TransparencyKey <> -1
+            Dim OpacityIsSet As Boolean = (Opacity >= 0) And (Opacity < 100)
+
+            Dim TransparentColor As Long = 0
+            If TransparencyColorIsSet Then
+                TransparentColor = TranslateColor(TransparencyKey)
+            End If
+                
+            Const LWA_ALPHA As Long = 2
+            Const LWA_COLORKEY As Long = 1
+            Dim oldStyles As Long = WinNativeFormsBASE.GetWindowLongW(hWnd, WinNativeFormsBASE.GWL_EXSTYLE)
+            
+            If OpacityIsSet Or TransparencyColorIsSet Then
+                If (oldStyles And WinNativeFormsBASE.WS_EX_LAYERED) = 0 Then
+                    WinNativeFormsBASE.SetWindowLongW(hWnd, WinNativeFormsBASE.GWL_EXSTYLE, oldStyles Or WinNativeFormsBASE.WS_EX_LAYERED)
+                End If
+                WinNativeFormsBASE.SetLayeredWindowAttributes(hWnd, TransparentColor, 255 * Opacity / 100, If(OpacityIsSet, LWA_ALPHA, 0) Or If(TransparencyColorIsSet, LWA_COLORKEY, 0))
+            Else
+            	If (oldStyles And WinNativeFormsBASE.WS_EX_LAYERED) <> 0 Then
+                    WinNativeFormsBASE.SetWindowLongW(hWnd, WinNativeFormsBASE.GWL_EXSTYLE, oldStyles - WinNativeFormsBASE.WS_EX_LAYERED)
+                End If
+                WinNativeFormsBASE.SetLayeredWindowAttributes(hWnd, 0, 255, LWA_ALPHA)
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        Private InternalIcon As StdPicture
+
+        [ Serialize (False) ]
+        Public Property Get Icon() As StdPicture
+            Return InternalIcon
+        End Property
+
+        Private Sub IconChanged()
+            If (InternalIcon IsNot Nothing) AndAlso (InternalIcon.Type = vbPicTypeIcon) Then
+                Const ICON_SMALL As Long = 0
+                Const ICON_BIG As Long = 1
+                Const ICON_SMALL2 As Long = 2
+                WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, WinNativeFormsBASE.WM_SETICON, ICON_SMALL, InternalIcon.Handle)
+            End If
+        End Sub
+
+        [ Serialize (False) ]
+        Public Property Set Icon(Value As StdPicture)
+            Set InternalIcon = Value
+            IconChanged()
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Icon(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+            Set InternalIcon = Value
+            IconChanged()
+        End Property
+        
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
+            If InternalMove(Me, Left, Top, Width, Height) Then
+                Me.ControlContext.ChangedPosition()
+            End If
+        End Sub
+        
+        Public Sub SetFocus()
+            WinNativeFormsBASE.WindowsAPI.USER32_SetFocus(Me.RootWindowElement)
+        End Sub
+        
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            If Me.OLEDropMode = OLEDropConstants.vbOLEDropManual Then
+            	If IsRegisteredItselfForOLEDragDrop = False Then
+                	Me.RegisterOLEDragDrop(True)
+                    IsRegisteredItselfForOLEDragDrop = True
+            	End If
+            ElseIf Me.OLEDropMode = OLEDropConstants.vbOLEDropNone Then
+            	If IsRegisteredItselfForOLEDragDrop = True Then
+                	Me.RegisterOLEDragDrop(False)
+                    IsRegisteredItselfForOLEDragDrop = False
+            	End If
+            Else
+                Err.Raise 5
+            End If
+        End Sub
+        
+        Friend Sub RegisterOLEDragDrop(Register As Boolean)
+        	If Register = True Then
+            	RegisteredChildOLEDropCount += 1
+                If RegisteredChildOLEDropCount = 1 Then
+                	BaseSyncOLEDropMode(Me, OLEDropConstants.vbOLEDropManual, Me.OLEDragDropHandler, True, False)
+                End If
+            Else
+                RegisteredChildOLEDropCount -= 1
+                If RegisteredChildOLEDropCount = 0 Then
+                	If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+                End If
+        	End If
+        End Sub
+    
+        Private Sub HandleShowHelp(ByVal control As Object) _
+                Handles RootWindowElement.ShowHelp
+            
+            HelpSystem.ShowControlHelp(Me, control, False)
+        End Sub
+        
+        [ Enumerator ]
+        Public Function InternalEnumerator() As stdole.IUnknown     ' FIXME should not be exposed
+            Return CallByDispId(Me.Controls, -4, vbGet)
+        End Function
+                
+    #End Region
+    
+End Class

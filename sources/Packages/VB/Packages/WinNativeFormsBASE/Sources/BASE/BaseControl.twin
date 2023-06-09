@@ -1,0 +1,62 @@
+' This deliberately has the same IID as Control
+[ ClassId ("D02CB910-DA6A-4232-A892-BCD3AECE95C0") ]
+[ InterfaceId ("0F56F78D-26A7-4291-82B7-D4B04978540B") ]
+[ COMCreatable (False) ]
+Private Class BaseControl
+    
+    [ Description ("A unique name for the control on this form") ]
+'    [ DispId (-800) ]
+        Public Name As String               ' FIXME should be ReadOnly, had to remove it due to control array dynamic loading of runtime controls needing to set it
+        Attribute Name.VB_VarUserMemId = -800
+
+    [ Description ("Storage area for internal data") ]
+        Public Tag As String = vbNullString
+    
+    [ Serialize (False) ]
+        Public ReadOnly ControlType As ControlTypeConstants
+
+    [ Serialize (False) ]
+        Public ControlContext As WindowsControls.WindowsControlContext
+        
+        Private MouseCaptured As Boolean
+
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Me.ControlType = ControlType
+    End Sub
+    
+    Friend Sub BeginMouseCapture(WindowElement As WindowsControls.WindowElement)
+    	WinNativeFormsBASE.USER32_SetCapture(WindowElement)
+        MouseCaptured = True
+    End Sub
+    
+    Friend Function EndMouseCapture() As Boolean
+    	If MouseCaptured = True Then
+            MouseCaptured = False
+            WinNativeFormsBASE.USER32_ReleaseCapture()
+            Return True
+        End If
+    End Function
+
+    [ Serialize (True, "Index") ]
+    Friend IndexINIT As Long = -1
+
+    [ Serialize (False) ]
+    Public Property Get Index() As Long
+        If IndexINIT = -1 Then
+        	'Err.Raise 343, , "Object not an array"
+            Err.ReturnHResult = &H800A0157
+            Return 0
+        End If
+    	Return IndexINIT
+    End Property
+
+    Private Sub OnTouchedFormProperties() _
+            Handles Name.OnPropertyGet, _
+                    Tag.OnPropertyGet, _
+                    Tag.OnPropertyLet, _
+                    ControlType.OnPropertyGet
+
+        If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+
+End Class

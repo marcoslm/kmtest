@@ -1,0 +1,39 @@
+Private Module ProgressBarConsts
+    
+    Public Enum ProgressBarStyles
+        PBS_SMOOTH = &H01
+        PBS_VERTICAL = &H04
+        PBS_SMOOTHREVERSE = &H10
+        PBS_MARQUEE = &H08
+    End Enum
+    
+    Public Enum ProgressBarMessages
+        PBM_SETRANGE = &H401
+        PBM_SETPOS = &H402
+        PBM_DELTAPOS = &H403
+        PBM_SETSTEP = &H404
+        PBM_STEPIT = &H405
+        PBM_SETRANGE32 = &H406
+        PBM_GETRANGE = &H407
+        PBM_GETPOS = &H408
+        PBM_SETBARCOLOR = &H409
+        PBM_SETBKCOLOR = &H2001
+        PBM_SETMARQUEE = &H40A
+        PBM_GETSTEP = &H40D
+        PBM_GETBKCOLOR = &H40E
+        PBM_GETBARCOLOR = &H40F
+        PBM_SETSTATE = &H410
+        PBM_GETSTATE = &H411
+    End Enum
+    
+    Public Type PBRANGE
+        iLow As Long
+        iHigh As Long
+    End Type
+    
+    ' Public Enum Notifications
+        
+    ' End Enum
+    
+End Module
+

@@ -1,0 +1,101 @@
+Module DTPickerConsts
+
+    Public Enum DTPickerStyles
+        DTS_UPDOWN = &H0001
+        DTS_SHOWNONE = &H0002
+        DTS_SHORTDATEFORMAT = &H0000
+        DTS_LONGDATEFORMAT = &H0004
+        DTS_SHORTDATECENTURYFORMAT = &H000C
+        DTS_TIMEFORMAT = &H0009
+        DTS_APPCANPARSE = &H0010
+        DTS_RIGHTALIGN = &H0020
+    End Enum
+    
+    Public Enum DTPickerMessages
+        DTM_GETSYSTEMTIME = &H1001
+        DTM_SETSYSTEMTIME = &H1002
+        DTM_GETRANGE = &H1003
+        DTM_SETRANGE = &H1004
+        DTM_SETFORMATA = &H1005
+        DTM_SETFORMATW = &H1032
+        DTM_SETMCCOLOR = &H1006
+        DTM_GETMCCOLOR = &H1007
+        DTM_GETMONTHCAL = &H1008
+        DTM_SETMCFONT = &H1009
+        DTM_GETMCFONT = &H100A
+        DTM_SETMCSTYLE = &H100B
+        DTM_GETMCSTYLE = &H100C
+        DTM_CLOSEMONTHCAL = &H100D
+        DTM_GETDATETIMEPICKERINFO = &H100E
+        DTM_GETIDEALSIZE = &H100F
+    End Enum
+    
+    Public Enum DTPickerNotifications
+    	DTN_DATETIMECHANGE = -759
+        DTN_USERSTRINGA = -758
+        DTN_USERSTRINGW = -745
+        DTN_WMKEYDOWNA = -757
+        DTN_WMKEYDOWNW = -744
+        DTN_FORMATA = -756
+        DTN_FORMATW = -743
+        DTN_FORMATQUERYA = -755
+        DTN_FORMATQUERYW = -742
+        DTN_DROPDOWN = -754
+        DTN_CLOSEUP = -753
+    End Enum
+    
+    Public Enum DTPickerColorArea
+    	MCSC_BACKGROUND = 0
+        MCSC_TEXT = 1
+        MCSC_TITLEBK = 2
+        MCSC_TITLETEXT = 3
+        MCSC_MONTHBK = 4
+        MCSC_TRAILINGTEXT = 5
+    End Enum
+    
+    Public Const GDT_ERROR As Long = -1
+    Public Const GDT_VALID As Long = 0
+    Public Const GDT_NONE As Long = 1
+    
+    Public Type NMDATETIMECHANGE
+        hdr As NMHDR
+        dwFlags As Long
+        ST As SYSTEMTIME
+    End Type
+
+    Public Type NMDATETIMEWMKEYDOWN
+        hdr As NMHDR
+        nVirtKey As Long
+        pszFormat As LongPtr
+        ST As SYSTEMTIME
+    End Type
+    
+    Public Type NMDATETIMEFORMAT
+        hdr As NMHDR
+        pszFormat As LongPtr
+        ST As SYSTEMTIME
+        pszDisplay As LongPtr
+        szDisplay As String * 64
+    End Type
+    
+    Public Type NMDATETIMEFORMATQUERY
+        hdr As NMHDR
+        pszFormat As LongPtr
+        szMax As WinNativeFormsBase.SIZE
+    End Type
+            
+    Public Type NMDATETIMESTRING
+        hdr As NMHDR
+        pszUserString As LongPtr
+        ST As SYSTEMTIME
+        dwFlags As Long
+    End Type
+    
+    Enum DTPickerFormatConstants
+        dtpLongDate = 0                                      ' &H00000000&
+        dtpShortDate = 1                                     ' &H00000001&
+        dtpTime = 2                                          ' &H00000002&
+        dtpCustom = 3                                        ' &H00000003&
+    End Enum
+
+End Module

@@ -1,0 +1,255 @@
+[ FormDesignerId ("398256B6-1522-470C-87D3-1F5D403311DB") ]
+[ PredeclaredId ]
+Class frmMain
+    Attribute VB_Name = "frmMain"
+    Attribute VB_GlobalNameSpace = False
+    Attribute VB_Creatable = False
+    Attribute VB_PredeclaredId = True
+    Attribute VB_Exposed = False
+    Option Explicit
+    
+    Dim RedispararTemporizador As boolean = False
+    Dim HookActivo As Boolean = False
+    Const EVENTOS_MAXIMOS = 1000
+    
+    
+
+
+    Sub EventoTecla(ByVal Tecla As String, ByVal Codigo As Long)
+        On Error GoTo gestionerror
+            CompruebaLEDs
+            Dim Texto As String
+            If Tecla = "" Then Exit Sub
+            ' Escribimos la pulsación
+            If Len(Tecla) = 1 Then
+                Texto = "[ " & UCase(Tecla) & " ]"
+            Else
+            	Texto = UCase(Tecla)
+            End If
+            NuevoEvento EVENTO_TECLADO, Texto, True
+            ' Teclas reservadas
+            If Codigo = 193 Then
+                NuevoEvento EVENTO_TECLADO, "Reservada:" & Trim$(Str$(Codigo)), True
+                Exit Sub
+            End If
+            ' Visualizamos la tecla iluminada correspondiente
+            imgTecla(Codigo).Visible = True
+            ' Teclas dobles: Ctrl, Enter
+            If Codigo = 91 Then imgTecla(1091).Visible = True ' Tecla Windows
+            If Codigo = 13 Then imgTecla(1013).Visible = True ' Tecla Enter
+            ' Reactivamos el timer para borrar la tecla
+            If RedispararTemporizador Then TimerCLS(0).Enabled = False
+            TimerCLS(0).Enabled = True
+            Exit Sub
+        gestionerror:
+            ' Códigos que no estamos contemplando en el programa causarán excepción. Mostramos los códigos como ND (no definido)
+            Select Case Err.Number
+                Case 355
+                    NuevoEvento EVENTO_TECLADO, "ND." & Trim$(Str$(Codigo)), True
+                    Resume Next
+                Case 340
+                    NuevoEvento EVENTO_TECLADO, "ND." & Trim$(Str$(Codigo)), True
+                    Resume Next
+                Case Else
+                    NuevoEvento EVENTO_TECLADO, "ND:" & Err.Number & "," & Trim$(Str$(Codigo)), True
+                    Resume Next
+            End Select
+    End Sub
+    
+    Sub EventoMouse(ByVal Boton As String, Optional X As Long, Optional Y As Long)
+        If Boton = "" Then Exit Sub
+        Select Case Boton
+            Case "[MOUSE_LEFT_BTN_DOWN]"
+                imgMouseBtn(0).Visible = True
+                Boton = "MOUSE IZQ"
+            Case "[MOUSE_LEFT_BTN_UP]"
+                imgMouseBtn(0).Visible = False
+                Boton = ""
+            Case "[MOUSE_MID_BTN_DOWN]"
+                imgMouseBtn(1).Visible = True
+                Boton = "MOUSE MED"
+            Case "[MOUSE_MID_BTN_UP]"
+                imgMouseBtn(1).Visible = False
+                Boton = ""
+            Case "[MOUSE_RIGHT_BTN_DOWN]"
+                imgMouseBtn(2).Visible = True
+                Boton = "MOUSE DER"
+            Case "[MOUSE_RIGHT_BTN_UP]"
+                imgMouseBtn(2).Visible = False
+                Boton = ""
+            Case "[MOUSE_WHEEL]"
+                imgMouseWhl.Visible = True
+                TimerCLS(0).Enabled = True
+                Boton = "MOUSE RUEDA"
+            Case "[MOUSE_MOVE]"
+                'shpMouseBtn(3).Visible = True
+                lblX.Caption = X
+                lblY.Caption = Y
+                'TimerCLS.Enabled = True
+                Boton = ""
+            Case Else
+                Exit Sub
+        End Select
+        If Boton > "" Then NuevoEvento EVENTO_MOUSE, Boton, True
+    End Sub
+    
+    ' Añade texto de evento en el listbox que corresponda (evento de teclado o evento de mouse)
+    Private Sub NuevoEvento(ByVal TipoEvento As eTipoEvento, ByVal Texto As String, ByRef InsertarTiempo As Boolean)
+        If InsertarTiempo Then Texto = Time & " " & Texto
+        With lstOut(TipoEvento)
+            .Visible = False
+            If .ListCount > EVENTOS_MAXIMOS Then
+                .RemoveItem (0)
+            End If
+            .AddItem Texto
+            .ListIndex = .ListCount - 1
+            .Visible = True
+        End With
+    End Sub
+    
+    ' Comprueba el estado de las teclas para establecer los LEDs
+    Private Sub CompruebaLEDs()
+        If GetKeyState(VK_CAPITAL) = 0 Then
+            imgLED(0).Visible = False
+        Else
+            imgLED(0).Visible = True
+        End If
+        If GetKeyState(VK_NUMLOCK) = 0 Then
+            imgLED(1).Visible = False
+        Else
+            imgLED(1).Visible = True
+        End If
+        If GetKeyState(VK_OEM_SCROLL) = 0 Then
+            imgLED(2).Visible = False
+        Else
+            imgLED(2).Visible = True
+        End If
+    End Sub
+    
+    
+    
+    ' Eventos del formulario
+    Private Sub Form_Load()
+        Me.Caption = "KM-Test v" & App.Major & "." & App.Minor & "." & App.Revision
+        'InstalarHooks App.hInstance
+        RecogeInfoPerifericos
+        ' Rellenamos la información de los periféricos
+        Dim Nodo As Node
+        With treeTeclado
+            Set Nodo = .Nodes.Add(, , "t", "Teclado")
+            Nodo.Bold = True
+            'Nodo.Expanded = True
+            Set Nodo = .Nodes.Add(, , "1", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+            Set Nodo = .Nodes.Add(, , "2", "Nº botones: " & InfoPerifericos.Mouse_Botones)
+            Set Nodo = .Nodes.Add(, , "3", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
+            Set Nodo = .Nodes.Add(, , "4", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
+        End With
+        With treeMouse
+            Set Nodo = .Nodes.Add(, , "m", "Mouse")
+            Nodo.Bold = True
+            'Nodo.Expanded = True
+            'Set Nodo = .Nodes.Add("m", tvwChild, , "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+            Set Nodo = .Nodes.Add(, , "1", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+            Set Nodo = .Nodes.Add(, , "2", "Nº botones: " & InfoPerifericos.Mouse_Botones)
+            Set Nodo = .Nodes.Add(, , "3", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
+            Set Nodo = .Nodes.Add(, , "4", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
+        End With
+       ' Habilitamos el timer para refrescar LEDs y demás
+       TimerCLS(0).Enabled = True
+    End Sub
+    
+    Private Sub Form_QueryUnload(Cancel As Integer, UnloadMode As Integer)
+        DesinstalarHooks
+    End Sub
+    
+    Private Sub Form_Unload(Cancel As Integer)
+        DesinstalarHooks
+        End
+    End Sub
+    
+    
+    
+    ' Eventos de controles
+    Private Sub mnu_web_Click()
+        ShellExecute hWnd, "open", "http://www.bluebit.es", vbNullString, vbNullString, conSwNormal
+    End Sub
+    
+    Private Sub salir_Click()
+        Unload Me
+    End Sub
+    
+    Private Sub siempre_visible_Click()
+        If siempre_visible.Checked Then
+            siempre_visible.Checked = False
+            ' Ventana normalmente visible
+            SetWindowPos Me.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
+        Else
+            siempre_visible.Checked = True
+            ' Ventana siempre visible
+            SetWindowPos Me.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
+        End If
+    End Sub
+    
+    Private Sub TimerCLS_Timer(Index As Integer)
+        On Error Resume Next
+        Dim cnt As Integer
+        ' Ocultar indicador rueda de mouse
+        imgMouseWhl.Visible = False
+        ' Ocultamos indicador de movimiento del mouse
+        'shpMouseBtn(3).Visible = False
+        ' Ocultar teclas
+        For cnt = 0 To 1400
+            If imgTecla(cnt) Then
+                imgTecla(cnt).Visible = False
+            End If
+        Next
+        CompruebaLEDs
+        ' Deshabilitamos el timer hasta próximo disparo
+        TimerCLS(0).Enabled = False
+    End Sub
+    
+    Private Sub acerca_de_Click()
+        If siempre_visible.Checked Then
+            ' Ventana normalmente visible
+            SetWindowPos Me.hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
+        End If
+        frmAcerca.Show vbModal
+        If siempre_visible.Checked Then
+            ' Ventana siempre visible
+            SetWindowPos Me.hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE Or SWP_NOSIZE
+        End If
+    End Sub
+    
+    Private Sub Temporizadorfijoparaapagado_Click()
+        Temporizadorfijoparaapagado.Checked = True
+        Redisparartemporizadoraldetectarpulsacin.Checked = False
+        RedispararTemporizador = False
+    End Sub
+    
+    Private Sub Redisparartemporizadoraldetectarpulsacin_Click()
+        Redisparartemporizadoraldetectarpulsacin.Checked = True
+        Temporizadorfijoparaapagado.Checked = False
+        RedispararTemporizador = True
+    End Sub
+    
+    Private Sub cmdOnOff_Click()
+        If HookActivo Then
+        	DesinstalarHooks
+            HookActivo = False
+            cmdOnOff.Caption = "COMENZAR"
+        Else
+            InstalarHooks App.hInstance
+            HookActivo = True
+            cmdOnOff.Caption = "DETENER"
+        End If
+    End Sub
+    
+    
+    
+
+    
+
+   
+    
+
+End Class

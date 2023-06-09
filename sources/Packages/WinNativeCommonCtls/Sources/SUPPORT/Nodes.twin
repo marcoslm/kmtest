@@ -1,0 +1,199 @@
+[ COMCreatable (False) ]
+[ ClassId ("0ABDDF7B-7F4A-4C0B-8541-8495128E2320") ]
+[ InterfaceId ("5890AF16-4812-4BC2-81B3-F4B594A4FA49") ]
+Class Nodes
+    Public ContainerTree As TreeView
+    Private InternalCollection As Collection = New Collection
+    
+    Public Sub New(tv As TreeView)
+    	Set Me.ContainerTree = tv
+    End Sub
+    
+    Private Sub Class_Terminate()
+        'Debug.Print "Nodes Class_Terminate"
+    End Sub
+    
+    Friend Function GetInternalCollection() As Collection
+    	Set GetInternalCollection = InternalCollection
+    End Function
+    
+    [ Enumerator ]      ' FIXME currently has to be PUBLIC for [ Enumerator ] to work
+    Public Function _NewEnum() As stdole.IUnknown
+    	Return InternalCollection.[_NewEnum]
+    End Function
+    
+    [ Description ("Adds a node to the treeview") ]
+    Public Function Add(Optional ByVal Relative As Variant, _
+                    Optional ByVal Relationship As TreeRelationshipConstants = TreeRelationshipConstants.tvwNext, _
+                    Optional ByVal Key As Variant, _
+                    Optional ByVal Text As Variant, _
+                    Optional ByVal Image As Variant, _
+                    Optional ByVal SelectedImage As Variant) As Node
+        Dim ParentNode As Node
+        
+        If (IsMissing(Relative) = False) And (IsObject(Relative) = False) Then
+            Set Relative = Item(Relative)
+        End If
+        
+        If Relationship = TreeRelationshipConstants.tvwChild Then
+            Set ParentNode = Relative
+        End If
+        
+        Dim keyStr As String = If(IsMissing(Key), vbNullString, Key)
+        Dim textStr As String = If(IsMissing(Text), vbNullString, Text)
+        Dim imageIndex As Long = If(IsMissing(Image), 0, Image)
+        Dim selectedImageIndex As Long = If(IsMissing(SelectedImage), imageIndex, SelectedImage)
+    	Dim NewNode As Node = New Node(Me.ContainerTree, ParentNode, Me.InternalCollection.Count() + 1, keyStr)
+        AddNodeInternal(NewNode, If(IsMissing(Relative), Nothing, Relative), Relationship, textStr, imageIndex, selectedImageIndex)
+        Me.InternalCollection.Add(NewNode, Key)
+        Return NewNode
+    End Function
+    
+    Private Sub AddNodeInternal(ByRef NewNode As Node, Optional ByVal RelativeNode As Node, Optional ByVal Relationship As TreeRelationshipConstants, Optional ByVal Text As String, Optional ByVal ImageIndex As Long, Optional ByVal SelectedImageIndex As Long)
+        Dim tvHandle As LongPtr = ContainerTree.hWnd
+        Dim tvInsertInfo As TVINSERTSTRUCT
+        Dim hRelative As LongPtr
+        Dim hNode As LongPtr
+        
+        With tvInsertInfo
+            If RelativeNode Is Nothing Then
+                hRelative = TreeViewConsts.Misc.TVI_ROOT
+            Else
+                hRelative = RelativeNode.Handle
+            End If
+            
+            Select Case Relationship
+            
+                Case TreeRelationshipConstants.tvwFirst
+                    If Not hRelative = TreeViewConsts.Misc.TVI_ROOT Then hRelative = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PARENT, hRelative)
+                    .hParent = hRelative
+                    .hInsertAfter = TreeViewConsts.Misc.TVI_FIRST
+            
+                Case TreeRelationshipConstants.tvwLast
+                    If Not hRelative = TreeViewConsts.Misc.TVI_ROOT Then hRelative = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PARENT, hRelative)
+                    .hParent = hRelative
+                    .hInsertAfter = TreeViewConsts.Misc.TVI_LAST
+            
+                Case TreeRelationshipConstants.tvwNext
+                    If hRelative = TreeViewConsts.Misc.TVI_ROOT Then
+                        .hParent = hRelative
+                    Else
+                        .hParent = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PARENT, hRelative)
+                        If .hParent = 0 Then .hParent = TreeViewConsts.Misc.TVI_ROOT
+                    End If
+                    .hInsertAfter = hRelative
+            
+                Case TreeRelationshipConstants.tvwPrevious
+                    Dim hPrevious As LongPtr
+                    hPrevious = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PREVIOUS, hRelative)
+                    If hPrevious = 0 Then
+                        .hParent = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PARENT, hRelative)
+                        .hInsertAfter = TreeViewConsts.Misc.TVI_FIRST
+                    Else
+                        .hParent = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PARENT, hRelative)
+                        .hInsertAfter = hPrevious
+                    End If
+                    If .hParent = 0 Then .hParent = TreeViewConsts.Misc.TVI_ROOT
+
+                Case TreeRelationshipConstants.tvwChild
+                    .hParent = hRelative
+
+                Case Else
+                    Err.Raise 380
+                    
+            End Select
+            
+            With .Item
+                With .TVI
+                    .Mask = TreeViewConsts.Misc.TVIF_TEXT Or TreeViewConsts.Misc.TVIF_IMAGE Or TreeViewConsts.Misc.TVIF_SELECTEDIMAGE Or TreeViewConsts.Misc.TVIF_PARAM Or TreeViewConsts.Misc.TVIF_INTEGRAL
+                    .pszText = StrPtrSafe(Text)
+                    .cchTextMax = Len(Text) + 1
+                    ' If TreeViewSampleMode = False Then
+                    '     .iImage = I_IMAGECALLBACK
+                    '     .iSelectedImage = I_IMAGECALLBACK
+                    ' Else
+                        .iImage = ImageIndex - 1
+                        .iSelectedImage = SelectedImageIndex - 1
+                    ' End If
+                    .lParam = ObjPtr(NewNode)           ' this is safe because the synced collection holds a reference to it
+                End With
+                .iIntegral = 1
+            End With
+            
+            hNode = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_INSERTITEM, 0, VarPtr(tvInsertInfo))
+            
+            If .Item.TVI.lParam <> 0 Then
+                NewNode.Handle = hNode
+                If .hParent = TreeViewConsts.Misc.TVI_ROOT Then
+                    If ContainerTree.Sorted Then Call ContainerTree.SortNowInternal(.hParent, ContainerTree.SortType)
+                ElseIf .hParent <> 0 Then
+                    If RelativeNode.Sorted Then Call ContainerTree.SortNowInternal(.hParent, RelativeNode.SortType)
+                End If
+            End If
+            
+        End With
+    End Sub
+    
+    [ Description ("Removes all nodes from the treeview") ]
+    Public Sub Clear()
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_CARET, 0)  ' prevents TVN_SELCHANGING/TVN_SELCHANGED
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_DELETEITEM, 0, TreeViewConsts.Misc.TVI_ROOT)
+    
+    	Set Me.InternalCollection = New Collection
+    End Sub
+    
+    [ Description ("Removes the count of all nodes that have been added to the treeview") ]
+    Public Property Get Count() As Long
+    	Return Me.InternalCollection.Count
+    End Property
+    
+    [ DefaultMember ]
+    [ Description ("Provides access to the added treeview nodes collection, using either the Key of an node as originally passed to Add(), or the Index of the node") ]
+    Public Property Get Item(ByRef Index As Variant) As Node
+    	Return Me.InternalCollection.Item(Index)
+    End Property
+    
+    [ Description ("Removes a tree node from the treeview, given the Index or Key of the node") ]
+    Public Sub Remove(ByRef Index As Variant)
+        Dim nodeToRemove As Node = Me.InternalCollection.Item(Index)
+        'Debug.Print "InternalCollection REMOVED (ROOT): " & nodeToRemove.Text
+        Me.InternalCollection.Remove(Index)
+
+        ' FIXME this is slow
+        RecursiveRemoveChildren(nodeToRemove)
+        SyncIndices()
+        
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_DELETEITEM, 0, nodeToRemove.Handle)
+    End Sub
+    
+    Private Sub SyncIndices()
+    	Dim collectionNode As Node
+        Dim collectionNodeIndex As Long = 1
+        For Each collectionNode In Me.InternalCollection
+            collectionNode.ChangeIndexInternal(collectionNodeIndex)
+            collectionNodeIndex += 1
+        Next
+    End Sub
+    
+    Private Sub RecursiveRemoveChildren(nodeToRemove As Node)
+    	Dim childNode As Node = nodeToRemove.Child
+        While childNode IsNot Nothing
+        
+            Dim nextChild As Node = childNode.Next
+            
+            Dim collectionNode As Node
+            Dim collectionNodeIndex As Long = 1
+            For Each collectionNode In Me.InternalCollection
+            	If collectionNode Is childNode Then
+                    'Debug.Print "InternalCollection REMOVED: " & collectionNode.Text
+                	Me.InternalCollection.Remove(collectionNodeIndex)
+                    RecursiveRemoveChildren(childNode)
+                    Exit For
+            	End If
+                collectionNodeIndex += 1
+            Next
+            
+        	Set childNode = nextChild
+        Wend
+    End Sub
+End Class

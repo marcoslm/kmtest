@@ -1,0 +1,290 @@
+[ Description ("A Win32 native vertical ScrollBar") ]
+[ WindowsControl ("/miscellaneous/ICONS??/VScrollBar??.png") ]
+[ ClassId ("33AD4F20-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("BD0F4344-6857-44BD-A45E-0B92153B0479") ]        ' FIXME implement {33AD4F21-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class VScrollBar
+     
+    #Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBase.BaseControlFocusableNoFont(ControlTypeConstants.vbVScrollBar)
+        
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Description ("") ]
+            Public SmallChange As Long = 1
+        [ Description ("") ]
+            Public LargeChange As Long = 1
+
+        [ Serialize (True, "Min") ]
+            Private Min_INIT As Long = 0
+        [ Serialize (True, "Max") ]
+            Private Max_INIT As Long = 32767
+        [ Serialize (True, "Value") ]
+            Private Value_INIT As Long
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+
+            Public CausesValidation As Boolean = True
+
+            Public HelpContextID As Long
+        [ Unimplemented ]
+            Public RightToLeft As Boolean
+
+            Public WhatsThisHelpID As Long
+                        
+            Public Sub ShowWhatsThis()
+                HelpSystem.ShowControlHelp(Me.Parent, Me, True)
+            End Sub
+    #End Region
+
+    #Region "EVENTS"
+    
+        [ DefaultDesignerEvent ]
+        [ Description ("") ]
+            Event Change()
+        [ Description ("") ]
+            Event GotFocus()
+        [ Description ("") ]
+            Event KeyDown(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event KeyPress(KeyAscii As Integer)
+        [ Description ("") ]
+            Event KeyUp(KeyCode As Integer, Shift As Integer)
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event Scroll()
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        Event Validate(Cancel As Boolean)
+    
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                ' InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Dim styles As Long
+            Dim extendedStyles As Long
+                
+                extendedStyles += If(ControlContext.IsPlacedOnUserControl, 0, WinNativeFormsBASE.GeneralConsts.WindowExtendedStyles.WS_EX_NOPARENTNOTIFY)
+                styles += WinNativeFormsBASE.ScrollBarStyles.SBS_VERT
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "ThunderVSrollBar", vbNullString, styles, extendedStyles)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+                
+            Me.Min = Min_INIT
+            Me.Max = Max_INIT
+            WinNativeFormsBASE.WindowsAPI.USER32_SetScrollValue(Me.RootWindowElement, Me.Value_INIT)    ' without Click event
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleScroll(ByVal ScrollType As WinNativeFormsBASE.SCROLLNOTIFY, ByVal IsHorizontal As Boolean) _
+                Handles RootWindowElement.Scroll
+            
+            Dim RaiseAnEvent As Boolean = False
+            Dim NewValue As Long
+            Select Case ScrollType
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_TOP
+                    NewValue = Me.Min
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_BOTTOM
+                    NewValue = Me.Max
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_LINEUP
+                    NewValue = Me.Value - Me.SmallChange
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_LINEDOWN
+                    NewValue = Me.Value + Me.SmallChange
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_PAGEUP
+                    NewValue = Me.Value - Me.LargeChange
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_PAGEDOWN
+                    NewValue = Me.Value + Me.LargeChange
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_THUMBPOSITION
+                    NewValue = WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValue(Me.RootWindowElement)
+                    RaiseAnEvent = True
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_THUMBTRACK
+                    NewValue = WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValueHot(Me.RootWindowElement)
+                Case WinNativeFormsBASE.SCROLLNOTIFY.SB_ENDSCROLL
+                    Exit Sub
+                Case Else
+                    Exit Sub
+            End Select
+            
+            If Me.Value <> NewValue Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollValue(Me.RootWindowElement, NewValue)
+                RaiseAnEvent = True
+            End If
+            
+            If RaiseAnEvent = True Then
+                If ScrollType = WinNativeFormsBASE.SCROLLNOTIFY.SB_THUMBTRACK Then
+                    RaiseEvent Scroll()
+                Else
+                    RaiseEvent Change()
+                End If
+            End If
+
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        Private Sub HandleKeyDown(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyDown
+                
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants) _
+                Handles RootWindowElement.KeyUp
+
+            Dim KeyCodeInt As Integer = KeyCode
+            RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
+            KeyCode = KeyCodeInt
+        End Sub
+        
+        Private Sub HandleKeyPress(ByRef Key As Integer) _
+                Handles RootWindowElement.KeyPress
+                
+            RaiseEvent KeyPress(Key)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get hWnd() As LongPtr
+            If Me.RootWindowElement IsNot Nothing Then
+                Me.ControlContext.EnsureFormIsLoaded()
+                Return Me.RootWindowElement.Handle
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Min() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_GetScrollMinimum(Me.RootWindowElement)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Min(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SetScrollRange(Me.RootWindowElement, Value, Max)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Max() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_GetScrollMaximum(Me.RootWindowElement)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Max(ByVal Value As Long)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SetScrollRange(Me.RootWindowElement, Min, Value)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Value() As Long
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return WinNativeFormsBASE.WindowsAPI.USER32_GetScrollValue(Me.RootWindowElement)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let Value(ByVal NewValue As Long)
+            If Me.Value <> NewValue Then
+                WinNativeFormsBASE.WindowsAPI.USER32_SetScrollValue(Me.RootWindowElement, NewValue)
+                RaiseEvent Change
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Long
+            Return Me.Value
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(ByVal Value As Long)
+            Me.Value = Value
+        End Property
+
+        Private Sub OnTouchedFormProperties() _
+                Handles SmallChange.OnPropertyGet, _
+        	            SmallChange.OnPropertyLet, _
+        	            LargeChange.OnPropertyGet, _
+                        LargeChange.OnPropertyLet
+                        
+            Me.ControlContext.EnsureFormIsLoaded()
+        End Sub
+        
+        Public Sub Refresh()
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_RedrawWindow(Me.RootWindowElement, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+
+    #End Region
+
+End Class

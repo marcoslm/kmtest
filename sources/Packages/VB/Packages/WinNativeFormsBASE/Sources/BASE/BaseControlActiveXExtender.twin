@@ -1,0 +1,138 @@
+[ ClassId ("ADB5583B-5C11-4317-9541-B511ED17C718") ]
+[ InterfaceId ("4DCF51FC-8AA6-47EF-913A-B0D106F041A3") ]
+[ COMCreatable (False) ]
+Private Class BaseControlActiveXExtender
+
+    Implements BaseControlRect Via BaseControlRect
+
+    [ Serialize (False) ]
+        Private RootWindowElementBase As WindowsControls.WindowElement
+    [ Description ("Determines how the sides of this control are anchored to its container") ]
+        Public ReadOnly Anchors As Anchors = New Anchors
+    [ Description ("Adjusts how the control is docked inside of its container") ]
+        Public ReadOnly Dock As VBRUN.DockModeConstants = VBRUN.DockModeConstants.vbDockNone
+    [ Description ("Indicates if the user can use the TAB key to focus on this control at runtime") ]
+        Public TabStop As Boolean = True
+        Attribute TabStop.VB_VarUserMemId = -854
+    [ Description ("Adjusts the TAB key order of this control at runtime") ]
+        Public TabIndex As Long
+    '[ Description ("") ]
+    '    Public Visible As Boolean = True
+        
+    [ Serialize (True, "DragIcon") ]
+    [ CustomDesigner ("designer_PictureBytes") ]
+    [ Description ("") ]
+        Private ReadOnly DragIconINIT() As Byte
+    [ Serialize (False) ]
+    [ Description ("") ]
+        Public DragIcon As StdPicture
+        Public DragMode As VBRUN.DragModeConstants
+
+    Sub New(ByVal ControlType As ControlTypeConstants)
+        Set Me.BaseControlRect = New BaseControlRect(ControlType)
+    End Sub
+
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown) As WindowElement
+        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.RootWindowElementBase = Me.ControlContext.CreateWindowElement(vbNullString, vbNullString, 0, 0, False)
+        Return Me.RootWindowElementBase
+    End Function
+    
+    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
+    End Sub
+
+    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+
+    [ DispId (-856) ]
+    Public Property Get Container() As Object
+        On Error Resume Next
+        Me.ControlContext.EnsureFormIsLoaded()
+    	Return Me.RootWindowElementBase.Container
+    End Property
+
+    ' Private Sub OnPropertyChanged_Visible() _
+    '         Handles Visible.OnPropertyLet
+
+    '     Me.ControlContext.EnsureFormIsLoaded()
+    '     Me.ControlContext.WindowlessRefresh()
+    ' End Sub
+
+    Private Sub OnTouchedFormProperties() _
+            Handles Anchors.OnPropertyGet, _
+                    Dock.OnPropertyGet, _
+                    TabStop.OnPropertyGet, _
+                    TabStop.OnPropertyLet, _
+                    TabIndex.OnPropertyGet, _
+                    TabIndex.OnPropertyLet
+                    
+        Me.ControlContext.EnsureFormIsLoaded()
+    End Sub
+    
+    Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
+'        Stop
+        Me.ControlContext.EnsureFormIsLoaded()
+        If InternalMove(Me, Left, Top, Width, Height) Then
+        	Me.ControlContext.ChangedPosition()
+        End If
+    End Sub
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Get Left() As Double
+        Return Me.ControlContext.GetScaledLeft
+    End Property
+    
+    [ Serialize (False) ]
+    [ BindOnlyIfNoArguments ]
+    Public Property Let Left(ByVal Value As Double)
+        Me.ControlContext.SetScaledLeft(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Top() As Double
+        Return Me.ControlContext.GetScaledTop
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Top(ByVal Value As Double)
+        Me.ControlContext.SetScaledTop(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Width() As Double
+        Return Me.ControlContext.GetScaledWidth
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Width(ByVal Value As Double)
+        Me.ControlContext.SetScaledWidth(Value)
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Get Height() As Double
+        Return Me.ControlContext.GetScaledHeight
+    End Property
+    
+    [ Serialize (False) ]
+    Public Property Let Height(ByVal Value As Double)
+        Me.ControlContext.SetScaledHeight(Value)
+    End Property
+    
+    Public Sub Drag([ TypeHint (DragConstants) ] Optional ByVal Action As Variant)
+    	If IsMissing(Action) Then Action = DragConstants.vbBeginDrag
+        Select Case Action
+        	Case DragConstants.vbBeginDrag
+                Me.RootWindowElementBase.StartDrag
+            Case DragConstants.vbCancel
+                Me.RootWindowElementBase.CancelDrag
+            Case DragConstants.vbEndDrag
+                Me.RootWindowElementBase.EndDrag
+            Case Else
+                Err.Raise 5
+        End Select
+    End Sub
+    
+End Class

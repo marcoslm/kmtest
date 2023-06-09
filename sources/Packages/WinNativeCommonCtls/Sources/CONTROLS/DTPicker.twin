@@ -1,0 +1,749 @@
+[ WindowsControl ("/miscellaneous/ICONS??/DTPicker??.png") ]
+[ ClassId ("02E8FCDC-84BC-4E60-996F-D99678A14604") ]
+[ InterfaceId ("83292960-B8D0-46D7-A29F-99342F5ECD46") ]
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+Class DTPicker
+	
+	#Region "INHERITANCE"
+
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbDTPicker)
+        
+    #End Region
+            
+    #Region "STATE"
+        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+            Public OLEDropMode As VBRUN.OLEDropConstants
+            
+            Public UpDown As Boolean = False
+            Public CheckBox As Boolean = False
+            
+            Public CalendarShowToday As Boolean = True
+            Public CalendarShowTodayCircle As Boolean = True
+            Public CalendarShowWeekNumbers As Boolean = False
+            Public CalendarShowTrailingDates As Boolean = True
+
+            Public CausesValidation As Boolean = True
+        [ Unimplemented ]
+            Public RightToLeft As Boolean = False
+
+            Public HelpContextID As Long
+            Public WhatsThisHelpID As Long
+            
+        Private WithEvents RootWindowElement As WindowsControls.WindowElement
+        Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+            
+            Private IsInitialized As Boolean = False
+            Private CachedValue As Variant
+            
+            Public Format As DTPickerFormatConstants = DTPickerFormatConstants.dtpShortDate
+            Public CustomFormat As String
+            
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "CalendarBackColor") ]
+        Private CalendarBackColor_INIT As OLE_COLOR = vbWindowBackground
+
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "CalendarForeColor") ]
+        Private CalendarForeColor_INIT As OLE_COLOR = vbButtonText
+
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "CalendarTitleBackColor") ]
+        Private CalendarTitleBackColor_INIT As OLE_COLOR = vb3DFace
+
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "CalendarTitleForeColor") ]
+        Private CalendarTitleForeColor_INIT As OLE_COLOR = vbButtonText
+
+        [ CustomDesigner ("designer_SpectrumWindows") ]
+        [ Serialize (True, "CalendarTrailingForeColor") ]
+        Private CalendarTrailingForeColor_INIT As OLE_COLOR = vbGrayText
+
+        Public StartOfWeek As VbDayOfWeek
+        
+        [ Serialize (True, "MinDate") ]
+            Public MinDate_INIT As Date = DateSerial(1601, 1, 1)
+        [ Serialize (True, "MaxDate") ]
+            Public MaxDate_INIT As Date = DateSerial(9999, 12, 31)
+        [ Serialize (True, "Value") ]
+            Public Value_INIT As Date = Date()
+            
+        Private LastMouseUpX As Single = -1
+        Private LastMouseUpY As Single = -1
+        Private LastMouseUpTime As LongLong
+
+    #End Region
+
+    #Region "EVENTS"
+    
+        Event CallbackKeyDown(ByVal KeyCode As Integer, ByVal Shift As Integer, ByVal CallbackField As String, CallbackDate As Date)
+        Event Change()
+        Event Click()
+        Event CloseUp()
+        Event DblClick()
+        Event DropDown()
+        Event Format(ByVal CallbackField As String, FormattedString As String)
+        Event FormatSize(ByVal CallbackField As String, Size As Integer)
+            Event GotFocus()
+        [ Description ("") ]
+            Event LostFocus()
+        [ Description ("") ]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [ Description ("") ]
+            Event Initialize()
+        [ Description ("") ]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [ Description ("") ]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        Event Validate(Cancel As Boolean)
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+            StartOfWeek = GetSystemDayOfWeek()
+        End Sub
+        
+        Private Function GetSystemDayOfWeek() As VbDayOfWeek
+            Return ((7 - (Weekday(#02-Jan-2000#, vbUseSystemDayOfWeek) - 1)) Mod 7) + 1
+        End Function
+        
+        Private Function GetStyles() As Long
+            Dim Styles As Long
+        	Styles += If(UpDown, DTS_UPDOWN, 0)
+            Styles += If(CheckBox, DTS_SHOWNONE, 0)
+            
+            Select Case Format
+                Case dtpLongDate
+                    Styles += DTS_LONGDATEFORMAT
+                Case dtpShortDate
+                    Styles += DTS_SHORTDATEFORMAT
+                Case dtpTime
+                    Styles += DTS_TIMEFORMAT
+            End Select
+
+            Return Styles
+        End Function
+        
+        Private Function GetStylesCalendar() As Long
+            Dim Styles As Long
+        	Styles += If(CalendarShowToday, 0, MCS_NOTODAY)
+        	Styles += If(CalendarShowTodayCircle, 0, MCS_NOTODAYCIRCLE)
+            Styles += If(CalendarShowWeekNumbers, MCS_WEEKNUMBERS, 0)
+            Styles += If(CalendarShowTrailingDates, 0, MCS_NOTRAILINGDATES)
+            'Styles += If(IsDesignMode = False, MCS_DAYSTATE, 0)
+            Return Styles
+        End Function
+        
+        Private Sub SyncCalendarStyles() _
+                Handles CalendarShowToday.OnPropertyLet, _
+                        CalendarShowTodayCircle.OnPropertyLet, _
+                        CalendarShowWeekNumbers.OnPropertyLet, _
+                        CalendarShowTrailingDates.OnPropertyLet
+
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCSTYLE, 0, GetStylesCalendar())
+        End Sub
+        
+        Private Sub SyncFormat() _
+                Handles Format.OnPropertyLet
+
+            Dim styleFlags As Long = DTS_LONGDATEFORMAT Or DTS_SHORTDATEFORMAT Or DTS_TIMEFORMAT
+            Dim styleFlag As Long
+            Select Case Format
+                Case dtpLongDate
+                    styleFlag += DTS_LONGDATEFORMAT
+                Case dtpShortDate
+                    styleFlag += DTS_SHORTDATEFORMAT
+                Case dtpTime
+                    styleFlag += DTS_TIMEFORMAT
+            End Select
+            
+            WinNativeFormsBASE.USER32_SetStyleFlags(RootWindowElement, styleFlags, styleFlag)
+            SyncCustomFormat()
+        End Sub
+                
+        Private Sub SyncCustomFormat() _
+        	    Handles CustomFormat.OnPropertyLet
+
+            If Format = dtpCustom Then
+                WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, DTM_SETFORMATW, 0, StrPtr(CustomFormat))
+            Else
+                WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, DTM_SETFORMATW, 0, 0)
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+                
+            Dim styles As Long = GetStyles()
+            Dim extendedStyles As Long
+                
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "SysDateTimePick32", vbNullString, styles, extendedStyles, True)
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+		
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+
+            ' NOTE: changing the property assignments here often means changes to SyncRecreate() too
+            Me.CalendarBackColor = Me.CalendarBackColor_INIT
+            Me.CalendarForeColor = Me.CalendarForeColor_INIT
+            Me.CalendarTitleBackColor = Me.CalendarTitleBackColor_INIT
+            Me.CalendarTitleForeColor = Me.CalendarTitleForeColor_INIT
+            Me.CalendarTrailingForeColor = Me.CalendarTrailingForeColor_INIT
+            Me.SetDateRange(MinDate_INIT, MaxDate_INIT)
+            Me.Value = Value_INIT
+            
+            SyncCalendarStyles()
+            SyncCustomFormat()
+            SyncOLEDropMode ()
+            
+            If IsInitialized = False Then
+                RaiseEvent Initialize()
+            End If
+                    
+            IsInitialized = True
+        End Sub
+        
+        Private Sub SyncRecreate() _
+                Handles UpDown.OnPropertyLet, _
+                        CheckBox.OnPropertyLet
+                        
+            ' changing these flags in the GWL_STYLE has no effect at runtime, so we have to recreate the control
+            
+            Dim CalendarBackColor As Long = Me.CalendarBackColor
+            Dim CalendarForeColor As Long = Me.CalendarForeColor
+            Dim CalendarTitleBackColor As Long = Me.CalendarTitleBackColor
+            Dim CalendarTitleForeColor As Long = Me.CalendarTitleForeColor
+            Dim CalendarTrailingForeColor As Long = Me.CalendarTrailingForeColor
+            Dim MinDate As Date = Me.MinDate
+            Dim MaxDate As Date = Me.MaxDate
+            Dim Value As Variant = Me.Value
+                        
+            RootWindowElement.RecreateWindow(GetStyles())
+
+            Me.CalendarBackColor = CalendarBackColor
+            Me.CalendarForeColor = CalendarForeColor
+            Me.CalendarTitleBackColor = CalendarTitleBackColor
+            Me.CalendarTitleForeColor = CalendarTitleForeColor
+            Me.CalendarTrailingForeColor = CalendarTrailingForeColor
+            Me.SetDateRange(MinDate, MaxDate)
+            Me.Value = Value
+            
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarBackColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let CalendarBackColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let CalendarForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TEXT, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarTitleBackColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let CalendarTitleBackColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarTitleForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let CalendarTitleForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, TranslateColor(Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get CalendarTrailingForeColor() As OLE_COLOR
+            Me.ControlContext.EnsureFormIsLoaded()
+            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, 0))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Let CalendarTrailingForeColor(ByVal Value As OLE_COLOR)
+            Me.ControlContext.EnsureFormIsLoaded()
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, TranslateColor(Value))
+        End Property
+        
+        
+        
+
+        
+        Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseDown
+            
+            RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
+                                        ByVal ShiftState As VBRUN.ShiftConstants, _
+                                        ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseMove
+                
+            RaiseEvent MouseMove(CInt(Button), CInt(ShiftState), X, Y)
+        End Sub
+        
+        Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
+                                    ByVal ShiftState As VBRUN.ShiftConstants, _
+                                    ByVal X As Single, ByVal Y As Single) _
+                Handles RootWindowElement.MouseUp
+                
+            Dim ScaledPixX As Double = (X / Me.ControlContext.GetScaleModePixelsMultiplierX)
+            Dim ScaledPixY As Double = (Y / Me.ControlContext.GetScaleModePixelsMultiplierY)
+            Dim PixX As Long = ScaledPixX * Me.RootWindowElement.UnitPixelScale
+            Dim PixY As Long = ScaledPixY * Me.RootWindowElement.UnitPixelScale
+            Dim IsDateDblClick As Boolean = False
+            
+            Dim _X As Single = X
+            Dim _Y As Single = Y
+            
+            If (LastMouseUpX = X) And (LastMouseUpY = Y) Then
+                Dim MouseUpTime As LongLong = GetTickCount()
+                Dim dblClickTime As Long = GetDoubleClickTime()
+                Dim MouseClickTime As LongLong = (MouseUpTime - LastMouseUpTime)
+                If MouseClickTime < dblClickTime Then
+                	RaiseEvent DblClick()
+                    _X = -1  ' prevent further double click messages
+                    _Y = -1
+                End If
+            End If
+            
+            RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+
+            If IsInRect(ScaledPixX, ScaledPixY) Then
+                RaiseEvent Click()
+            End If
+            
+            LastMouseUpX = _X
+            LastMouseUpY = _Y
+            LastMouseUpTime = GetTickCount()
+        End Sub
+        
+        Private Sub HandleGotFocus() _
+                Handles RootWindowElement.GotFocus
+                
+            RaiseEvent GotFocus()
+        End Sub
+
+        Private Sub HandleLostFocus() _
+                Handles RootWindowElement.LostFocus
+                
+            RaiseEvent LostFocus()
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+
+        Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
+                Handles RootWindowElement.DragOver
+            
+            If State = 3 Then
+                RaiseEvent DragDrop(Source, CSng(X), CSng(Y))
+            Else
+                RaiseEvent DragOver(Source, CSng(X), CSng(Y), CInt(State))
+            End If
+        End Sub
+        
+        Public Sub OLEDrag()
+            InternalOLEDrag(Me)
+        End Sub
+
+        Private Sub SyncOLEDropMode() _
+                Handles OLEDropMode.OnPropertyLet
+                
+            BaseSyncOLEDropMode (Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+                  
+        [ Serialize (False) ]
+        Public Property Get MinDate() As Date
+        	Dim dates(0 To 1) As SYSTEMTIME
+            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MIN Then
+                Return DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay)
+            End If
+        End Property
+        
+        Private Sub SetDateRange(ByVal minDate As Double, ByVal maxDate As Double)
+        	Dim dates(1) As SYSTEMTIME
+            DateToSystemTime(minDate, dates(0))
+            DateToSystemTime(maxDate, dates(1))
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETRANGE, GDTR_MIN Or GDTR_MAX, VarPtr(dates(0)))
+        End Sub
+
+        [ Serialize (False) ]
+        Public Property Let MinDate(NewValue As Date)
+            If Int(NewValue) > Me.MaxDate Then
+                Err.Raise 35775, Description:="The value specified for the MinDate is higher than the current value of MaxDate"
+            Else
+                NewValue = Int(NewValue)
+            End If
+            
+            If Value < NewValue Then Value = NewValue
+            SetDateRange(NewValue, Me.MaxDate)
+        End Property
+    
+        [ Serialize (False) ]
+        Public Property Get MaxDate() As Date
+        	Dim dates(0 To 1) As SYSTEMTIME
+            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MAX Then
+                Return DateSerial(dates(1).wYear, dates(1).wMonth, dates(1).wDay)
+            End If
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let MaxDate(NewValue As Date)
+            If Int(NewValue) < Me.MinDate Then
+                Err.Raise 35775, , "The value specified for MaxDate is lower than the current value of MinDate"
+            Else
+                NewValue = Int(NewValue)
+            End If
+            
+            If Value > NewValue Then Value = NewValue
+        	SetDateRange(Me.MinDate, NewValue)
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Value() As Variant
+            Dim ST As SYSTEMTIME
+            Dim flags As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_GETSYSTEMTIME, 0, VarPtr(ST)))
+            Return SystemTimeToDate(flags, ST)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Value(ByVal NewValue As Variant)
+            If IsEmpty(NewValue) Then
+                NewValue = Null
+            ElseIf IsNumeric(NewValue) Then
+            	NewValue = CDate(NewValue)
+            End If
+            
+            If IsDateNullEqual(NewValue, Me.Value) = True Then
+                Exit Property
+            End If
+            
+            Dim flag As Long
+            Dim date As SYSTEMTIME
+
+            If IsNull(NewValue) Then
+                flag = GDT_NONE
+                If CheckBox = False Then
+                    Err.Raise 35787, , "Can't set Value to NULL when CheckBox property = FALSE"
+                End If
+            ElseIf IsDate(NewValue) Then
+                flag = GDT_VALID
+                If NewValue < Me.MinDate Or NewValue > Me.MaxDate Then
+                    Err.Raise 35773, , "Specified date value does not fall within the MinDate and MaxDate properties"
+                End If
+                DateToSystemTime(NewValue, date)
+            Else
+                Err.Raise 380
+            End If
+            
+            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_SETSYSTEMTIME, flag, VarPtr(date))
+            Me.CachedValue = NewValue
+            RaiseEvent Change
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Year() As Integer
+            Return VBA.Year(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Year(ByVal Value As Integer)
+            Me.Value = DateSerial(Value, VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Month() As Integer
+            Return VBA.Month(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Month(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 13 Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), Value, VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Week() As Integer
+            Dim DayOfWeek As VbDayOfWeek = StartOfWeek
+            Dim DateValue As Date = Me.Value
+            Week = DatePart("ww", DateValue, DayOfWeek, vbFirstFourDays)
+            If Week > 52 Then
+                ' from VBCCR: DatePart function can return wrong week number (see https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/200299)
+                If DatePart("ww", DateAdd("d", 7, DateValue), DayOfWeek, vbFirstFourDays) = 2 Then
+                    Week = 1
+                End If
+            End If
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get hWndCalendar() As LongPtr
+            Return WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_GETMONTHCAL, 0, 0)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Week(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 54 Then Err.Raise 380
+            Dim changeDelta As Long = Value - Me.Week
+            If changeDelta <> 0 Then Me.Value = DateAdd("ww", changeDelta, Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Day() As Integer
+            Return VBA.Day(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Day(ByVal Value As Integer)
+            If Value <= 0 Or Value > Me.DayCount Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), Value) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+        End Property
+        
+        [ Serialize (False) ]
+        Public Property Get Hour() As Integer
+            Return VBA.Hour(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Hour(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 24 Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(Value, VBA.Minute(Me.Value), VBA.Second(Me.Value))
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Get Minute() As Integer
+            Return VBA.Minute(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Minute(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 60 Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), Value, VBA.Second(Me.Value))
+        End Property
+                    
+        [ Serialize (False) ]
+        Public Property Get Second() As Integer
+            Return VBA.Second(Me.Value)
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Second(ByVal Value As Integer)
+            If Value <= 0 Or Value >= 60 Then Err.Raise 380
+            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), Value)
+        End Property
+                            
+        [ Serialize (False) ]
+        Public Property Get DayCount() As Long
+            Return VBA.Day(DateSerial(Me.Year, Me.Month + 1, 0))
+        End Property
+        
+        Private Sub SyncStartOfWeek() _
+                Handles StartOfWeek.OnPropertyLet
+        	
+            Dim startWeek As VbDayOfWeek = Me.StartOfWeek
+            If startWeek = vbUseSystemDayOfWeek Then startWeek = GetSystemDayOfWeek()
+            WinNativeFormsBASE.WindowsAPI.SendMessageW(Me.hWndCalendar, MCM_SETFIRSTDAYOFWEEK, 0, (startWeek + 5) Mod 7)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get DayOfWeek() As VbDayOfWeek
+            Return Weekday(Me.Value)
+        End Property
+
+        Public Function SystemTimeToDate(flags As Long, st As SYSTEMTIME) As Variant
+            If flags = GDT_VALID Then
+            	With st
+                	Return DateSerial(st.wYear, st.wMonth, st.wDay) + TimeSerial(st.wHour, st.wMinute, st.wSecond)
+            	End With
+            Else
+                Return Null
+            End If
+        End Function
+        
+        Public Sub DateToSystemTime(ByVal Value As Date, st As SYSTEMTIME)
+        	With st
+                .wYear = VBA.Year(Value)
+                .wMonth = VBA.Month(Value)
+                .wDay = VBA.Day(Value)
+                .wDayOfWeek = VBA.Weekday(Value)
+                .wHour = VBA.Hour(Value)
+                .wMinute = VBA.Minute(Value)
+                .wSecond = VBA.Second(Value)
+            End With
+        End Sub
+        
+        Public Function IsDateNullEqual(date1 As Variant, date2 As Variant) As Boolean
+        	If IsNull(date1) Then
+            	If IsNull(date2) Then
+                	Return True
+                Else
+                    Return False
+            	End If
+            Else
+                If IsNull(date2) Then
+                	Return False
+                Else
+                    Return date1 = date2
+                End If
+        	End If
+        End Function
+        
+        Private Sub HandleDropDown(ByRef Notification As NMHDR)
+            SyncStartOfWeek()
+            If Me.VisualStyles = False Then Me.RootWindowElement.RemoveVisualStyles(Me.hWndCalendar)
+            RaiseEvent DropDown
+        End Sub
+        
+        Private Sub HandleCloseUp(ByRef Notification As NMHDR)
+            RaiseEvent CloseUp
+        End Sub
+        Private Sub HandleDateTimeChange(ByRef Notification As NMDATETIMECHANGE)
+            Dim NewValue As Variant = SystemTimeToDate(Notification.dwFlags, Notification.ST)
+            If IsDateNullEqual(NewValue, Me.CachedValue) = False Then
+                Me.CachedValue = Me.Value
+                RaiseEvent Change
+            End If
+        End Sub
+        
+        Private Sub HandleFormatQuery(ByRef Notification As NMDATETIMEFORMATQUERY)
+            With Notification
+                If .pszFormat <> 0 Then
+                    Dim CallbackFieldId As String = WinNativeFormsBASE.SysAllocString(.pszFormat)
+                End If
+                Dim Size As Integer
+                RaiseEvent FormatSize(CallbackFieldId, Size)
+                If Size = 0 Then Size = 1
+                If Me.Font Is Nothing Then
+                    Me.InitializeOLEFont()
+                End If
+                Dim hDC As LongPtr = WinNativeFormsBASE.GetDC(RootWindowElement.Handle)
+                Dim font As stdole.IFont = Me.Font
+                Dim hFontOld As LongPtr = WinNativeFormsBASE.SelectObject(hDC, font.hFont)
+                GetTextExtentPoint32W(hDC, String(Size, "W"), Size, .szMax)
+                If hFontOld <> 0 Then WinNativeFormsBASE.SelectObject(hDC, hFontOld)
+                WinNativeFormsBASE.ReleaseDC(RootWindowElement.Handle, hDC)
+            End With
+        End Sub
+
+        Private Sub HandleFormat(ByRef Notification As NMDATETIMEFORMAT)
+            With Notification
+                If .pszFormat <> 0 Then
+                    Dim CallbackFieldId As String = WinNativeFormsBASE.SysAllocString(.pszFormat)
+                End If
+                Dim FormattedString As String
+                RaiseEvent Format(CallbackFieldId, FormattedString)
+                Notification.szDisplay = FormattedString & vbNullChar
+            End With
+        End Sub
+        
+        Private Sub HandleFormatKeyDown(ByRef Notification As NMDATETIMEWMKEYDOWN)
+            With Notification
+                If .pszFormat <> 0 Then
+                    Dim CallbackFieldId As String = WinNativeFormsBASE.SysAllocString(.pszFormat)
+                End If
+                Dim CallbackDate As Date = SystemTimeToDate(GDT_VALID, .ST)
+                RaiseEvent CallbackKeyDown(.nVirtKey And &HFF, GetShiftState(), CallbackFieldId, CallbackDate)
+                DateToSystemTime(CallbackDate, .ST)
+            End With
+        End Sub
+        
+        Private Sub RootWindowElement_Notify(ByRef Notification As NMHDR, MutedReturnValue As Variant)
+            'Debug.Print Now() & " " & CurrentProcedureName & " " & Hex(Notification.Code)
+            Select Case Notification.Code
+            	Case DTN_DROPDOWN
+                    HandleDropDown(VarPtr(Notification))
+            	Case DTN_CLOSEUP
+                    HandleCloseUp(VarPtr(Notification))
+                Case DTN_DATETIMECHANGE
+                    HandleDateTimeChange(VarPtr(Notification))
+                Case DTN_FORMATQUERYW
+                    HandleFormatQuery(VarPtr(Notification))
+                Case DTN_FORMATW
+                    HandleFormat(VarPtr(Notification))
+                Case DTN_WMKEYDOWNW
+                    HandleFormatKeyDown(VarPtr(Notification))
+            End Select
+        End Sub
+        
+        Private Sub HandleValidate(Cancel As Boolean) _
+                Handles RootWindowElement.Validate
+
+            RaiseEvent Validate(Cancel)
+        End Sub
+    
+    #End Region
+	
+End Class

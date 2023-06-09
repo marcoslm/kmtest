@@ -1,0 +1,207 @@
+[ Description ("A Win32 native MENU control") ]
+[ WindowsControl ("no_designer") ]
+[ ClassId ("33AD4F68-6699-11CF-B70C-00AA0060D393") ]
+[ InterfaceId ("79AE735E-3ABB-41DB-B421-922CA19976D3") ]    ' FIXME implement {33AD4F69-6699-11CF-B70C-00AA0060D393} for backcompat
+[ COMCreatable (False) ]
+[ EventsUseDispInterface ]
+[ ComImport (True) ]
+Class Menu
+    
+    #Region "INHERITANCE"
+    
+        [ WithDispatchForwarding ] Implements Control
+        Implements WindowsControls.IWindowsControl
+        Implements WinNativeFormsBase.BaseControl Via _BaseControl = New WinNativeFormsBase.BaseControl(ControlTypeConstants.vbMenuControl)
+
+    #End Region
+        
+    #Region "STATE"
+    
+        [ Description ("TIP: enter '-' for a seperator bar") ]
+            Public Caption As String
+            Public Checked As Boolean
+            Public Enabled As Boolean = True
+            Public Visible As Boolean = True
+            
+        [ Unimplemented ]
+            Public HelpContextID As Long
+        [ Unimplemented ]
+            Public WindowList As Boolean
+        [ Unimplemented ]
+            Public NegotiatePosition As VBRUN.NegotiatePositionConstants
+        [ Unimplemented ]
+            Public Shortcut As String
+
+        [ Serialize (False) ]
+            Friend InternalCachedContainerMenuHandle As LongPtr
+        [ Serialize (False) ]
+            Friend InternalCachedPopupMenuHandle As LongPtr
+        [ Serialize (False) ]
+            Friend InternalCachedPositionId As Long
+        [ Serialize (False) ]
+            Friend InternalCachedMasterId As Long
+            
+        [ Serialize (False) ]
+            Private InternalPicture As StdPicture
+        
+        [ Serialize (True, "Picture") ]
+        [ CustomDesigner ("designer_PictureBytes") ]
+            Private ReadOnly PictureINIT() As Byte
+
+        [ Description ("if Picture is an ICON file with multiple sizes, use this to choose the size you want to use") ]
+            Public IconSizeX As Long = 0
+        [ Description ("if Picture is an ICON file with multiple sizes, use this to choose the size you want to use") ]
+            Public IconSizeY As Long = 0
+            
+    #End Region
+
+    #Region "EVENTS"
+    
+        Event Click()
+
+    #End Region
+               
+    #Region "MEMBERS"
+
+        Public Sub New()
+            ' This constructor is useful for allowing control inheritance
+        End Sub
+        
+        Private Sub InitializeDefaultValues()
+        End Sub
+    
+        Public Sub New(Serializer As WindowsControls.SerializationInfo)
+            If Serializer Is Nothing Then Exit Sub
+            If Not Serializer.Deserialize(Me) Then
+                InitializeDefaultValues
+            End If
+        End Sub
+        
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Set Me.ControlContext = ControlContext
+            
+            If IsArrayInitialized(Me.PictureINIT) AndAlso (UBound(Me.PictureINIT) > -1) Then
+                ' LoadPicture can now be passed a byte-array containing an in-memory stream
+                If IconSizeX = 0 And IconSizeY = 0 Then
+                    Set InternalPicture = Global.LoadPicture(Me.PictureINIT)
+                Else
+                    Set InternalPicture = Global.LoadPicture(Me.PictureINIT, LoadPictureSizeConstants.vbLPCustom, , IconSizeX, IconSizeY)
+                End If
+                
+                If InternalPicture.Type = vbPicTypeIcon Then
+                	Set InternalPicture = [_HiddenModule].ConvertIconToBitmap(InternalPicture)
+                End If
+            End If
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+                
+            ' disconnect anything that causes a circular reference here
+        End Sub
+        
+        Public Function Container() As Control
+             Return Me.ControlContext.GetContainer
+        End Function
+        
+        [ Serialize (False) ]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        Private Sub UpdateMenus(itemInfo As MENUITEMINFO)
+        	itemInfo.cbSize = LenB(itemInfo)
+            If Me.InternalCachedContainerMenuHandle <> 0 Then
+                SetMenuItemInfoW(Me.InternalCachedContainerMenuHandle, Me.InternalCachedPositionId, 1, itemInfo)
+                DrawMenuBar(Parent.hWnd)
+            End If
+            If Me.InternalCachedPopupMenuHandle <> 0 Then
+                SetMenuItemInfoW(Me.InternalCachedPopupMenuHandle, Me.InternalCachedPositionId, 1, itemInfo)
+            End If
+        End Sub
+        
+        Private Sub CaptionChanged() _  
+        	        Handles Caption.OnPropertyLet
+
+            Dim itemInfo As MENUITEMINFO
+            itemInfo.fMask = MIIM_STRING
+            itemInfo.dwTypeData = Me.Caption
+            UpdateMenus(itemInfo)
+        End Sub
+        
+        Private Sub CheckedChanged() _  
+        	        Handles Checked.OnPropertyLet, _        
+                            Enabled.OnPropertyLet
+                            
+            Dim itemInfo As MENUITEMINFO
+            itemInfo.fMask = MIIM_STATE
+            If Checked = True Then itemInfo.fState += MFS_CHECKED
+            If Enabled = False Then itemInfo.fState += MFS_DISABLED
+            UpdateMenus(itemInfo)
+        End Sub
+        
+        [ Serialize (False) ]
+        Public Property Get Picture() As StdPicture
+            Return InternalPicture
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Set Picture(Value As StdPicture)
+            Set InternalPicture = Value
+            PictureChanged()
+        End Property
+
+        [ Serialize (False) ]
+        Public Property Let Picture(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+            Set InternalPicture = Value
+            PictureChanged()
+        End Property
+        
+        Private Sub PictureChanged()
+                            
+            If InternalPicture.Type = vbPicTypeIcon Then
+                Set InternalPicture = [_HiddenModule].ConvertIconToBitmap(InternalPicture)
+            End If
+            
+            Dim itemInfo As MENUITEMINFO
+            itemInfo.fMask = MIIM_BITMAP
+            itemInfo.hbmpItem = If((InternalPicture Is Nothing) OrElse (InternalPicture.Type = vbPicTypeIcon), 0, InternalPicture.Handle)
+            UpdateMenus(itemInfo)
+        End Sub
+        
+        Private Sub VisibleChanged() _
+                Handles Visible.OnPropertyLet
+        
+            ' FIXME what about popup menus here.
+            If (Me.InternalCachedContainerMenuHandle <> 0) Then
+                Parent.RebuildMenus
+            End If
+        End Sub
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Get _Default() As Boolean
+            Return Me.Enabled
+        End Property
+        
+        [ Serialize (False) ]
+        [ DefaultMember ]
+        Public Property Let _Default(Value As Boolean)
+            Me.Enabled = Value
+            CheckedChanged()
+        End Property
+        
+    #End Region
+    
+End Class
