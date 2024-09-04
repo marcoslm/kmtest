@@ -2,7 +2,7 @@
 
 KM-Test es una aplicación sencilla y eficaz para probar el funcionamiento de teclados y ratones, mostrando en tiempo real las teclas presionadas, el estado de los LEDs del teclado (Bloq Num, Bloq Mayús y Bloq Despl), y los eventos del ratón, junto con las coordenadas de movimiento. Es muy útil para por ejemplo diagnosticar membranas de teclado defectuosas.
 
-[![Captura de pantalla de KM-Test](http://www.bluebit.es/soft/kmtest.png)]]
+![Captura de pantalla de KM-Test](http://www.bluebit.es/soft/kmtest.jpg)]
 
 ## Descripción
 
