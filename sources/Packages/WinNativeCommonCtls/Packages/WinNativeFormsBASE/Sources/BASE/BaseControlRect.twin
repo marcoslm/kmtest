@@ -1,92 +1,78 @@
-[ ClassId ("8B0BA607-69F9-4F00-8A79-A28449E7182B") ]
-[ InterfaceId ("39333942-9249-43E7-BABC-EFD97CF98074") ]
-[ COMCreatable (False) ]
+[ClassId("8B0BA607-69F9-4F00-8A79-A28449E7182B")]
+[InterfaceId("39333942-9249-43E7-BABC-EFD97CF98074")]
+[COMCreatable(False)]
 Private Class BaseControlRect
     
     Implements BaseControl Via BaseControl
 
-    [ Description ("Adjusts the left position of this control, in pixels, relative to the container") ]
-'    [ BindOnlyIfNoArguments ]
-'    [ DispId (-850) ]
-    [ Serialize (True, "Left") ]
-        Public PixelsLeft As Double
-        Attribute PixelsLeft.VB_VarUserMemId = -850
-    [ Description ("Adjusts top position of this control, in pixels, relative to the container") ]
-'    [ DispId (-851) ]
-    [ Serialize (True, "Top") ]
-        Public PixelsTop As Double
-        Attribute PixelsTop.VB_VarUserMemId = -851
-    [ Description ("Adjusts the width of this control, in pixels") ]
-'    [ DispId (-852) ]
-    [ Serialize (True, "Width") ]
-        Public PixelsWidth As Double
-        Attribute PixelsWidth.VB_VarUserMemId = -852
-    [ Description ("Adjusts the height of this control, in pixels") ]
-'    [ DispId (-853) ]
-    [ Serialize (True, "Height") ]
-        Public PixelsHeight As Double
-        Attribute PixelsHeight.VB_VarUserMemId = -853
-
-        Private LeftCached As Double
-        Private TopCached As Double
-        Private WidthCached As Double
-        Private HeightCached As Double
+    [Serialize(False)]
+    Friend RootWindowElementBase As WindowsControls.WindowElement
+    
+    [Description("Adjusts the left position of this control, in pixels, relative to the container")]
+    [Serialize(True, "Left")]
+        Private PixelsLeftINIT As Double
+    [Description("Adjusts top position of this control, in pixels, relative to the container")]
+    [Serialize(True, "Top")]
+        Private PixelsTopINIT As Double
+    [Description("Adjusts the width of this control, in pixels")]
+    [Serialize(True, "Width")]
+        Friend PixelsWidthINIT As Double                ' FIXME should not be public
+    [Description("Adjusts the height of this control, in pixels")]
+    [Serialize(True, "Height")]
+        Friend PixelsHeightINIT As Double               ' FIXME should not be public
      
-    Public Function IsInRect(ByVal X As Double, ByVal Y As Double) As Boolean
-    	Return (X >= 0) AndAlso (Y >= 0) AndAlso (X <= PixelsWidth) AndAlso (Y <= PixelsHeight)
-    End Function
-     
+        Private CurrentBackBrush As LongPtr
+        Private CurrentBackBrushColor As OLE_COLOR
+        
     Sub New(ByVal ControlType As ControlTypeConstants)
         Set Me.BaseControl = New BaseControl(ControlType)
+        
+        ' These defaults apply to runtime added controls, via Controls.Add
+        Me.PixelsWidthINIT = 80
+        Me.PixelsHeightINIT = 32
     End Sub
-
-
-    Private Sub OnPropertyChanged_LEFT() _
-            Handles PixelsLeft.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        If PixelsLeft <> LeftCached Then
-            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
-            LeftCached = PixelsLeft
-        End If
+    
+    Friend Sub InternalStateReset()
+        If CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+        CurrentBackBrush = vbNullPtr
+        IgnoreMousePointerChanged = False
+        Me.BaseControl.InternalStateReset()
     End Sub
-
-    Private Sub OnPropertyChanged_TOP() _
-            Handles PixelsTop.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        If PixelsTop <> TopCached Then
-            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
-            TopCached = PixelsTop
-        End If
+    
+    Friend Function InternalBaseControlBeforeCreateRootWindow(ByRef InitData As WindowCreationData) As LongPtr
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .PixelsLeft = Me.PixelsLeftINIT
+            .PixelsTop = Me.PixelsTopINIT
+            .PixelsWidth = Me.PixelsWidthINIT
+            .PixelsHeight = Me.PixelsHeightINIT
+        End With
+        Return BaseControl.InternalBaseControlBeforeCreateRootWindow(InitData)
+    End Function
+    
+    Friend Sub InternalSyncDesignerDimensions()
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            Me.PixelsLeftINIT =.PixelsLeft
+            Me.PixelsTopINIT = .PixelsTop
+            Me.PixelsWidthINIT =.PixelsWidth
+            Me.PixelsHeightINIT = .PixelsHeight
+        End With
     End Sub
-
-    Private Sub OnPropertyChanged_WIDTH() _
-            Handles PixelsWidth.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        If PixelsWidth <> WidthCached Then
-            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
-            WidthCached = PixelsWidth
-        End If
+    
+    Sub Class_Terminate()
+        If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+        Me.CurrentBackBrush = vbNullPtr
     End Sub
-
-    Private Sub OnPropertyChanged_HEIGHT() _
-            Handles PixelsHeight.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        If PixelsHeight <> HeightCached Then
-            If Me.ControlContext IsNot Nothing Then Me.ControlContext.ChangedPosition()
-            HeightCached = PixelsHeight
-        End If
-    End Sub
-
-    Friend Sub InternalChangeSizeNoEvents(Control As Object, ByVal Width As Double, ByVal Height As Double)
-        PixelsWidth = Width
-    	WidthCached = Width
-        PixelsHeight = Height
-    	HeightCached = Height
-    End Sub
+    
+    Friend Function IsInRect(ByVal X As Double, ByVal Y As Double) As Boolean
+    	Return (X >= 0) AndAlso (Y >= 0) AndAlso (X <= CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsWidth) AndAlso (Y <= CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsHeight)
+    End Function
+ 
+    ' Public Sub InternalChangeSizeNoEvents(Control As Object, ByVal Width As Double, ByVal Height As Double)
+    '     PixelsWidth = Width
+    ' 	WidthCached = Width
+    '     PixelsHeight = Height
+    ' 	HeightCached = Height
+    ' End Sub
     
     Friend Function InternalMove(Control As Object, ByVal Left As Single, ByVal Top As Variant, ByVal Width As Variant, ByVal Height As Variant) As Boolean
     	If IsMissing(Top) Then
@@ -102,10 +88,10 @@ Private Class BaseControlRect
         End If
 
 '        Stop
-        Dim leftDiff As Double = Abs(Control.Left - Left)
-        Dim topDiff As Double = Abs(Control.Top - Top)
-        Dim widthDiff As Double = Abs(Control.Width - Width)
-        Dim heightDiff As Double = Abs(Control.Height - Height)
+        Dim leftDiff As Double = CDbl(Abs(Control.Left - Left))
+        Dim topDiff As Double = CDbl(Abs(Control.Top - Top))
+        Dim widthDiff As Double = CDbl(Abs(Control.Width - Width))
+        Dim heightDiff As Double = CDbl(Abs(Control.Height - Height))
     
         ' FIXME should take the ScaleMode into account
         If (leftDiff > 0.05) OrElse _   
@@ -119,16 +105,175 @@ Private Class BaseControlRect
             (Control.Height <> Height) Then
             
             Control.Left = Left
-            LeftCached = Left
+            'LeftCached = Left
             Control.Top = Top
-            TopCached = Top
+            'TopCached = CDbl(Top)
             Control.Width = Width
-            WidthCached = Width
+            'WidthCached = CDbl(Width)
             Control.Height = Height
-            HeightCached = Height
+            'HeightCached = CDbl(Height)
 
             Return True
         End If
     End Function
+    
+    Friend Function CommonGetHWND() As LongPtr
+    	Dim RootWindowElementBase As Any = Me.RootWindowElementBase
+        If RootWindowElementBase IsNot Nothing Then
+            Return RootWindowElementBase.Handle
+        End If
+    End Function
+    
+    Friend Function SendMessageCtl(ByVal msg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+        Return WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElementBase, msg, wParam, lParam)
+    End Function
+        
+    Friend Function GetStyleFlagCtl(ByVal flag As Long) As Boolean
+        Return WinNativeFormsBASE.WindowsAPI.USER32_GetStyleFlag(RootWindowElementBase, flag)
+    End Function
 
+    Friend Function SetStyleFlagCtl(ByVal flag As Long, ByVal Value As Boolean) As Boolean
+        WinNativeFormsBASE.WindowsAPI.USER32_SetStyleFlag(RootWindowElementBase, flag, Value)
+    End Function
+    
+    Friend Function GetWindowLongCtl(ByVal type As Long) As Long
+        Return WinNativeFormsBASE.WindowsAPI.USER32_GetWindowLong(RootWindowElementBase, type)
+    End Function
+
+    Friend Sub SetWindowLongCtl(ByVal type As Long, ByVal Value As Long)
+        WinNativeFormsBASE.WindowsAPI.USER32_SetWindowLong(RootWindowElementBase, type, Value)
+    End Sub
+        
+    Friend Sub CommonRefresh()
+        WindowsAPI.USER32_RedrawWindow(Me.RootWindowElementBase, 0, 0, RDW_ERASE Or RDW_INVALIDATE Or RDW_UPDATENOW)
+    End Sub
+        
+    Friend Function GetWindowTextCtl() As String
+        Return WinNativeFormsBASE.WindowsAPI.USER32_GetWindowText(RootWindowElementBase)
+    End Function
+    
+    Friend Sub LetWindowTextCtl(ByRef Value As String)
+        WindowsAPI.USER32_SetWindowText(Me.RootWindowElementBase, Value)
+    End Sub
+    
+    Friend Sub HandleGetColorsCommon(ByVal hdc As LongPtr, ByRef BackBrushOut As LongPtr, ByVal RootThis As Object)
+        WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(hdc, TranslateColor(CLng(RootThis.ForeColor)))
+        WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(hdc, WinNativeFormsBASE.BackgroundModes.TRANSPARENT)
+        BackBrushOut = Me.CreateBackBrush(CLng(RootThis.BackColor))
+    End Sub
+                
+    Friend Function CreateBackBrush(ByVal Color As OLE_COLOR) As LongPtr
+        If Color <> Me.CurrentBackBrushColor Then
+            If Me.CurrentBackBrush <> 0 Then WindowsAPI.GDI32_DeleteObject(Me.CurrentBackBrush)
+                Me.CurrentBackBrush = WindowsAPI.GDI32_CreateSolidBrushColor(TranslateColor(Color))
+                Me.CurrentBackBrushColor = Color
+        End If
+        Return Me.CurrentBackBrush
+    End Function
+        
+    Friend Function CommonGetTabStop() As Boolean
+        Return GetStyleFlagCtl(WS_TABSTOP)
+    End Function
+        
+    Friend Sub CommonLetTabStop(Value As Boolean)
+        SetStyleFlagCtl(WS_TABSTOP, Value)
+    End Sub
+        
+    Friend Function CommonGetEnabled() As Boolean
+        Return Not GetStyleFlagCtl(WS_DISABLED)
+    End Function
+    
+    Friend Sub CommonLetEnabled(Value As Boolean)
+        WindowsAPI.USER32_EnableWindow(Me.RootWindowElementBase, Value)
+        If Value = False Then
+            RootWindowElementBase.ControlHasBeenDisabled()
+        End If
+    End Sub
+        
+    Friend Sub CommonSetFocus()
+        WindowsAPI.USER32_SetFocus(Me.RootWindowElementBase)
+    End Sub
+        
+    [Serialize(False)]
+    Friend IgnoreMousePointerChanged As Boolean
+    Friend Sub CommonMousePointerChanged()
+        If IgnoreMousePointerChanged Then Exit Sub
+        Dim ControlContext As Any = Me.ControlContext
+        If ControlContext IsNot Nothing Then ControlContext.MousePointerChanged()
+    End Sub
+        
+    Friend Sub WindowlessRefresh()
+        Me.ControlContext.WindowlessRefresh()
+    End Sub
+    
+    [Serialize(False)]
+    [BindOnlyIfNoArguments]
+    Public Property Get Left() As Double
+        Return Me.ControlContext.GetScaledLeft
+    End Property
+    
+    [Serialize(False)]
+    [BindOnlyIfNoArguments]
+    Public Property Let Left(ByVal Value As Double)
+        Me.ControlContext.SetScaledLeft(Value)
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get Top() As Double
+        Return Me.ControlContext.GetScaledTop
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let Top(ByVal Value As Double)
+        Me.ControlContext.SetScaledTop(Value)
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get Width() As Double
+        Return Me.ControlContext.GetScaledWidth
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let Width(ByVal Value As Double)
+        Me.ControlContext.SetScaledWidth(Value)
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get Height() As Double
+        Return Me.ControlContext.GetScaledHeight
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let Height(ByVal Value As Double)
+        Me.ControlContext.SetScaledHeight(Value)
+    End Property
+    
+    [Serialize(False)]
+    [DispId(-850)]
+    [Hidden]
+    Friend Property Get PixelsLeft() As Double
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsLeft
+    End Property
+        
+    [Serialize(False)]
+    [DispId(-851)]
+    [Hidden]
+    Friend Property Get PixelsTop() As Double
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsTop
+    End Property
+        
+    [Serialize(False)]
+    [DispId(-852)]
+    [Hidden]
+    Friend Property Get PixelsWidth() As Double
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsWidth
+    End Property
+    
+    [Serialize(False)]
+    [DispId(-853)]
+    [Hidden]
+    Friend Property Get PixelsHeight() As Double
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).PixelsHeight
+    End Property
+    
 End Class

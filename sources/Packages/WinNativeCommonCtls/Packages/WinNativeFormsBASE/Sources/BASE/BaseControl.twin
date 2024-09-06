@@ -1,62 +1,102 @@
 ' This deliberately has the same IID as Control
-[ ClassId ("D02CB910-DA6A-4232-A892-BCD3AECE95C0") ]
-[ InterfaceId ("0F56F78D-26A7-4291-82B7-D4B04978540B") ]
-[ COMCreatable (False) ]
+[ClassId("D02CB910-DA6A-4232-A892-BCD3AECE95C0")]
+[InterfaceId("0F56F78D-26A7-4291-82B7-D4B04978540B")]
+[COMCreatable(False)]
 Private Class BaseControl
     
-    [ Description ("A unique name for the control on this form") ]
-'    [ DispId (-800) ]
-        Public Name As String               ' FIXME should be ReadOnly, had to remove it due to control array dynamic loading of runtime controls needing to set it
-        Attribute Name.VB_VarUserMemId = -800
+    Private InternalBaseControlInfo As BaseControlInfo
 
-    [ Description ("Storage area for internal data") ]
+    [Serialize(False)]
+        Friend ReadOnly InternalBaseControlInfoPtrX As LongPtr
+    
+    [Serialize(True, "Name")]
+    [Description("The name associated with this control.  Control arrays can share the same name, but for individual controls the assigned name must be unique.")]
+        Friend NameINIT As String
+    
+    [Description("Any string value, allowing you to associate custom data to a control")]
         Public Tag As String = vbNullString
     
-    [ Serialize (False) ]
+    [Serialize(False)]
+    [Description("A numeric value representing the type of this control, see ControlTypeConstants")]
         Public ReadOnly ControlType As ControlTypeConstants
 
-    [ Serialize (False) ]
-        Public ControlContext As WindowsControls.WindowsControlContext
+    [Serialize(False)]
+        Friend ControlContext As WindowsControls.WindowsControlContext
         
-        Private MouseCaptured As Boolean
+    Friend Sub InternalStateReset()
+        InternalBaseControlInfo.Name = vbNullString
+        InternalBaseControlInfo.InitialCaption = vbNullString
+        InternalBaseControlInfo.ToolTipText = vbNullString
+        Set InternalBaseControlInfo.MouseIcon = Nothing
+        Set InternalBaseControlInfo.DragIcon = Nothing
+        
+        [_HiddenModule].MemZero(VarPtr(InternalBaseControlInfo), LenB(InternalBaseControlInfo))
+        
+        Set ControlContext = Nothing
+        InternalBaseControlInfo.VisualStyles = True
+    End Sub
 
     Sub New(ByVal ControlType As ControlTypeConstants)
         Me.ControlType = ControlType
+        Me.InternalBaseControlInfoPtrX = VarPtr(InternalBaseControlInfo)
     End Sub
+    
+    Friend Function InternalBaseControlBeforeCreateRootWindow(ByRef InitData As WindowCreationData) As LongPtr
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .Name = Me.NameINIT
+            .InitialCaption = InitData.Caption
+        End With
+        Return Me.InternalBaseControlInfoPtrX
+    End Function
     
     Friend Sub BeginMouseCapture(WindowElement As WindowsControls.WindowElement)
     	WinNativeFormsBASE.USER32_SetCapture(WindowElement)
-        MouseCaptured = True
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .MouseCaptured = True
+        End With
     End Sub
     
     Friend Function EndMouseCapture() As Boolean
-    	If MouseCaptured = True Then
-            MouseCaptured = False
-            WinNativeFormsBASE.USER32_ReleaseCapture()
-            Return True
-        End If
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            If .MouseCaptured = True Then
+                .MouseCaptured = False
+                WinNativeFormsBASE.USER32_ReleaseCapture()
+                Return True
+            End If
+        End With
     End Function
 
-    [ Serialize (True, "Index") ]
-    Friend IndexINIT As Long = -1
+    ' [Serialize(True, "Index")]
+    ' Friend IndexINIT As Long = -1
 
-    [ Serialize (False) ]
-    Public Property Get Index() As Long
-        If IndexINIT = -1 Then
-        	'Err.Raise 343, , "Object not an array"
-            Err.ReturnHResult = &H800A0157
-            Return 0
-        End If
-    	Return IndexINIT
+    ' [Serialize(False)]
+    ' Public Property Get Index() As Long
+    ' 	Dim IndexINIT As Any = Me.IndexINIT
+    '     If IndexINIT = -1 Then
+    '     	'Err.Raise 343, , "Object not an array"
+    '         Err.ReturnHResult = &H800A0157
+    '         Return 0
+    '     End If
+    ' 	Return IndexINIT
+    ' End Property
+    
+    [Description("A unique name for the control on this form")]
+    [DispId(-800)]
+    [Serialize(False)]
+    Public Property Get Name() As String
+        Return InternalBaseControlInfo.Name
     End Property
-
-    Private Sub OnTouchedFormProperties() _
-            Handles Name.OnPropertyGet, _
-                    Tag.OnPropertyGet, _
-                    Tag.OnPropertyLet, _
-                    ControlType.OnPropertyGet
-
-        If Me.ControlContext IsNot Nothing Then Me.ControlContext.EnsureFormIsLoaded()
+        
+    Friend Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
+        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
     End Sub
+
+    Friend Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
+        Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
+    End Function
+    
+    Friend Function SubClassWindowElement(ByVal hWnd As LongPtr, Optional ByVal flags As EnumWindowElementFlags) As stdole.IUnknown
+        Return Me.ControlContext.SubClassWindowElement(hWnd, flags)
+    End Function
 
 End Class

@@ -1,15 +1,15 @@
-[ WindowsControl ("/miscellaneous/ICONS??/Slider??.png") ]
-[ ClassId ("FE755F8E-4EF9-42A4-A88B-B876EF5B4450") ]
-[ InterfaceId ("BD91F6FC-5074-4D76-B43A-502BB9D51656") ]
-[ COMCreatable (False) ]
-[ EventsUseDispInterface ]
+[WindowsControl("/miscellaneous/ICONS??/Slider??.png")]
+[ClassId("FE755F8E-4EF9-42A4-A88B-B876EF5B4450")]
+[InterfaceId("BD91F6FC-5074-4D76-B43A-502BB9D51656")]
+[COMCreatable(False)]
+[EventsUseDispInterface]
 Class Slider
 	
 	#Region "INHERITANCE"
 
-        [ WithDispatchForwarding ] Implements Control
+        [WithDispatchForwarding] Implements Control
         Implements WindowsControls.IWindowsControl
-        Implements WinNativeFormsBase.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBase.BaseControlFocusableNoFont(ControlTypeConstants.vbSlider)
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseControlFocusableNoFont Via _BaseControl = New WinNativeFormsBASE.BaseControlFocusableNoFont(ControlTypeConstants.vbSlider)
         
     #End Region
             
@@ -31,37 +31,47 @@ Class Slider
             ccOrientationVertical = 1
         End Enum
     
-        [ Description ("") ]
+        [Description("")]
             Public BorderStyle As VBRUN.ControlBorderStyleConstants = ControlBorderStyleConstants.vbNoBorder
         
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Description ("") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Description("")]
             Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonFace
 
-        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        [CustomDesigner("designer_RestrictedOLEDropMode")]
             Public OLEDropMode As VBRUN.OLEDropConstants
+            
+        [Description("Opacity, given as a percentage, 0 - 100.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public Opacity As Double = 100
+        
+        [CustomDesigner("designer_SpectrumWindowsOrClear")]
+        [Description("A color, when set, that will appear fully transparent in the window.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public TransparencyKey As OLE_COLOR = -1
+        
             
         Private WithEvents RootWindowElement As WindowsControls.WindowElement
         Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+        
+        [CustomDesigner("designer_MultiLineText")]
+        [Serialize(True, "ToolTipText")]
+            Private ToolTipTextINIT As String
 
-        Public CausesValidation As Boolean = True
-
-        [ Serialize (True, "Min") ]
+        [Serialize(True, "Min")]
             Private Min_INIT As Long = 0
-        [ Serialize (True, "Max") ]
+        [Serialize(True, "Max")]
             Private Max_INIT As Long = 10
-        [ Serialize (True, "Value") ]
+        [Serialize(True, "Value")]
             Private Value_INIT As Long = 0
-        [ Serialize (True, "SelStart") ]
+        [Serialize(True, "SelStart")]
             Private SelStart_INIT As Long = 0
-        [ Serialize (True, "SelLength") ]
+        [Serialize(True, "SelLength")]
             Private SelLength_INIT As Long = 0
-        [ Serialize (True, "SmallChange") ]
+        [Serialize(True, "SmallChange")]
             Private SmallChange_INIT As Long = 1
-        [ Serialize (True, "LargeChange") ]
+        [Serialize(True, "LargeChange")]
             Private LargeChange_INIT As Long = 2
             
-            Private IsInitialized As Boolean = False
+            Private IsInitialized As Boolean
         
             Public HideThumb As Boolean = False
             Public ShowTip As Boolean = True
@@ -70,37 +80,39 @@ Class Slider
             Public TextPosition As TextPositionConstants = TextPositionConstants.SldAboveLeft
             Public TickStyle As TickStyleConstants = TickStyleConstants.SldBottomRight
             Public Orientation As OrientationConstants = OrientationConstants.ccOrientationHorizontal
-            Public ReadOnly VisualStyles As Boolean = True
+            
+        [Serialize(True, "VisualStyles")]
+            Private VisualStylesINIT As Boolean = True
 
     #End Region
 
     #Region "EVENTS"
     
-        [ Description ("") ]
+        [Description("")]
             Event Change()
-        [ Description ("") ]
+        [Description("")]
             Event Click()
-        [ Description ("") ]
+        [Description("")]
             Event GotFocus()
-        [ Description ("") ]
+        [Description("")]
             Event KeyDown(KeyCode As Integer, Shift As Integer)
-        [ Description ("") ]
+        [Description("")]
             Event KeyPress(KeyAscii As Integer)
-        [ Description ("") ]
+        [Description("")]
             Event KeyUp(KeyCode As Integer, Shift As Integer)
-        [ Description ("") ]
+        [Description("")]
             Event LostFocus()
-        [ Description ("") ]
+        [Description("")]
             Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event Initialize()
-        [ Description ("") ]
+        [Description("")]
             Event DragDrop(Source As Control, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
         Event OLECompleteDrag(Effect As Long)
         Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
@@ -108,50 +120,70 @@ Class Slider
         Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
         Event OLESetData(Data As DataObject, DataFormat As Integer)
         Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
-        [ Description ("") ]
+        [Description("")]
             Event Scroll()
         Event Validate(Cancel As Boolean)
         
     #End Region
                
     #Region "MEMBERS"
-
-        Public Sub New()
-            ' This constructor is useful for allowing control inheritance
-        End Sub
         
-        Private Sub InitializeDefaultValues()
-        	If Me.PixelsHeight > Me.PixelsWidth Then
-                Me.Orientation = OrientationConstants.ccOrientationVertical
+        Private Sub HandleLoad() _
+                Handles RootWindowElement.Load
+            
+            Dim Opacity As Any = Me.Opacity
+            If ((Opacity >= 0) And (Opacity < 100)) Or (TransparencyKey <> -1) Then
+                SyncOpacity
             End If
         End Sub
         
-        Public Sub New(Serializer As WindowsControls.SerializationInfo)
-            If Serializer Is Nothing Then Exit Sub
-            If Not Serializer.Deserialize(Me) Then
-                InitializeDefaultValues
-            End If
+        Private Sub SyncOpacity() _ 
+                Handles Opacity.OnPropertyLet, _
+                        TransparencyKey.OnPropertyLet
+            
+            VB.CommonSyncOpacity(Me.TransparencyKey, Me.Opacity, Me.RootWindowElement.Handle)
         End Sub
         
         Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
                 Implements IWindowsControl.Initialize
             
-            ControlContext.SetControlArrayIndex(Me.IndexINIT)
+            Me.InternalStateReset()     ' resets all the base class state
+            Me.IsInitialized = False
+            
+            With ControlContext.GetSerializer
+                If Not .Deserialize(Me) Then
+                    If Me.PixelsHeight > Me.PixelsWidth Then
+                       Me.Orientation = OrientationConstants.ccOrientationVertical
+                   End If
+                End If
+                'IsDesignMode = .IsDesignMode
+            End With
+            
+            With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+                .Name = Me.NameINIT
+                .ToolTipText = Me.ToolTipTextINIT
+                .VisualStyles = Me.VisualStylesINIT
+            End With
+            
+            Dim Opacity As Any = Me.Opacity
+            If Opacity > 100 Then Me.Opacity = 100
+            If Opacity < 0 Then Me.Opacity = 0
                 
-            Dim styles As Long = GetStyles()
-            Dim extendedStyles As Long
-                
-            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "msctls_trackbar32", vbNullString, styles, extendedStyles, True)
+            Dim InitData As WinNativeFormsBASE.WindowCreationData
+            InitData.ClassName = "msctls_trackbar32"
+            InitData.WindowStyles = GetStyles()
+            InitData.SubClass = True
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, InitData)
         End Sub
         
         Private Function GetStyles() As Long
             Dim Styles As Long
-        	Styles += If(HideThumb, TBS_NOTHUMB, 0)
-            Styles += If(ShowTip, TBS_TOOLTIPS, 0)
-            Styles += If(SelectRange, TBS_ENABLESELRANGE, 0)
+        	Styles += If(HideThumb, TBS_NOTHUMB, 0&)
+            Styles += If(ShowTip, TBS_TOOLTIPS, 0&)
+            Styles += If(SelectRange, TBS_ENABLESELRANGE, 0&)
             Styles += TBS_AUTOTICKS
             Styles += If(Orientation = OrientationConstants.ccOrientationHorizontal, TBS_HORZ, TBS_VERT)
-            Styles += If(BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder, WinNativeFormsBASE.WS_BORDER, 0)
+            Styles += If(BorderStyle = ControlBorderStyleConstants.vbFixedSingleBorder, WinNativeFormsBASE.WS_BORDER, 0&)
 
             Select Case TickStyle
                 Case TickStyleConstants.sldBottomRight
@@ -183,6 +215,7 @@ Class Slider
             
             ' disconnect anything that causes a circular reference here
             If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+            [_HiddenModule].ResetFirstMethodAccessFlag(Me)
         End Sub
 
         Private Sub Class_Terminate()
@@ -213,9 +246,10 @@ Class Slider
         
         Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
                                         ByVal ShiftState As VBRUN.ShiftConstants, _
-                                        ByVal X As Single, ByVal Y As Single) _
-                Handles RootWindowElement.MouseDown
+                                        ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean) _
+                Handles RootWindowElement.PreMouseDown
             
+            'BeginMouseCapture(RootWindowElement)   this intereferes with dragging the slider
             RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
         End Sub
         
@@ -229,17 +263,27 @@ Class Slider
         
         Private Sub HandleMouseUp(ByVal Button As VBRUN.MouseButtonConstants, _
                                     ByVal ShiftState As VBRUN.ShiftConstants, _
-                                    ByVal X As Single, ByVal Y As Single) _
-                Handles RootWindowElement.MouseUp
+                                    ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean) _
+                Handles RootWindowElement.PreMouseUp
                 
+            Dim ScaledPixX As Double = (X / Me.ControlContext.GetScaleModePixelsMultiplierX)
+            Dim ScaledPixY As Double = (Y / Me.ControlContext.GetScaleModePixelsMultiplierY)
+            
             RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
-            RaiseEvent Click()          ' FIXME
+            
+            'If EndMouseCapture() Then
+                If IsInRect(ScaledPixX, ScaledPixY) Then
+                    RaiseEvent Click()
+                End If
+            'End If
         End Sub
         
         Private Sub HandleGotFocus() _
                 Handles RootWindowElement.GotFocus
-                
-            RaiseEvent GotFocus()
+              
+            If IsInitialized = True Then
+                RaiseEvent GotFocus()
+            End If
         End Sub
 
         Private Sub HandleLostFocus() _
@@ -252,18 +296,18 @@ Class Slider
                                     ByVal ShiftState As VBRUN.ShiftConstants) _
                 Handles RootWindowElement.KeyDown
         
-            Dim KeyCodeInt As Integer = KeyCode
+            Dim KeyCodeInt As Integer = CInt(KeyCode)
             RaiseEvent KeyDown(KeyCodeInt, CInt(ShiftState))
-            KeyCode = KeyCodeInt
+            KeyCode = CType(Of VBRUN.KeyCodeConstants)(KeyCodeInt)
         End Sub
         
         Private Sub HandleKeyUp(ByRef KeyCode As VBRUN.KeyCodeConstants, _
                                     ByVal ShiftState As VBRUN.ShiftConstants) _
                 Handles RootWindowElement.KeyUp
                 
-            Dim KeyCodeInt As Integer = KeyCode
+            Dim KeyCodeInt As Integer = CInt(KeyCode)
             RaiseEvent KeyUp(KeyCodeInt, CInt(ShiftState))
-            KeyCode = KeyCodeInt
+            KeyCode = CType(Of VBRUN.KeyCodeConstants)(KeyCodeInt)
         End Sub
         
         Private Sub HandleKeyPress(ByRef Key As Integer) _
@@ -272,47 +316,47 @@ Class Slider
             RaiseEvent KeyPress(Key)
         End Sub
                 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Min() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETRANGEMIN, 0, 0))
+            Return SendMessageLng(TBM_GETRANGEMIN, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Min(ByVal Value As Long)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETRANGEMIN, 1, Value)
+            SendMessageLngPtr(TBM_SETRANGEMIN, 1, Value)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Max() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETRANGEMAX, 0, 0))
+            Return SendMessageLng(TBM_GETRANGEMAX, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Max(ByVal Value As Long)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETRANGEMAX, 1, Value)
+            SendMessageLngPtr(TBM_SETRANGEMAX, 1, Value)
         End Property
                 
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Get Value() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_GETPOS, 0, 0))
+            Return SendMessageLng(TBM_GETPOS, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Let Value(ByVal NewValue As Long)
             If Me.Value <> NewValue Then
-                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, TBM_SETPOS, 1, NewValue)
+                SendMessageLngPtr(TBM_SETPOS, 1, NewValue)
                 If IsInitialized Then RaiseEvent Change
             End If
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
             Return ControlContext.GetForm
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get Object() As Object
+            Return Me
         End Property
 
         Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
@@ -337,7 +381,7 @@ Class Slider
         End Sub
                 
         Public Property Get SelStart() As Long
-        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETSELSTART, 0, 0))
+        	Return SendMessageLng(TBM_GETSELSTART, 0, 0)
         End Property
         
         Public Property Let SelStart(ByVal Value As Long)
@@ -346,11 +390,11 @@ Class Slider
                 Case Else
                     Err.Raise 380
             End Select
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETSELSTART, 0, Value)
+            SendMessageLngPtr(TBM_SETSELSTART, 0, Value)
         End Property
         
         Public Property Get SelLength() As Long
-        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETSELEND, 0, 0) - SelStart)
+        	Return SendMessageLng(TBM_GETSELEND, 0, 0) - SelStart
         End Property
         
         Public Property Let SelLength(ByVal Value As Long)
@@ -359,23 +403,23 @@ Class Slider
                 Case Else
                     Err.Raise 380
             End Select
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETSELEND, 1, SelStart + Value)
+            SendMessageLngPtr(TBM_SETSELEND, 1, SelStart + Value)
         End Property
         
         Public Property Get SmallChange() As Long
-        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETLINESIZE, 0, 0))
+        	Return SendMessageLng(TBM_GETLINESIZE, 0, 0)
         End Property
         
         Public Property Let SmallChange(ByVal Value As Long)
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETLINESIZE, 0, Value)
+            SendMessageLngPtr(TBM_SETLINESIZE, 0, Value)
         End Property
         
         Public Property Get LargeChange() As Long
-        	Return CLng(WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_GETPAGESIZE, 0, 0))
+        	Return SendMessageLng(TBM_GETPAGESIZE, 0, 0)
         End Property
         
         Public Property Let LargeChange(ByVal Value As Long)
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETPAGESIZE, 0, Value)
+            SendMessageLngPtr(TBM_SETPAGESIZE, 0, Value)
         End Property
         
         Private Sub SyncTextPosition() _
@@ -387,7 +431,7 @@ Class Slider
             Else
                 tipSide = If(TextPosition = TextPositionConstants.sldAboveLeft, TBTS_LEFT, TBTS_RIGHT)
             End If
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETTIPSIDE, tipSide, 0)
+            SendMessageLngPtr(TBM_SETTIPSIDE, tipSide, 0)
         End Sub
         
         Private Sub SyncTickFrequency() _
@@ -396,11 +440,11 @@ Class Slider
             If TickFrequency < 0 Then
                 TickFrequency = 0
             End If
-        	WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, TBM_SETTICFREQ, TickFrequency, 0)
+            SendMessageLngPtr(TBM_SETTICFREQ, TickFrequency, 0)
         End Sub
         
         Public Sub OLEDrag()
-            InternalOLEDrag (Me)
+            CommonOLEDrag(Me)
         End Sub
 
         Private Sub SyncOLEDropMode() _
@@ -410,10 +454,11 @@ Class Slider
         End Sub
         
         Private Sub RootWindowElement_Scroll(ByVal ScrollType As Long, ByVal IsHorizontal As Boolean)
+            'Debug.Print "RootWindowElement_Scroll", ScrollType
             Select Case ScrollType
-                Case TB_THUMBTRACK, TB_THUMBPOSITION
+                Case TB_THUMBTRACK, TB_THUMBPOSITION, TB_LINEDOWN, TB_LINEUP, TB_PAGEDOWN, TB_PAGEUP
                     RaiseEvent Scroll
-            	Case TB_ENDTRACK
+            	Case TB_BOTTOM, TB_TOP, TB_ENDTRACK
                 	RaiseEvent Change
             End Select
         End Sub
@@ -426,6 +471,22 @@ Class Slider
                 Handles RootWindowElement.Validate
 
             RaiseEvent Validate(Cancel)
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ToolTipText() As String
+            Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ToolTipText
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let ToolTipText(ByVal Value As String)
+            CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ToolTipText = Value
+            Me.RootWindowElementBase.ToolTipChanged()
+        End Property
+        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
         End Sub
     #End Region
 	

@@ -1,0 +1,47 @@
+[COMCreatable(False)]
+[ClassId("4490F9A2-9457-438E-84A2-61255C5EA4B8")]
+[InterfaceId("E6D84C77-3CFB-487F-B5FF-AB282BE66C0E")]
+[ComImport(True)]
+Class ListImage
+    Public ReadOnly Index As Long
+    Public Key As String
+    Public Picture As StdPicture
+    Public Tag As Variant
+    
+    Private ListImagesWEAK As LongPtr
+    
+    Sub New(ListImagesPtr As LongPtr, Index As Long, Key As String, Picture As StdPicture, Tag As Variant)
+        Me.ListImagesWEAK = ListImagesPtr
+        Me.Index = Index
+        Me.Key = Key
+        Set Me.Picture = Picture
+        Me.Tag = Tag
+    End Sub
+    
+    Sub Draw(ByVal hDC As OLE_HANDLE, Optional x As Variant, Optional y As Variant, [TypeHint(ImlDrawConstants)] Optional Style As Variant)
+        Dim Flags As Long
+        If IsMissing(Style) = False Then
+            If Style And ImlDrawNormal Then Flags = Flags Or ILD_NORMAL
+            If Style And ImlDrawSelected Then Flags = Flags Or ILD_SELECTED
+            If Style And ImlDrawFocus Then Flags = Flags Or ILD_FOCUS
+            If Style And ImlDrawNoMask Then Flags = Flags Or ILD_IMAGE
+            If Style And ImlDrawTransparent Then Flags = Flags Or ILD_TRANSPARENT
+        End If
+        Const CLR_DEFAULT As Long = &HFF000000
+        Dim ListImages As Any = CType(Of ListImages)(WinNativeFormsBASE.ObjPtrToObject(ListImagesWEAK))
+        Dim Owner As Any = CType(Of ImageList)(WinNativeFormsBASE.ObjPtrToObject(ListImages.OwnerWEAK))
+        With CType(Of TbImageListPrivate)(Owner)
+            x /= .GetScaleX()
+            y /= .GetScaleY()
+        End With
+        ImageList_DrawEx(ListImages.hImageList, CLng(Index) - 1, hDC, CLng(x), CLng(y), 0, 0, CLR_DEFAULT, CLR_DEFAULT, Flags)
+    End Sub
+    
+    Function ExtractIcon() As IPictureDisp
+        Dim ListImages As Any = CType(Of ListImages)(WinNativeFormsBASE.ObjPtrToObject(ListImagesWEAK))
+        Dim hIcon As LongPtr = ImageList_GetIcon(ListImages.hImageList, Index - 1, ILD_TRANSPARENT)
+        If hIcon Then
+            Return CType(Of IPictureDisp)(CreateStdPictureFromHandle(hIcon, PictureTypeConstants.vbPicTypeIcon, True))
+        End If
+    End Function
+End Class

@@ -1,0 +1,1765 @@
+[WindowsControl("/miscellaneous/ICONS??/Frame??.png")]
+[ClassId("33AD4F70-6699-11CF-B70C-00AA0060D393")]
+[InterfaceId("33AD4F71-6699-11CF-B70C-00AA0060D393")]    ' FIXME implement {33AD4F39-6699-11CF-B70C-00AA0060D393} for backcompat
+[COMCreatable(False)]
+[COMExtensible(True)]
+[EventsUseDispInterface]
+[ComImport(True)]
+Class MDIForm
+         
+     #Region "INHERITANCE"
+     
+        [WithDispatchForwarding] Implements Control
+        Implements WindowsControls.IWindowsControl
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseMDIForm Via _BaseForm = New WinNativeFormsBASE.BaseMDIForm
+        [ImplementsViaPrivateFriendlies] Implements OLEDragDropHelper Via _BaseOLEDragDropHelper = New OLEDragDropHelper
+        Implements TbCommonContainerPrivate
+        Implements Form
+
+    #End Region
+        
+    #Region "STATE"
+            
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+            
+        [Serialize(True, "Picture")]
+        [CustomDesigner("designer_PictureBytes")]
+            Private ReadOnly PictureINIT() As Byte
+        [Serialize(True, "Icon")]
+        [CustomDesigner("designer_IconBytes")]
+            Private ReadOnly IconINIT() As Byte
+
+        Public ReadOnly TopMost As Boolean = False                      ' FIXME could make this not ReadOnly
+        
+        [Serialize(True, "AlwaysShowKeyboardCues")]
+            Private AlwaysShowKeyboardCuesINIT As Boolean = False
+        
+        [Description("Opacity, given as a percentage, 0 - 100")]
+        Public Opacity As Double = 100
+        
+        [CustomDesigner("designer_SpectrumWindowsOrClear")]
+        [Description("A color, when set, that will appear fully transparent in the window")]
+        Public TransparencyKey As OLE_COLOR = -1
+
+            Public HelpContextID As Long
+        [Unimplemented]
+            Public LinkMode As VBRUN.LinkModeConstants
+        [Unimplemented]
+            Public LinkTopic As String
+        
+        [Unimplemented]
+            Public RightToLeft As Boolean
+
+            Public WhatsThisHelp As Boolean
+        [Unimplemented]
+            Public NegotiateToolbars As Boolean = True
+
+        [Serialize(True, "Scrollbars")]
+            Private ReadOnly ScrollbarsINIT As Boolean = True
+            
+        [Serialize(True, "MinWidth")]
+        [Description("The minimum width of the CLIENT area, in twips")]
+            Private MinWidthINIT As Double
+        [Serialize(True, "MinHeight")]
+        [Description("The minimum height of the CLIENT area, in twips")]
+            Private MinHeightINIT As Double
+        [Serialize(True, "MaxWidth")]
+        [Description("The maximum width of the CLIENT area, in twips")]
+            Private MaxWidthINIT As Double
+        [Serialize(True, "MaxHeight")]
+        [Description("The maximum height of the CLIENT area, in twips")]
+            Private MaxHeightINIT As Double
+    
+        [Serialize(True, "AutoShowChildren")]
+            Private AutoShowChildrenINIT As Boolean = True
+            
+        [CustomDesigner("designer_SpectrumWindows")]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbApplicationWorkspace
+
+        [Serialize(False)]
+            Public Picture As StdPicture
+            Public PictureDpiScaling As Boolean = True
+            
+            Private IsStretchedPicture As Boolean
+            
+        [Serialize(False)]
+        [Unimplemented]
+            Public ReadOnly Image As StdPicture          ' persistent bitmap
+        
+        [Description("If set to True, TextBox content will be auto-selected when TAB key is used to focus their controls, provided the TextBox control has the TabFocusAutoSelect property set to True")]
+        [Serialize(True, "TabFocusAutoSelect")]
+            Private TabFocusAutoSelectINIT As Boolean = False
+            
+            Private IsLoaded As Boolean
+            Private Activated As Boolean
+        
+        Public Sub OLEDrag()
+            CommonOLEDrag(Me)
+        End Sub
+                    
+        [Unimplemented]
+            Public Sub PrintForm()
+            End Sub
+            
+        [Unimplemented]
+            Public Function Point(ByVal X As Single, ByVal Y As Single) As Long
+            End Function
+                        
+            Public Sub ValidateControls()
+                On Error GoTo Error
+                Dim ActiveControl As Any = Me.ActiveControl
+                If ActiveControl IsNot Nothing Then
+                    If ActiveControl.CausesValidation Then
+                        Dim Cancel As Boolean
+                        On Error Resume Next
+                        RaiseEventByName2(ActiveControl, "Validate", Cancel)
+                        If Cancel Then
+                            On Error GoTo 0
+                            Err.Raise 380, , "Invalid property value"
+                        End If
+                    End If
+                End If
+                Exit Sub
+                Error:
+            End Sub
+            
+            Public Sub WhatsThisMode()
+                With Me
+                    Dim WhatsThisHelp As Any = Me.WhatsThisHelp
+                    Dim hWnd As Any = Me.hWnd
+                End With
+                If WhatsThisHelp Then
+                    Const SC_CONTEXTHELP As Long = 61824
+                    WinNativeFormsBASE.SendMessageW(hWnd, WinNativeFormsBASE.WM_SYSCOMMAND, SC_CONTEXTHELP, 0)
+                End If
+            End Sub
+                        
+    #End Region
+
+    #Region "EVENTS"
+    
+        Event Activate()
+        Event Deactivate()
+        Event Initialize()
+        [DefaultDesignerEvent] Event Load()
+        [DispId(&HEAEA0004)]
+        Event Click()
+        [DispId(&HEAEA0005)]
+        Event DblClick()
+        [DispId(&HEAEA0001)]
+        Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [DispId(&HEAEA0002)]
+        Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [DispId(&HEAEA0003)]
+        Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event Resize()
+        Event Terminate()
+        Event Unload(Cancel As Integer)
+        [Description("")]
+        [DispId(&HEAEA000B)]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [Description("")]
+        [DispId(&HEAEA000C)]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        [Unimplemented] Event LinkClose()
+        [Unimplemented] Event LinkError(LinkErr As Integer)
+        [Unimplemented] Event LinkExecute(CmdStr As String, Cancel As Integer)
+        [Unimplemented] Event LinkOpen(Cancel As Integer)
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        Event QueryUnload(Cancel As Integer, UnloadMode As Integer)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+        
+        Private Sub Class_Terminate()
+            RaiseEvent Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+
+            Me.InternalStateReset()     ' resets all the base class state
+            Me.InternalStateResetOLEDragDrop()
+            
+            Set Me.Picture = Nothing
+            Me.IsStretchedPicture = False
+            Me.IsLoaded = False
+            Me.Activated = False
+            Me.MenusPrepared = False
+            Erase Me.Menus
+            
+            With ControlContext.GetSerializer
+                ' This allows dispatch calls to pass on to the outer form controller, allowing for extensibility  
+                CType(Of ITwinBasicInternalClassSupport)(Me).OverrideDispatchHandler .GetRootClassDispatch  ' this causes a circular reference that needs to be manually broken in IOleObject_Close
+                Me.IsDesignMode = .IsDesignMode
+            
+                If Not .Deserialize(Me) Then
+                    'BackColor = SystemColorConstants.vbButtonFace
+                End If
+            End With
+            
+            CommonLoadPictureInit(Me.Picture, Me.PictureINIT)
+            CommonLoadPictureInit(Me.InternalIcon, Me.IconINIT)
+                        
+            With CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+                .MdiScrollBars = ScrollbarsINIT
+                .TabFocusAutoSelect = TabFocusAutoSelectINIT
+                .AlwaysShowKeyboardCues = AlwaysShowKeyboardCuesINIT
+                .MinWidth = MinWidthINIT
+                .MinHeight = MinHeightINIT
+                .MaxWidth = MaxWidthINIT
+                .MaxHeight = MaxHeightINIT
+                .AutoShowChildren = AutoShowChildrenINIT
+            End With
+            
+            Dim Opacity As Any = Me.Opacity
+            If Opacity > 100 Then Me.Opacity = 100
+            If Opacity < 0 Then Me.Opacity = 0
+            
+            Dim InitData As WinNativeFormsBASE.WindowCreationData
+            InitData.ClassName = "ThunderMDIForm"
+            InitData.Caption = ""
+            InitData.WindowStyles = WinNativeFormsBASE.WS_CLIPSIBLINGS Or WinNativeFormsBASE.WS_CLIPCHILDREN Or WinNativeFormsBASE.WS_SYSMENU Or WinNativeFormsBASE.WS_MINIMIZEBOX Or WinNativeFormsBASE.WS_MAXIMIZEBOX
+            InitData.ExtendedStyles = If(TopMost = True, WinNativeFormsBASE.WS_EX_TOPMOST, 0&) Or WinNativeFormsBASE.WS_EX_WINDOWEDGE Or WinNativeFormsBASE.WS_EX_APPWINDOW
+            InitData.Flags = ForwardDoubleClick Or _
+                                ForwardDragOver Or _
+                                ForwardMouseDown Or _
+                                ForwardMouseUp Or _
+                                ForwardMouseMove Or _
+                                ManualMouseCapture Or _
+                                ForwardButtonClick Or _
+                                ScaleAdjustMouseEvents Or _
+                                IsMDIForm
+
+            If Me.IsDesignMode = False Then
+                InitData.WindowStyles += WinNativeFormsBASE.WS_CAPTION Or WinNativeFormsBASE.WS_THICKFRAME
+            End If
+            
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, InitData)
+            
+            InitOleDragDropHelper()
+        End Sub
+        
+        Private Sub InitOleDragDropHelper()
+            _BaseOLEDragDropHelper.OLEDragDropInit(Me, ControlContext, RootWindowElement, True, False, False)
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            
+            Erase Menus
+            MenusPrepared = False
+            FormMenuHandle = 0      ' will be destroyed along with the MDICLIENT
+            
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here                                                      
+            Me.InternalStateResetOLEDragDrop()
+        End Sub
+        
+        Private Sub HandleLoad() _
+                Handles RootWindowElement.Load
+
+            If Moveable = False Then SyncMoveable()
+            
+            Dim Opacity As Any = Me.Opacity
+            If ((Opacity >= 0) And (Opacity < 100)) Or (TransparencyKey <> -1) Then
+                SyncOpacity
+            End If
+
+            IsLoaded = True
+            RaiseEvent Load()
+            RaiseEvent Resize()
+        End Sub
+        
+        Private Sub HandlePreLoad() _
+                Handles RootWindowElement.PreLoadForm
+
+            ' At this point the HWND is available, but not correct size etc.
+            If IsDesignMode = False Then
+                ' FIXME these shouldn't be needed but HandleDestroy is not firing
+                Dim ControlMenu As Menu
+                For Each ControlMenu In Menus
+                    If (ControlMenu IsNot Nothing) Then
+                        CommonClearSubMenusCachedInfo(ControlMenu, Menus)
+                    End If
+                Next
+                Erase Menus
+                MenusPrepared = False
+                FormMenuHandle = 0      ' will be destroyed along with the MDICLIENT
+                
+                PrepareMenus()
+                RebuildMenus()
+                IconChanged()
+            End If
+            
+            RootWindowElement.ChangeChildScaleMode(ScaleModeConstants.vbTwips, 15, 15, 0, 0)
+            
+            SyncOLEDropMode()
+                        
+        End Sub
+        
+        Private Sub HandlePreLoad2() _
+                Handles RootWindowElement.PreLoadForm2
+            
+            RaiseEvent Initialize()
+            
+        End Sub
+        
+        Private Menus() As Menu
+        Private MenusPrepared As Boolean = False
+        
+        Private Sub RuntimeMenuAdded(ByVal control As Object) Handles _
+                RootWindowElement.NotifyRuntimeMenuAdded
+
+            CommonRuntimeMenuAdded(CType(Of Menu)(control), Menus)
+            RebuildMenus()
+        End Sub
+        
+        Private Sub RuntimeMenuRemoved(ByVal control As Object) Handles _
+                RootWindowElement.NotifyRuntimeMenuRemoved
+
+            CommonRuntimeMenuRemoved(CType(Of Menu)(control), Menus)
+            RebuildMenus()
+        End Sub
+        
+        Private Sub PrepareMenus()
+            If MenusPrepared = False Then
+                CommonPrepareMenus(Me.Controls, Menus)
+                MenusPrepared = True
+            End If
+        End Sub
+        
+        Private Sub ClearSubMenusCachedInfo(Container As Menu)
+            CommonClearSubMenusCachedInfo(Container, Menus)
+        End Sub
+        
+        Public Sub PopUpMenu(ByVal Menu As Object, Optional ByVal Flags As Variant, Optional ByVal X As Variant, Optional ByVal Y As Variant, Optional ByVal DefaultMenu As Variant)
+            CommonPopUpMenu(Menus, RootWindowElement, Me.ControlContext, Menu, Flags, X, Y, DefaultMenu)
+        End Sub
+        
+        Private FormMenuHandle As LongPtr
+        
+        Private Sub RebuildMenus() _
+                Implements TbCommonContainerPrivate.RebuildMenus
+        
+            Dim hwnd As Any = RootWindowElement.Handle
+            Dim IsFirstRun As Boolean = False
+            If FormMenuHandle = 0 Then
+                ' MDI forms must always have a menu created for them, even if empty initially (so that maximized children can merge into it)
+                FormMenuHandle = CreateMenu()
+                IsFirstRun = True
+            End If
+
+            Dim windowListMenu As LongPtr
+            CommonBuildMenus(Menus, Controls, FormMenuHandle, windowListMenu, Me, 0, False, Nothing)
+            
+            If IsFirstRun = True Then
+                RootWindowElement.SetMDIMenu(FormMenuHandle, windowListMenu)
+            End If
+        End Sub
+        
+        Private Sub HandleActivate() _
+            Handles RootWindowElement.Activate
+                
+            ' VB6 bug: activate fires only once for the MDI form, and Deactivate never fires at all
+            If Activated = False Then
+                Activated = True
+                RaiseEvent Activate()
+            End If
+        End Sub
+
+        Private Sub HandleDeactivate() _
+                Handles RootWindowElement.Deactivate
+                
+            'RaiseEvent Deactivate()
+        End Sub
+           
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+                
+            ' NOTE: this is the paint routine FOR THE MDI FRAME, not the MDI CLIENT area            
+            Dim RootWindowElement As Any = Me.RootWindowElement
+            
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API 
+                
+                If Me.IsDesignMode Then
+                    CommonFillRect(ps.hdc, ps.rcPaint, BackColor)
+
+                    ' FIXME need to paint the Picture here, if set.
+                    ' But it would need to be adjusted by any x/y movement of the MDI Client window area due to docking elements
+                    ' Currently, at design time we don't have that information here
+                    
+                    RootWindowElement.PaintContainedWindowlessElements(ps.hdc)
+                End If
+            
+            RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+        End Sub
+        
+        Private Sub HandleMDIClientResized() _
+                Handles RootWindowElement.MDIClientResized
+            
+            'Debug.Print "MDIClientResized"
+            If IsStretchedPicture = True Then
+                 ' Need to redraw the full MDIClient area, as the stretched image will be potentially different in all areas
+                 WinNativeFormsBASE.InvalidateRect(RootWindowElement.MDIClientHandle, vbNullPtr, 1)
+             End If
+        End Sub
+        
+        Private Sub HandlePaintMDIClient(ByVal hdc As LongPtr, ByRef rect As WinNativeFormsBASE.RECT) _
+                Handles RootWindowElement.PaintMDIClient
+
+            CommonFillRect(hdc, rect, BackColor)
+            
+            Me.IsStretchedPicture = False
+            
+            If (Me.Picture IsNot Nothing) Then
+            
+                ' FIXME very similar code in GraphicsBase
+                Dim Picture As OlePicture = Me.Picture
+        
+                Const STRETCH_HALFTONE = 4
+                Dim OldStretchMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(hdc, STRETCH_HALFTONE)
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBrushOrigin(hdc, 0, 0, 0)
+        
+                Dim DrawWidth As Long
+                Dim DrawHeight As Long
+
+                Const PICTYPE_METAFILE As Long = 2
+                Const PICTYPE_ENHMETAFILE As Long = 4
+        
+                Dim pictureType As Any = CType(Of PictureTypeConstants)(Picture.Type)
+                Dim pictureWidth As Any = Picture.Width
+                Dim pictureHeight As Any = Picture.Height
+                If (pictureType = PICTYPE_METAFILE) Or (pictureType = PICTYPE_ENHMETAFILE) Then
+                    ' Size the metafile to fill the area                
+                    ' If AutoRedraw Then
+                    '     DrawWidth = BufferBitmapWidth
+                    '     DrawHeight = BufferBitmapHeight
+                    ' Else
+                        DrawWidth = rect.Right - rect.Left
+                        DrawHeight = rect.Bottom - rect.Top
+                    'End If
+                    Me.IsStretchedPicture = True
+                Else
+                    ScaleOLEPictureDimensionsToPixels(pictureType, pictureWidth, DrawWidth, pictureHeight, DrawHeight)
+                    If PictureDpiScaling = True Then
+                        Dim UnitPixelScale As Any = Me.RootWindowElementBase.UnitPixelScale
+                        DrawWidth = CLng(DrawWidth * UnitPixelScale)
+                        DrawHeight = CLng(DrawHeight * UnitPixelScale)
+                    End If
+                End If
+                If (DrawWidth > 0) And (DrawHeight > 0) Then
+                    PictureRender(Picture, hdc, 0, 0, DrawWidth, DrawHeight)
+                End If
+                WinNativeFormsBASE.WindowsAPI.GDI32_SetBitmapStretchMode(hdc, OldStretchMode)
+            End If
+            
+            RootWindowElement.PaintContainedWindowlessElements(hdc)
+        End Sub
+                
+        Private Sub CanClose(ByRef Cancel As Integer) _
+                Handles RootWindowElement.CanClose
+            
+            RaiseEvent Unload(Cancel)
+            
+            If Cancel = False Then
+                ' FIXME this should be in HandleDestroy?
+                With CType(Of ITwinBasicInternalClassSupport)(Me)
+                    .OverrideDispatchHandler Nothing  ' this breaks the circular reference
+                End With
+                [_HiddenModule].ResetFirstMethodAccessFlag(Me)
+            End If
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get DpiScaleFactorX() As Double ' exposed as X/Y for future 
+            Return RootWindowElement.UnitPixelScale
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get DpiScaleFactorY() As Double ' exposed as X/Y for future 
+            Return RootWindowElement.UnitPixelScale
+        End Property
+        
+        Private Sub InternalRaiseResize() _
+                Implements TbCommonContainerPrivate.RaiseResize
+            
+            RaiseEvent Resize()
+        End Sub
+
+        Private Sub InternalRaisePaint() _
+                    Implements TbCommonContainerPrivate.RaisePaint
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ActiveControl() As Control
+            Return CType(Of Control)(Me.RootWindowElement.FormActiveControl)
+        End Property
+        
+        Private InternalActiveForm As Object
+        
+        Private Sub ChangedMDIActiveForm(ByVal ActiveChildForm As Object) _
+                Handles RootWindowElement.ChangedMDIActiveForm
+            
+            Set InternalActiveForm = ActiveChildForm
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ActiveForm() As Object
+            Return InternalActiveForm
+        End Property
+        
+        Public Sub Arrange([TypeHint(FormArrangeConstants)] ByVal Arrangement As Integer)
+            Const MDITILE_VERTICAL As Long = 0
+            Const MDITILE_HORIZONTAL As Long = 1
+            Dim msg As Long
+            Dim wParam As LongPtr
+            Select Case Arrangement
+                Case FormArrangeConstants.vbCascade
+                    msg = WinNativeFormsBASE.WM_MDICASCADE
+                Case FormArrangeConstants.vbTileHorizontal
+                    msg = WinNativeFormsBASE.WM_MDITILE
+                    wParam = MDITILE_HORIZONTAL
+                Case FormArrangeConstants.vbTileVertical
+                    msg = WinNativeFormsBASE.WM_MDITILE
+                    wParam = MDITILE_VERTICAL
+                Case FormArrangeConstants.vbArrangeIcons
+                    msg = WinNativeFormsBASE.WM_MDIICONARRANGE
+                Case Else
+                    Err.Raise 5
+            End Select
+            WinNativeFormsBASE.SendMessageW(RootWindowElement.MDIClientHandle, msg, wParam, vbNullPtr)
+        End Sub
+        
+        Private Sub HandleMenuCommand(ByVal CommandID As Long, ByRef Handled As Boolean) Handles RootWindowElement.MenuCommand
+            On Error GoTo ErrorHandler        ' needed in MDI forms because we can receive CommandID here relating to minimize/restore/close buttons that are auto added to our menu bar
+            Dim ControlMenu As Any = Menus(CommandID - 1)
+            RaiseEventByName ControlMenu, "Click"
+            Exit Sub
+        ErrorHandler:
+            Handled = False
+        End Sub
+        
+        Private Sub HandleShowMenuHelp(ByVal CommandID As Long) Handles RootWindowElement.ShowMenuHelp
+            Dim ControlMenu As Any = Menus(CommandID - 1)
+            HelpSystem.ShowControlHelp(Me, ControlMenu, False)
+        End Sub
+
+        [Serialize(False)]
+        [DefaultMember]
+        Public Property Get _Default() As Object
+            Return Me.Controls
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get Count() As Long
+            Return CLng(Me.Controls.Count)
+        End Property
+        
+        Private Sub SyncOpacity() _ 
+                Handles Opacity.OnPropertyLet, _
+                        TransparencyKey.OnPropertyLet
+            
+            CommonSyncOpacity(Me.TransparencyKey, Me.Opacity, Me.hWnd)
+        End Sub
+        
+        [Serialize(False)]
+        Private InternalIcon As StdPicture
+
+        [Serialize(False)]
+        Public Property Get Icon() As StdPicture
+            Return InternalIcon
+        End Property
+
+        Private Sub IconChanged()
+            Dim InternalIcon As Any = Me.InternalIcon
+            If (InternalIcon IsNot Nothing) AndAlso (InternalIcon.Type = vbPicTypeIcon) Then
+                Const ICON_SMALL As Long = 0
+                Const ICON_BIG As Long = 1
+                Const ICON_SMALL2 As Long = 2
+                WinNativeFormsBASE.SendMessageW(RootWindowElement.Handle, WinNativeFormsBASE.WM_SETICON, ICON_SMALL, InternalIcon.Handle)
+            End If
+        End Sub
+
+        [Serialize(False)]
+        Public Property Set Icon(Value As StdPicture)
+            Set InternalIcon = Value
+            IconChanged()
+        End Property
+
+        [Serialize(False)]
+        Public Property Let Icon(Value As StdPicture)    ' Weirdly, VBx also implements the Let for this
+            Set InternalIcon = Value
+            IconChanged()
+        End Property
+        
+        Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
+            If InternalMove(Me, Left, Top, Width, Height) Then
+                Me.ControlContext.ChangedPosition()
+            End If
+        End Sub
+        
+        Public Sub SetFocus()
+            WinNativeFormsBASE.WindowsAPI.USER32_SetFocus(Me.RootWindowElement)
+        End Sub
+    
+        Private Sub HandleShowHelp(ByVal control As Object) _
+                Handles RootWindowElement.ShowHelp
+            
+            HelpSystem.ShowControlHelp(Me, control, False)
+        End Sub
+        
+        [Enumerator]
+        Public Function InternalEnumerator() As stdole.IUnknown     ' FIXME should not be exposed
+            Return CallByDispId(Me.Controls, -4, vbGet)
+        End Function
+        
+        Private Sub RootWindowElement_QueryUnload(Cancel As Integer, ByVal UnloadMode As Long) _
+                Handles RootWindowElement.QueryUnload
+
+            RaiseEvent QueryUnload(Cancel, CInt(UnloadMode))
+        End Sub
+        
+        Private Sub ChangedBackground() _
+                Handles BackColor.OnPropertyLet, _
+                        Picture.OnPropertyLet, _
+                        Picture.OnPropertySet
+
+            WinNativeFormsBASE.RedrawWindow(Me.RootWindowElement.MDIClientHandle, 0, 0, WinNativeFormsBASE.RDW_ERASE Or WinNativeFormsBASE.RDW_INVALIDATE Or WinNativeFormsBASE.RDW_UPDATENOW)()
+        End Sub
+                                
+        [Serialize(False)]
+        Public Property Get ScaleWidth() As Double
+            ' Note: this is based on the MDI Client area, not the MDI Frame
+            Dim rect As WinNativeFormsBASE.RECT
+            WinNativeFormsBASE.GetClientRect(RootWindowElement.MDIClientHandle, rect)
+            Return RootWindowElement.ScaleX(rect.Right - rect.Left, vbPixels, vbTwips)
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get ScaleHeight() As Double
+            ' Note: this is based on the MDI Client area, not the MDI Frame
+            Dim rect As WinNativeFormsBASE.RECT
+            WinNativeFormsBASE.GetClientRect(RootWindowElement.MDIClientHandle, rect)
+            Return RootWindowElement.ScaleY(rect.Bottom - rect.Top, vbPixels, vbTwips)
+        End Property
+        
+        Private Sub HandleResize() _
+                Handles RootWindowElement.Resize
+            
+            If IsLoaded Then
+                RaiseEvent Resize()
+            End If
+        End Sub
+        
+        Private Sub ErrorUnsupportedFormProperty()
+            ' If you get there, then you've accessed a Form property that is not supported by MDI forms
+            Err.Raise 380
+        End Sub
+        
+        Private Sub ErrorUnsupportedFormMethod()
+            ' If you get there, then you've accessed a Form method that is not supported by MDI forms
+            Err.Raise 438
+        End Sub
+        
+        Private Property Get Form_TopMost() As Boolean
+            Return Me.TopMost
+        End Property
+        
+        Private Property Get Form_AlwaysShowKeyboardCues() As Boolean
+            Return Me.AlwaysShowKeyboardCues
+        End Property
+        
+        Private Property Get Form_Opacity() As Double
+            Return Me.Opacity
+        End Property
+        
+        Private Property Let Form_Opacity(ByVal Value As Double)
+            Me.Opacity = Value
+        End Property
+        
+        Private Property Get Form_TransparencyKey() As OLE_COLOR
+            Return Me.TransparencyKey
+        End Property
+        
+        Private Property Let Form_TransparencyKey(ByVal Value As Long)
+            Me.TransparencyKey = Value
+        End Property
+        
+        Private Property Let Form_Palette(Value As Variant)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Palette() As StdPicture
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Set Form_Palette(ByVal Value As stdole.StdPicture)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_HelpContextID() As Long
+            Return Me.HelpContextID
+        End Property
+        
+        Private Property Let Form_HelpContextID(ByVal Value As Long)
+            Me.HelpContextID = Value
+        End Property
+        
+        Private Property Get Form_LinkMode() As VBRUN.LinkModeConstants
+            Return Me.LinkMode
+        End Property
+        
+        Private Property Let Form_LinkMode(ByVal Value As VBRUN.LinkModeConstants)
+            Me.LinkMode = Value
+        End Property
+        
+        Private Property Get Form_LinkTopic() As String
+            Return Me.LinkTopic
+        End Property
+        
+        Private Property Let Form_LinkTopic(ByVal Value As String)
+            Me.LinkTopic = Value
+        End Property
+        
+        Private Property Get Form_PaletteMode() As VBRUN.PaletteModeConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_PaletteMode(ByVal Value As VBRUN.PaletteModeConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_RightToLeft() As Boolean
+            Return Me.RightToLeft
+        End Property
+        
+        Private Property Let Form_RightToLeft(ByVal Value As Boolean)
+            Me.RightToLeft = Value
+        End Property
+        
+        Private Property Get Form_WhatsThisButton() As Boolean
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_WhatsThisButton(ByVal Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_WhatsThisHelp() As Boolean
+            Return Me.WhatsThisHelp
+        End Property
+        
+        Private Property Let Form_WhatsThisHelp(ByVal Value As Boolean)
+            Me.WhatsThisHelp = Value
+        End Property
+        
+        Private Property Get Form_MDIChild() As Boolean
+            Return False
+        End Property
+        
+        Private Property Get Form_NegotiateMenus() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+
+        Private Property Let Form_NegotiateMenus(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Name() As String
+            Return Me.Name
+        End Property
+        
+        Private Property Let Form_Name(ByVal Value As String)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_MinWidth() As Double
+            Return Me.MinWidth
+        End Property
+        
+        Private Property Let Form_MinWidth(ByVal Value As Double)
+            Me.MinWidth = Value
+        End Property
+        
+        Private Property Get Form_MinHeight() As Double
+            Return Me.MinHeight
+        End Property
+        
+        Private Property Let Form_MinHeight(ByVal Value As Double)
+            Me.MinHeight = Value
+        End Property
+        
+        Private Property Get Form_MaxWidth() As Double
+            Return Me.MaxWidth
+        End Property
+        
+        Private Property Let Form_MaxWidth(ByVal Value As Double)
+            Me.MaxWidth = Value
+        End Property
+        
+        Private Property Get Form_MaxHeight() As Double
+            Return Me.MaxHeight
+        End Property
+        
+        Private Property Let Form_MaxHeight(ByVal Value As Double)
+            Me.MaxHeight = Value
+        End Property
+        
+        Private Property Get Form_Image() As StdPicture
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_TabFocusAutoSelect() As Boolean
+            Return Me.TabFocusAutoSelect
+        End Property
+        
+        Private Property Let Form_TabFocusAutoSelect(ByVal Value As Boolean)
+            Me.TabFocusAutoSelect = Value
+        End Property
+        
+        Private Sub Form_OLEDrag()
+            Me.OLEDrag
+        End Sub
+        
+        Private Property Get Form_OLEDropMode() As VBRUN.OLEDropConstants
+            Return Me.OLEDropMode
+        End Property
+        
+        Private Property Let Form_OLEDropMode(ByVal Value As VBRUN.OLEDropConstants)
+            Me.OLEDropMode = Value
+        End Property
+
+        Private Property Get Form_InternalPrinterUserScaleWidthX() As Double
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_InternalPrinterUserScaleWidthX(ByVal Value As Double)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_InternalPrinterUserScaleWidthY() As Double
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_InternalPrinterUserScaleWidthY(ByVal Value As Double)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Sub Form_InternalGetPrinterScalesFromScaleMode(ByVal ScaleMode As ScaleModeConstants, ByRef inputUnitsScaleX As Double, ByRef inputUnitsScaleY As Double, ByVal outputResolutionScaleX As Double, ByVal outputResolutionScaleY As Double)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_InternalGetXYScales(ByRef inputUnitsScaleX As Double, ByRef inputUnitsScaleY As Double, ByRef outputResolutionScaleX As Double, ByRef outputResolutionScaleY As Double)
+            ErrorUnsupportedFormMethod
+        End Sub
+            
+        Private Sub Form_PaintPicture(ByVal Picture As IPictureDisp, ByVal X1 As Single, ByVal Y1 As Single, ByVal Width1 As Variant, ByVal Height1 As Variant, ByVal X2 As Variant, ByVal Y2 As Variant, ByVal Width2 As Variant, ByVal Height2 As Variant, ByVal Opcode As Variant, Optional ByVal StretchQuality As vbStretchQuality)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_PrintForm(ByVal ImplicitEndDoc As Boolean, OutputAtCurrentPosition As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Function Form_Point(ByVal X As Single, ByVal Y As Single) As Long
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Sub Form_ValidateControls()
+            Me.ValidateControls()
+        End Sub
+        
+        Private Sub Form_WhatsThisMode()
+            Me.WhatsThisMode()
+        End Sub
+        
+        Private Property Get Form_ActiveControl() As Control
+            Set Form_ActiveControl = Me.ActiveControl
+        End Property
+        
+        Private Property Get Form_Appearance() As VBRUN.AppearanceConstants
+            Return Me.Appearance
+        End Property
+        
+        Private Property Let Form_Appearance(ByVal Value As VBRUN.AppearanceConstants)
+            Me.Appearance = Value
+        End Property
+        
+        Private Property Get Form_AutoRedraw() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_AutoRedraw(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_BackColor() As OLE_COLOR
+            Return Me.BackColor
+        End Property
+        
+        Private Property Let Form_BackColor(ByVal Value As Long)
+            Me.BackColor = Value
+        End Property
+        
+        Private Property Get Form_BorderStyle() As FormBorderStyleConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_BorderStyle(ByVal Value As VBRUN.FormBorderStyleConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Caption() As String
+            Return Me.Caption
+        End Property
+        
+        Private Property Let Form_Caption(Value As String)
+            Me.Caption = Value
+        End Property
+        
+        Private Sub Form_ChangeHDC(hdc As LongPtr, hwnd As LongPtr, RootWindowElement As WindowsControls.WindowElement, Picture As StdPicture, Owner As Object, ByVal IsForm As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_Circle(ByVal Flags As Long, ByVal X As Single, ByVal Y As Single, ByVal Radius As Single, ByVal Color As Long, ByVal Start As Single, ByVal _End As Single, ByVal Aspect As Single)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_ClipControls() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_ClipControls(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Sub Form_Close()
+            Me.Close
+        End Sub
+        
+        Private Sub Form_Cls()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Function Form_CommonGetEnabled() As Boolean
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Function Form_CommonGetHWND() As LongPtr
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Function Form_CommonGetTabStop() As Boolean
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Sub Form_CommonLetEnabled(Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_CommonLetTabStop(Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_CommonMousePointerChanged()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_CommonSetFocus()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_ControlBox() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_ControlContext() As WindowsControls.WindowsControlContext
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_ControlContext(Value As Variant)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Set Form_ControlContext(ByVal Value As WindowsControls.WindowsControlContext)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_Controls() As Object
+            Return Me.Controls
+        End Property
+        
+        Private Property Let Form_Controls(Value As Variant)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Set Form_Controls(ByVal Value As Object)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_ControlType() As ControlTypeConstants
+            Return Me.ControlType
+        End Property
+        
+        Private Property Get Form_Count() As Long
+            Return Me.Count
+        End Property
+
+        Private Property Get Form_InternalCurrentX() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_InternalCurrentX(ByVal Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_InternalCurrentY() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_InternalCurrentY(ByVal Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Sub Form_InternalPrintForm(ByVal Printer As Object, ByVal ImplicitEndDoc As Boolean, ByVal OutputAtCurrentPosition As Boolean)
+            ErrorUnsupportedFormProperty
+        End Sub
+                
+        Private Property Get Form_CurrentX() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_CurrentX(Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_CurrentY() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_CurrentY(Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_DpiScaleFactorX() As Double
+            Return Me.DpiScaleFactorX
+        End Property
+        
+        Private Property Get Form_DpiScaleFactorY() As Double
+            Return Me.DpiScaleFactorY
+        End Property
+        
+        Private Property Get Form_DrawMode() As DrawModeConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_DrawMode(ByVal Value As VBRUN.DrawModeConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_DrawStyle() As DrawStyleConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_DrawStyle(ByVal Value As VBRUN.DrawStyleConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_DrawWidth() As Long
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_DrawWidth(ByVal Value As Long)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Enabled() As Boolean
+            Return Me.Enabled
+        End Property
+        
+        Private Property Let Form_Enabled(Value As Boolean)
+            Me.Enabled = Value
+        End Property
+        
+        Private Property Get Form_FillColor() As OLE_COLOR
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FillColor(ByVal Value As Long)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FillStyle() As FillStyleConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FillStyle(ByVal Value As VBRUN.FillStyleConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Font() As StdFont
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_Font(Value As Variant)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Set Form_Font(ByVal Value As stdole.StdFont)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontBold() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontBold(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontItalic() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontItalic(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontName() As String
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontName(ByVal Value As String)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontSize() As Single
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontSize(ByVal Value As Single)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontStrikethru() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontStrikethru(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontTransparent() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontTransparent(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FontUnderline() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_FontUnderline(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_ForeColor() As OLE_COLOR
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_ForeColor(ByVal Value As Long)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_FormDesignerId() As String
+        End Property
+        
+        Private Property Let Form_FormDesignerId(ByVal Value As String)
+        End Property
+        
+        Private Property Get Form_HasDC() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_HasDC(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_hDC() As LongPtr
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Height() As Double
+            Return Me.Height
+        End Property
+        
+        Private Property Let Form_Height(ByVal Value As Double)
+            Me.Height = Value
+        End Property
+        
+        Private Sub Form_Hide()
+            Me.Hide
+        End Sub
+        
+        Private Property Get Form_hWnd() As LongPtr
+            Return Me.hWnd
+        End Property
+        
+        Private Property Get Form_Icon() As StdPicture
+            Return Me.Icon
+        End Property
+        
+        Private Property Set Form_Icon(Value As StdPicture)
+            Set Me.Icon = Value
+        End Property
+        
+        Private Property Let Form_Icon(Value As StdPicture)
+            Let Me.Icon = Value
+        End Property
+        
+        Private Property Get Form_IgnoreMousePointerChanged() As Boolean
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_IgnoreMousePointerChanged(ByVal Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Property
+                
+        Private Property Get Form_IndexINIT() As Long
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_IndexINIT(ByVal Value As Long)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Sub Form_OLEDragDropInit(OwnerControl As Object, OwnerControlContext As WindowsControls.WindowsControlContext, OwnerRootWindowElement As WindowsControls.WindowElement, ByVal IsContainer As Boolean, ByVal AutomaticIsAllowed As Boolean, ByVal IsLightweightControl As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        ' Private Sub Form_InternalChangeSizeNoEvents(Control As Object, ByVal Width As Double, ByVal Height As Double)
+        '     ErrorUnsupportedFormMethod
+        ' End Sub
+        
+        Private Property Get Form_InternalCurrentBrush() As LongPtr
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_InternalCurrentBrush(ByVal Value As LongPtr)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Function Form_InternalEnumerator() As stdole.IUnknown
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Property Get Form_InternalIsFirstResizeEventAfterLoad() As Boolean
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_InternalIsFirstResizeEventAfterLoad(ByVal Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_InternalPicture() As StdPicture
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_InternalPicture(Value As Variant)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Set Form_InternalPicture(ByVal Value As stdole.StdPicture)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Sub Form_InternalSyncFont(ByVal MuteFontEvents As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_InternalSyncFontProperties(ByVal MuteFontEvents As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Function Form_IsInRect(ByVal X As Double, ByVal Y As Double) As Boolean
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Property Get Form_IsPainting() As Boolean
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_IsPainting(ByVal Value As Boolean)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Get Form_KeyPreview() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_KeyPreview(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_Left() As Double
+            Return Me.Left
+        End Property
+        
+        Private Property Let Form_Left(ByVal Value As Double)
+            Me.Left = Value
+        End Property
+        
+        Private Sub Form_Line(ByVal Flags As Long, ByVal X1 As Single, ByVal Y1 As Single, ByVal X2 As Single, ByVal Y2 As Single, ByVal Color As Long)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_MaxButton() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_MinButton() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_MouseIcon() As StdPicture
+            Return Me.MouseIcon
+        End Property
+        
+        Private Property Set Form_MouseIcon(Value As StdPicture)
+            Set Me.MouseIcon = Value
+        End Property
+        
+        Private Property Let Form_MouseIcon(Value As StdPicture)
+            Let Me.MouseIcon = Value
+        End Property
+        
+        Private Property Get Form_MousePointer() As VBRUN.MousePointerConstants
+            Return Me.MousePointer
+        End Property
+        
+        Private Property Let Form_MousePointer(ByVal Value As VBRUN.MousePointerConstants)
+            Me.MousePointer = Value
+        End Property
+        
+        Private Sub Form_Move(ByVal Left As Single, ByVal Top As Variant, ByVal Width As Variant, ByVal Height As Variant)
+            Me.Move(Left, Top, Width, Height)
+        End Sub
+        
+        Private Property Get Form_Moveable() As Boolean
+            Return Me.Moveable
+        End Property
+        
+        Private Property Let Form_Moveable(ByVal Value As Boolean)
+            Me.Moveable = Value
+        End Property
+        
+        Private Property Get Form_Picture() As StdPicture
+            Return Me.Picture
+        End Property
+        
+        Private Property Set Form_Picture(Value As StdPicture)
+            Set Me.Picture = Value
+        End Property
+        
+        Private Property Let Form_Picture(Value As StdPicture)
+            Let Me.Picture = Value
+        End Property
+        
+        Private Property Get Form_PictureDpiScaling() As Boolean
+            Return Me.PictureDpiScaling
+        End Property
+        
+        Private Property Let Form_PictureDpiScaling(ByVal Value As Boolean)
+            Me.PictureDpiScaling = Value
+        End Property
+        
+        Private Property Get Form_PixelsHeight() As Double
+            Return Me.PixelsHeight
+        End Property
+        
+        ' Private Property Let Form_PixelsHeight(ByVal Value As Double)
+        '     Me.PixelsHeight = Value
+        ' End Property
+        
+        Private Property Get Form_PixelsLeft() As Double
+            Return Me.PixelsLeft
+        End Property
+        
+        ' Private Property Let Form_PixelsLeft(ByVal Value As Double)
+        '     Me.PixelsLeft = Value
+        ' End Property
+        
+        Private Property Get Form_PixelsTop() As Double
+            Return Me.PixelsTop
+        End Property
+        
+        ' Private Property Let Form_PixelsTop(ByVal Value As Double)
+        '     Me.PixelsTop = Value
+        ' End Property
+        
+        Private Property Get Form_PixelsWidth() As Double
+            Return Me.PixelsWidth
+        End Property
+        
+        ' Private Property Let Form_PixelsWidth(ByVal Value As Double)
+        '     Me.PixelsWidth = Value
+        ' End Property
+        
+        Private Sub Form_PopUpMenu(ByVal Menu As Object, ByVal Flags As Variant, ByVal X As Variant, ByVal Y As Variant, ByVal DefaultMenu As Variant)
+            Me.PopUpMenu(Menu, Flags, X, Y, DefaultMenu)
+        End Sub
+        
+        Private Sub Form_PSet(ByVal Flags As Long, ByVal X As Single, ByVal Y As Single, ByVal Color As Long)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_RealHDC() As LongPtr
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Sub Form_Refresh()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_RegisterOLEDragDrop(Register As Boolean)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_RootWindowElementBase() As WindowsControls.WindowElement
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Let Form_RootWindowElementBase(Value As Variant)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Property Set Form_RootWindowElementBase(ByVal Value As WindowsControls.WindowElement)
+            ErrorUnsupportedFormMethod
+        End Property
+        
+        Private Sub Form_Scale(ByVal Flags As Long, ByVal X1 As Single, ByVal Y1 As Single, ByVal X2 As Single, ByVal Y2 As Single)
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_ScaleHeight() As Double
+            Return Me.ScaleHeight
+        End Property
+        
+        Private Property Let Form_ScaleHeight(ByVal Value As Double)
+            Err.Raise 383, , "'ScaleHeight' property is read-only"
+        End Property
+        
+        Private Property Get Form_ScaleLeft() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_ScaleLeft(ByVal Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_ScaleWidth() As Double
+            Return Me.ScaleWidth
+        End Property
+        
+        Private Property Let Form_ScaleWidth(ByVal Value As Double)
+            Err.Raise 383, , "'ScaleWidth' property is read-only"
+        End Property
+        
+        Private Property Get Form_ScaleTop() As Double
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_ScaleTop(ByVal Value As Double)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_ScaleMode() As VBRUN.ScaleModeConstants
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_ScaleMode(ByVal Value As VBRUN.ScaleModeConstants)
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Function Form_ScaleX(ByVal Width As Single, ByVal FromScale As Variant, ByVal ToScale As Variant) As Single
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Function Form_ScaleY(ByVal Height As Single, ByVal FromScale As Variant, ByVal ToScale As Variant) As Single
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Sub Form_SetFocus()
+            Me.SetFocus
+        End Sub
+        
+        Private Sub Form_Show(ByVal Modal As Variant, ByVal OwnerForm As Variant)
+            Me.Show(Modal, OwnerForm)
+        End Sub
+        
+        Private Property Get Form_ShowInTaskbar() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Get Form_StartUpPosition() As StartUpPositionConstants
+            Return Me.StartUpPosition
+        End Property
+        
+        Private Sub Form_SyncFontProperties()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_SyncMoveable()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Sub Form_SyncOLEDropMode()
+            ErrorUnsupportedFormMethod
+        End Sub
+        
+        Private Property Get Form_Tag() As String
+            Return Me.Tag
+        End Property
+        
+        Private Property Let Form_Tag(ByVal Value As String)
+            Me.Tag = Value
+        End Property
+        
+        Private Function Form_TextHeight(str As String) As Double
+            Return 0        ' VBx bug, this just returns 0 but should really throw an error like the rest of the unsupported methods/properties
+        End Function
+        
+        Private Function Form_TextWidth(str As String) As Double
+            ErrorUnsupportedFormMethod
+        End Function
+        
+        Private Property Get Form_Top() As Double
+            Return Me.Top
+        End Property
+        
+        Private Property Let Form_Top(ByVal Value As Double)
+            Me.Top = Value
+        End Property
+        
+        Private Property Get Form_Visible() As Boolean
+            Return Me.Visible
+        End Property
+        
+        Private Property Let Form_Visible(Value As Boolean)
+            Me.Visible = Value
+        End Property
+        
+        Private Property Get Form_Width() As Double
+            Return Me.Width
+        End Property
+        
+        Private Property Let Form_Width(ByVal Value As Double)
+            Me.Width = Value
+        End Property
+        
+        Private Sub Form_WindowlessRefresh()
+            ErrorUnsupportedFormMethod()
+        End Sub
+        
+        Private Property Get Form_WindowState() As FormWindowStateConstants
+            Return Me.WindowState
+        End Property
+        
+        Private Property Let Form_WindowState(ByVal Value As VBRUN.FormWindowStateConstants)
+            Me.WindowState = Value
+        End Property
+        
+        Private Sub Form_ZOrder(ByVal Position As Variant)
+            Me.ZOrder(Position)
+        End Sub
+        
+        Private Property Get Form__Default() As Object _
+                Implements Form.[_Default]
+        End Property
+        
+        Private Property Get Form_InternalBaseControlInfoPtrX() As LongPtr
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Let Form_InternalBaseControlInfoPtrX(ByVal Value As LongPtr)
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_NameINIT() As String
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Let Form_NameINIT(ByVal Value As String)
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_BorderStyleINIT() As FormBorderStyleConstants
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Let Form_BorderStyleINIT(ByVal Value As VBRUN.FormBorderStyleConstants)
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Let Form_ControlBox(ByVal Value As Boolean)
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_ControlBoxINIT() As Boolean
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_StartUpPositionINIT() As StartUpPositionConstants
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_MaxButtonINIT() As Boolean
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_MinButtonINIT() As Boolean
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        Private Property Get Form_ShowInTaskbarINIT() As Boolean
+            ErrorUnsupportedFormMethod()
+        End Property
+        
+        /*Private Property Get Form_RenderPictureAsIcon() As Boolean
+            ErrorUnsupportedFormProperty
+        End Property
+        
+        Private Property Let Form_RenderPictureAsIcon(ByVal Value As Boolean)
+            ErrorUnsupportedFormProperty
+        End Property*/
+        
+        [Serialize(False)]
+        [Description("")]
+        Property Get TabFocusAutoSelect() As Boolean
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabFocusAutoSelect
+        End Property
+    
+        [Serialize(False)]
+        [Description("")]
+        Property Let TabFocusAutoSelect(ByVal Value As Boolean)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabFocusAutoSelect = Value
+        End Property
+        
+        [Serialize(False)]
+        [Description("")]
+        Property Get AlwaysShowKeyboardCues() As Boolean
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).AlwaysShowKeyboardCues
+        End Property
+        
+        [Serialize(False)]
+        [Description("The minimum width of the CLIENT area, in twips")]
+        Property Get MinWidth() As Double
+            Return RootWindowElement.ScaleX(CSng(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MinWidth), vbScaledPixels, vbTwips)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The minimum width of the CLIENT area, in twips")]
+        Property Let MinWidth(ByVal Value As Double)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MinWidth = RootWindowElement.ScaleX(CSng(Value), vbTwips, vbScaledPixels)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The minimum height of the CLIENT area, in twips")]
+        Property Get MinHeight() As Double
+            Return RootWindowElement.ScaleY(CSng(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MinHeight), vbScaledPixels, vbTwips)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The minimum height of the CLIENT area, in twips")]
+        Property Let MinHeight(ByVal Value As Double)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MinHeight = RootWindowElement.ScaleY(CSng(Value), vbTwips, vbScaledPixels)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The maximum width of the CLIENT area, in twips")]
+        Property Get MaxWidth() As Double
+            Return RootWindowElement.ScaleX(CSng(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MaxWidth), vbScaledPixels, vbTwips)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The maximum width of the CLIENT area, in twips")]
+        Property Let MaxWidth(ByVal Value As Double)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MaxWidth = RootWindowElement.ScaleX(CSng(Value), vbTwips, vbScaledPixels)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The maximum height of the CLIENT area, in twips")]
+        Property Get MaxHeight() As Double
+            Return RootWindowElement.ScaleY(CSng(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MaxHeight), vbScaledPixels, vbTwips)
+        End Property
+        
+        [Serialize(False)]
+        [Description("The maximum height of the CLIENT area, in twips")]
+        Property Let MaxHeight(ByVal Value As Double)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MaxHeight = RootWindowElement.ScaleY(CSng(Value), vbTwips, vbScaledPixels)
+        End Property
+
+        [Serialize(False)]
+        [Description("")]
+        Property Get AutoShowChildren() As Boolean
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).AutoShowChildren
+        End Property
+        
+        [Serialize(False)]
+        [Description("")]
+        Property Let AutoShowChildren(ByVal Value As Boolean)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).AutoShowChildren = Value
+        End Property
+        
+        Private Sub TbCommonContainerPrivate_RaiseChange()
+        End Sub
+        
+        Private Sub TbCommonContainerPrivate_RaiseViewChanged()
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get Width() As Double
+            Return CommonGetFormWidth(Me.RootWindowElement)
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let Width(ByVal ValueTwips As Double)
+            CommonSetFormWidth(Me.RootWindowElement, Me.InternalBaseControlInfoPtrX, Me.ControlContext, ValueTwips)
+        End Property
+    
+        [Serialize(False)]
+        Public Property Get Height() As Double
+            Return CommonGetFormHeight(Me.RootWindowElement)
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let Height(ByVal ValueTwips As Double)
+            CommonSetFormHeight(Me.RootWindowElement, Me.InternalBaseControlInfoPtrX, Me.ControlContext, ValueTwips)
+        End Property
+        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
+        End Sub
+        
+    #End Region
+    
+End Class

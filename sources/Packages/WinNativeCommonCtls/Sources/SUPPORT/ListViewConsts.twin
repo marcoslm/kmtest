@@ -9,7 +9,7 @@ Private Module ListViewConsts
         LVN_DELETEALLITEMS = (LVN_FIRST - 4)
         LVN_BEGINLABELEDITA = (LVN_FIRST - 5)
         LVN_BEGINLABELEDITW = (LVN_FIRST - 75)
-        LVN_ENDLABELEDITA = (LVN_FIRST - 6)
+        LVN_ENDLABELEDITA = (LVN_FIRST - 6) 
         LVN_ENDLABELEDITW = (LVN_FIRST - 76)
         LVN_COLUMNCLICK = (LVN_FIRST - 8)
         LVN_BEGINDRAG = (LVN_FIRST - 9)
@@ -462,7 +462,7 @@ Private Module ListViewConsts
     End Type
     
     Public Type LVHITTESTINFO
-        PT As WinNativeFormsBase.POINT
+        PT As WinNativeFormsBASE.POINT
         Flags As Long
         iItem As Long
         iSubItem As Long
@@ -477,7 +477,7 @@ Private Module ListViewConsts
         dwFlags As Long
         sizeTile As WinNativeFormsBASE.SIZE
         cLines As Long
-        rcLabelMargin As WinNAtiveFormsBASE.RECT
+        rcLabelMargin As WinNativeFormsBASE.RECT
     End Type
     
     Type LVTILEINFO
@@ -554,7 +554,7 @@ Private Module ListViewConsts
         hdr As NMHDR
         dwDrawStage As Long
         hDC As LongPtr
-        RC As WinNativeFormsBase.RECT
+        RC As WinNativeFormsBASE.RECT
         dwItemSpec As LongPtr
         uItemState As Long
         lItemlParam As LongPtr
@@ -595,7 +595,7 @@ Private Module ListViewConsts
         uNewState As Long
         uOldState As Long
         uChanged As Long
-        ptAction As WinNativeFormsBase.POINT
+        ptAction As WinNativeFormsBASE.POINT
         lParam As LongPtr
     End Type
     

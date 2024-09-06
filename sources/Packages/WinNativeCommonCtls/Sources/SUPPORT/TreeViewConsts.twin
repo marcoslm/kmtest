@@ -1,5 +1,5 @@
 Private Module TreeViewConsts
-	    
+	     
     Public Enum Notifications
         TVN_FIRST = (-400)
         TVN_SELCHANGINGA = (TVN_FIRST - 1)
@@ -214,7 +214,7 @@ Private Module TreeViewConsts
     End Type
     
     Public Type TVHITTESTINFO
-        PT As WinNativeFormsBase.POINT
+        PT As WinNativeFormsBASE.POINT
         Flags As Long
         hItem As LongPtr
     End Type
@@ -236,7 +236,7 @@ Private Module TreeViewConsts
         Action As Long
         ItemOld As TVITEM
         ItemNew As TVITEM
-        PTDrag As WinNativeFormsBase.POINT
+        PTDrag As WinNativeFormsBASE.POINT
     End Type
     
     Public Type NMTVDISPINFO
@@ -248,7 +248,7 @@ Private Module TreeViewConsts
         hdr As NMHDR
         dwDrawStage As Long
         hDC As LongPtr
-        RC As WinNativeFormsBase.RECT
+        RC As WinNativeFormsBASE.RECT
         dwItemSpec As LongPtr
         uItemState As Long
         lItemlParam As LongPtr
@@ -303,6 +303,7 @@ Private Module TreeViewConsts
         NM_RCLICK = (NM_FIRST - 5)
         NM_RDBLCLK = (NM_FIRST - 6)
         NM_CUSTOMDRAW = (NM_FIRST - 12)
+        NM_RELEASEDCAPTURE = (NM_FIRST - 16)
     End Enum
     
     Public Enum CommonCustomDrawState
@@ -319,6 +320,7 @@ Private Module TreeViewConsts
         TVCDRF_NOIMAGES = &H10000
     End Enum
     
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function COMCTL32_ImageList_Destroy Lib "comctl32" Alias "ImageList_Destroy" (ByVal hImageList As LongPtr) As Long
 
 End Module

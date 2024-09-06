@@ -1,0 +1,466 @@
+[Description("A Win32 native windowless CheckMark")]
+[WindowsControl("/miscellaneous/ICONS??/CheckBox??.png")]
+[ClassId("F697BF0A-793B-4BA0-8340-1C3B9E1F4ECB")]
+[InterfaceId("F8F47E3C-64EA-4300-A154-E4C3E31DEB5B")]
+[COMCreatable(False)]
+[EventsUseDispInterface]
+[ComImport(True)]
+Class CheckMark
+    
+    #Region "INHERITANCE"
+
+        [WithDispatchForwarding] Implements Control
+        Implements WindowsControls.IWindowsControl
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseControlWindowlessNoFocus Via _BaseControl = New WinNativeFormsBASE.BaseControlWindowlessNoFocus(ControlTypeConstants.vbLabel)
+        [ImplementsViaPrivateFriendlies] Implements DataFieldBinderBase Via _DataFieldBinderBase = New DataFieldBinderBase
+        [ImplementsViaPrivateFriendlies] Implements OLEDragDropHelper Via _BaseOLEDragDropHelper = New OLEDragDropHelper
+        
+    #End Region
+    
+    #Region "STATE"
+    
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Description("")]
+            Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vb3DFace   ' FIXME this is linked to Appearance
+                    
+            [NonBrowsable]
+            [Serialize(True)]
+            Private InternalSectionId As Long = -1
+            
+            [Description("Adjusts the TAB key order of this control at runtime")]
+            [Unimplemented]
+            Public TabIndex As Long     ' despite not being focusable, useful for use with mnemonic access keys, so tabbing is still in order
+
+        [CustomDesigner("designer_MultiLineText")]
+        [Serialize(True, "ToolTipText")]
+            Public ToolTipTextINIT As String
+                
+        [Serialize(True, "Enabled")]
+            Private EnabledINIT As Boolean = True
+
+        [Description("")]
+            Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+            Private WithEvents RootWindowElement As WindowsControls.WindowElement
+            Private IsDesignMode As Boolean
+            
+            Public BackStyle As BackFillStyleConstants = BackFillStyleConstants.vbBFTransparent
+            Public VisualStyles As Boolean = False
+        
+            Public WhatsThisHelpID As Long
+
+        [Description("")]
+        [Serialize(True, "MousePointer")]
+            Private MousePointerINIT As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+        [Serialize(True, "MouseIcon")]
+        [CustomDesigner("designer_IconBytes")]
+            Private ReadOnly MouseIconINIT() As Byte
+            
+            Public Value As VBRUN.CheckBoxConstants = VBRUN.CheckBoxConstants.vbUnchecked
+            
+        Public Sub OLEDrag()
+            CommonOLEDrag(Me)
+        End Sub
+            
+        Public Sub ShowWhatsThis()
+            HelpSystem.ShowControlHelpManual(Me)
+        End Sub
+            
+    #End Region
+
+    #Region "EVENTS"
+
+        [DefaultDesignerEvent]
+        [Description("")]
+        [DispId(&HEAEA0004)]
+            Event Click()
+        [Description("")]
+        [DispId(&HEAEA0005)]
+            Event DblClick()
+        [Description("")]
+        [DispId(&HEAEA0001)]
+            Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [Description("")]
+        [DispId(&HEAEA0002)]
+            Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [Description("")]
+        [DispId(&HEAEA0003)]
+            Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
+        [Description("")]
+            Event Initialize()
+        [Description("")]
+        [DispId(&HEAEA000B)]
+            Event DragDrop(Source As Control, X As Single, Y As Single)
+        [Description("")]
+        [DispId(&HEAEA000C)]
+            Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
+        
+        Event OLECompleteDrag(Effect As Long)
+        Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
+        Event OLEDragOver(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single, State As Integer)
+        Event OLEGiveFeedback(Effect As Long, DefaultCursors As Boolean)
+        Event OLESetData(Data As DataObject, DataFormat As Integer)
+        Event OLEStartDrag(Data As DataObject, AllowedEffects As Long)
+        
+    #End Region
+               
+    #Region "MEMBERS"
+    
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            Me.InternalStateReset()     ' resets all the base class state
+            Me.InternalStateResetDataBinderBase()
+            Me.InternalStateResetOLEDragDrop()
+        
+            With ControlContext.GetSerializer
+                If Not .Deserialize(Me) Then
+                    'Caption_INIT = "CheckMark"
+                End If
+                IsDesignMode = .IsDesignMode
+            End With
+            
+            Dim InitData As WinNativeFormsBASE.WindowCreationData
+            InitData.InternalSectionId = InternalSectionId + 1
+            InitData.Flags = RequiresWindowlessPaintingWithEvents Or _
+                                ForwardEnsureEnabled Or _
+                                ManualMouseCapture Or _
+                                ForwardButtonClick Or _
+                                ForwardDoubleClick Or _
+                                ForwardMouseDown Or _
+                                ForwardMouseUp Or _
+                                ForwardMouseMove Or _
+                                ForwardDragOver
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, InitData)
+            
+            With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+                .ToolTipText = Me.ToolTipTextINIT
+                .MousePointer = Me.MousePointerINIT
+                .WindowlessEnabled = Me.EnabledINIT
+            End With
+            
+            InitOleDragDropHelper()
+            
+            CommonLoadPictureInit(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon, Me.MouseIconINIT)
+        End Sub
+        
+        Private Sub InitOleDragDropHelper()
+            _BaseOLEDragDropHelper.OLEDragDropInit(Me, ControlContext, RootWindowElement, True, False, True)
+        End Sub
+                
+        Private Sub HandleCreate() _
+                Handles RootWindowElement.Create
+            
+            SyncOLEDropMode()
+            
+            If IsDesignMode = False Then _DataFieldBinderBase.SetupBindings()
+            RaiseEvent Initialize()
+        End Sub
+        
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+'            Stop
+            ' disconnect anything that causes a circular reference here
+            Me.InternalStateResetOLEDragDrop()
+            Me.InternalStateResetDataBinderBase()
+            [_HiddenModule].ResetFirstMethodAccessFlag(Me)
+        End Sub
+
+        #If LOG_TERMINATE Then
+            Private Sub Class_Terminate()
+                    Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            End Sub
+        #End If
+                                
+        [Serialize(False)]
+        [DefaultMember]
+        Public Property Get _Default() As VBRUN.CheckBoxConstants
+            Return Me.Value
+        End Property
+        
+        [Serialize(False)]
+        [DefaultMember]
+        Public Property Let _Default(ByVal Value As VBRUN.CheckBoxConstants)
+            Me.Value = Value
+            SignificantChange()
+        End Property
+        
+        Private Sub SignificantChange() _
+                Handles BackColor.OnPropertyLet, _
+                        BackStyle.OnPropertyLet, _
+                        Appearance.OnPropertyLet, _
+                        BackStyle.OnPropertyLet, _
+                        Value.OnPropertyLet
+            
+            Me.WindowlessRefresh()
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+                
+        Private Sub HandlePaint(ByRef Handled As Boolean) _
+                Handles RootWindowElement.Paint
+
+            'Debug.Print "Label.HandlePaint " & Me.Name
+            
+            Dim RootWindowElement As Any = Me.RootWindowElement
+            Dim UnitPixelScale As Any = RootWindowElement.UnitPixelScale
+            
+            If Visible = False And Me.IsDesignMode = False Then Exit Sub
+
+            Dim rgbBackColor As Long = TranslateColor(BackColor)
+            Dim brush As LongPtr = 0
+            
+            If Me.BackStyle = vbBFOpaque Then
+                brush = WinNativeFormsBASE.CreateSolidBrush(rgbBackColor)
+            End If
+            
+            Dim ps As WinNativeFormsBASE.PAINTSTRUCT
+            RootWindowElement.BeginPaint(ps)    ' you MUST use this method, and NOT the BeginPaint API directly
+                
+                Dim ps_hdc As Any = ps.hdc
+                Dim rect As WinNativeFormsBASE.RECT
+                rect.Left = CLng(Me.PixelsLeft * UnitPixelScale)
+                rect.Top = CLng(Me.PixelsTop * UnitPixelScale)
+                rect.Right = CLng(rect.Left + (Me.PixelsWidth * UnitPixelScale))
+                rect.Bottom = CLng(rect.Top + (Me.PixelsHeight * UnitPixelScale))
+
+                If (rect.Right > rect.Left) And (rect.Bottom > rect.Top) Then
+                    Dim _width As Long = rect.Right - rect.Left
+
+                    'If BorderStyle = vbNoBorder Then
+                        If brush <> 0 Then
+                            WinNativeFormsBASE.USER32_FillRectangle(ps_hdc, rect, brush)
+                        End If
+                    'End If
+                    
+                    
+                    If VisualStyles Then
+                        Dim Theme As LongPtr = WinNativeFormsBASE.WindowsAPI.THEME_OpenData(RootWindowElement, "Button")
+                        Dim CheckState As Long
+                        
+                        If Value = vbChecked Then
+                            CheckState = If(Enabled, WinNativeFormsBASE.CBS_CHECKEDNORMAL, WinNativeFormsBASE.CBS_CHECKEDDISABLED)
+                        ElseIf Value = vbUnchecked Then
+                            CheckState = If(Enabled, WinNativeFormsBASE.CBS_UNCHECKEDNORMAL, WinNativeFormsBASE.CBS_UNCHECKEDDISABLED)
+                        Else
+                            CheckState = If(Enabled, WinNativeFormsBASE.CBS_MIXEDNORMAL, WinNativeFormsBASE.CBS_MIXEDDISABLED)
+                        End If
+
+                        If WinNativeFormsBASE.WindowsAPI.THEME_IsBackgroundPartiallyTransparent(Theme, WinNativeFormsBASE.BP_CHECKBOX, CheckState) Then
+                            On Error Resume Next
+                            Dim containerHwnd As LongPtr = CLngPtr(Container.hwnd)
+                            If containerHwnd <> vbNullPtr Then WinNativeFormsBASE.WindowsAPI.THEME_DrawParentBackground(containerHwnd, ps_hdc, rect)
+                            On Error GoTo 0
+                        End If
+                        WinNativeFormsBASE.WindowsAPI.THEME_DrawBackground(Theme, ps_hdc, WinNativeFormsBASE.BP_CHECKBOX, CheckState, rect, rect)
+                        WinNativeFormsBASE.WindowsAPI.THEME_CloseData Theme
+                    Else
+                        Dim frameFlags As Long
+                        frameFlags = If(Appearance = vbAppear3d, 0&, WinNativeFormsBASE.DrawFrameTypes.DFCS_FLAT) + _ 
+                                        WinNativeFormsBASE.DrawFrameTypes.DFCS_BUTTONCHECK + _
+                                        If(Value <> vbUnchecked, WinNativeFormsBASE.DrawFrameTypes.DFCS_CHECKED, 0&) + _
+                                        If((Value = vbGrayed) Or Not Enabled, WinNativeFormsBASE.DrawFrameTypes.DFCS_BUTTON3STATE Or WinNativeFormsBASE.DrawFrameTypes.DFCS_INACTIVE, 0&)
+                    
+                        WinNativeFormsBASE.WindowsAPI.USER32_DrawFrameControl(ps_hdc, rect, WinNativeFormsBASE.DFC_BUTTON, frameFlags)
+                                            
+                    End If
+                    
+                    ' Dim actualForeColor As Long = TranslateColor(If(Me.Enabled, ForeColor, vbGrayText))
+                    ' Dim rbgBackColor As Long = TranslateColor(BackColor)
+                    ' Dim oldTextColor As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(ps_hdc, actualForeColor)
+                    ' Dim oldBackColor As Long = WinNativeFormsBASE.WindowsAPI.SetBkColor(ps_hdc, rbgBackColor)
+                    ' Dim oldBkMode As Long = WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps_hdc, 1)
+                    
+                    ' If BorderStyle = vbFixedSingleBorder Then
+                    '     Dim bfStyle As Long
+                    '     Dim bfFlags As Long = BorderFlags.BF_RECT Or BorderFlags.BF_ADJUST
+                        
+                    '     If Appearance = vbAppearFlat Then
+                    '         bfFlags += BorderFlags.BF_MONO
+                    '         bfStyle = BorderStyles.BDR_SUNKENOUTER
+                    '     Else
+                    '         bfStyle = BorderStyles.BDR_SUNKENOUTER Or BorderStyles.BDR_SUNKENINNER
+                    '     End If
+                    '     WinNativeFormsBASE.DrawEdge(ps_hdc, rect, bfStyle, bfFlags)
+                    ' End If
+                                    
+                    ' If Me.FontHandle = 0 Then
+                    '     InitializeOLEFont()
+                    ' End If
+                    
+                    ' Dim oldFont As LongPtr = WinNativeFormsBASE.SelectObject(ps_hdc, Me.FontHandle)
+                    
+                    ' Dim LineSpacing As Any = CLng(RootWindowElement.ScaleY(Me.LineSpacing, vbTwips, vbPixels))
+                    
+                    ' ' FIXME we should cache the render path     
+                    ' Dim Caption As Any = Me.Caption
+                    ' Dim UseMnemonics As Boolean = True
+                    ' If IsDesignMode Then
+                    '     If Left(Me.DataFieldINIT, 1) = "=" Then
+                    '         Caption = Me.DataFieldINIT
+                    '         UseMnemonics = False
+                    '     End If
+                    ' End If
+                    ' Dim render As TextRenderPath = New TextRenderPath(ps_hdc, Caption, UseMnemonics, Me.Alignment, rect.Right - rect.Left, Me.AutoSize, Me.WordWrap, LineSpacing)
+                    
+                    ' Dim savedDC As Long
+                    ' If Me.VerticalAlignment <> vbVerticalAlignTop Then
+                    '     savedDC = SaveDC(ps_hdc)    ' preserve clip region
+                    '     IntersectClipRect(ps_hdc, rect.Left, rect.Top, rect.Right, rect.Bottom)
+                    
+                    '     If Me.VerticalAlignment = vbVerticalAlignMiddle Then
+                    '         rect.Top += ((rect.Bottom - rect.Top) - render.TotalHeight) \ 2
+                    '     Else
+                    '         rect.Top += ((rect.Bottom - rect.Top) - render.TotalHeight)
+                    '     End If
+                    ' End If
+                    
+                    ' If render.HasMnemomnics Then
+                    '     render.RenderWithMnemonics(ps_hdc, rect, 0, 0, GetFontMetrics().TMAscent, UnitPixelScale)
+                    ' Else
+                    '     render.Render(ps_hdc, rect, 0, 0)
+                    ' End If
+                    
+                    ' If Me.VerticalAlignment <> vbVerticalAlignTop Then
+                    '     RestoreDC(ps_hdc, savedDC)
+                    ' End If
+                    
+                ' Debug.Print "---------------------------------"
+                    
+                    ' WinNativeFormsBASE.WindowsAPI.GDI32_SetBackMode(ps_hdc, oldBkMode)
+                    ' WinNativeFormsBASE.WindowsAPI.SetBkColor(ps_hdc, oldBackColor)
+                    ' WinNativeFormsBASE.WindowsAPI.GDI32_SetTextForeColor(ps_hdc, oldTextColor)
+                    ' WinNativeFormsBASE.SelectObject(ps_hdc, oldFont)
+                
+                End If
+                
+            RootWindowElement.EndPaint(ps)
+            Handled = True     ' swallow up the event
+
+            If brush <> 0 Then WinNativeFormsBASE.WindowsAPI.GDI32_DeleteObject(brush)
+
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ToolTipText() As String
+            Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ToolTipText
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let ToolTipText(ByVal Value As String)
+            CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ToolTipText = Value
+            Me.RootWindowElementBase.ToolTipChanged()
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get MouseIcon() As StdPicture
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon
+        End Property
+
+        [Serialize(False)]
+        Public Property Set MouseIcon(Value As StdPicture)
+            Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+            CommonMousePointerChanged()
+        End Property
+
+        [Serialize(False)]
+        Public Property Let MouseIcon(Value As StdPicture)
+            Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+            CommonMousePointerChanged()
+        End Property
+        
+        Private Sub HandleResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, _
+                                               ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long) _
+                    Handles RootWindowElement.ResizeWindowless
+                 
+                On Error Resume Next
+                Dim containerHwnd As LongPtr = CLngPtr(_BaseControl.Container.hwnd)
+                On Error GoTo 0
+                
+                If containerHwnd = 0 Then
+                    ' Windowless UC container...  FIXME need to pass on the RECTs to refine the InvalidateRect passed to the UC site
+                    CommonRaiseViewChanged(_BaseControl.Container)
+                    Exit Sub
+                End If
+                    
+                Dim rect As WinNativeFormsBASE.RECT
+                If oldWidth <> 0 And oldHeight <> 0 Then
+                    rect.Left = oldLeft
+                    rect.Top = oldTop
+                    rect.Right = oldLeft + oldWidth
+                    rect.Bottom = oldTop + oldHeight
+                    WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+                End If
+
+                If newWidth <> 0 And newHeight <> 0 Then
+                    rect.Left = newLeft
+                    rect.Top = newTop
+                    rect.Right = newLeft + newWidth
+                    rect.Bottom = newTop + newHeight
+                    WinNativeFormsBASE.WindowsAPI.InvalidateRect(containerHwnd, rect, 1)
+                End If
+
+        End Sub
+        
+        Private Sub RootWindowElement_MouseUp(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single)
+            'Debug.Print "X: " & X, "Y: " & Y, "PixelsWidth: " & PixelsWidth, "PixelsHeight: " & PixelsHeight
+            If Enabled And (Button = 1) And (IsInRect(RootWindowElement.ScaleX(X, vbTwips, vbScaledPixels), RootWindowElement.ScaleY(Y, vbTwips, vbScaledPixels))) Then
+                If Value <> vbChecked Then
+                    Value = vbChecked
+                Else
+                    Value = vbUnchecked
+                End If
+                SignificantChange()
+            End If
+        End Sub
+                
+        ' Private Sub _DataFieldBinderBase_SetLiveValue(fieldValue As Variant) Handles [_DataFieldBinderBase].SetLiveValue
+        '     Me.Caption = If(IsNull(fieldValue), "", CStr(fieldValue))
+        ' End Sub
+        
+        ' Private Sub _DataFieldBinderBase_GetLiveValue(fieldValue As Variant) Handles [_DataFieldBinderBase].GetLiveValue
+        '     fieldValue = Me.Caption
+        ' End Sub
+        
+        ' Private Sub _DataFieldBinderBase_GetParent(out As Control) Handles [_DataFieldBinderBase].GetParent
+        '     Set out = CType(Of Control)(Me.Parent)
+        ' End Sub
+        
+        [Serialize(False)]
+        Public Property Get MousePointer() As MousePointerConstants
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let MousePointer(ByVal Value As MousePointerConstants)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer = Value
+            CommonMousePointerChanged()
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get Enabled() As Boolean
+            Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessEnabled
+        End Property
+    
+        [Serialize(False)]
+        Public Property Let Enabled(ByVal Value As Boolean)
+            CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessEnabled = Value
+            Me.SignificantChange()
+        End Property
+        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
+        End Sub
+        
+    #End Region
+
+End Class

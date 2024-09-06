@@ -1,0 +1,350 @@
+[InterfaceId("A68E98AD-5ABA-4D1B-9926-718ADFF62B89")]
+[ComImport(True)]
+Interface TbImageListPrivate Extends stdole.IUnknown
+    Function GetScaleX() As Double
+    Function GetScaleY() As Double
+    Sub SetWidthHeight(ByVal width As Long, ByVal height As Long)
+    Sub SyncListProps()
+    Sub GetInitImageData(Images() As String, Keys() As String, Tags() As String)
+    Sub SetInitImageData(Images() As String, Keys() As String, Tags() As String)
+    Property Get ImageWidth() As Long
+    Property Let ImageWidth(ByVal Value As Long)
+    Property Get ImageHeight() As Long
+    Property Let ImageHeight(ByVal Value As Long)
+    Property Get ColorDepth() As ImageListColorDepth
+    Property Get UseMaskColor() As Boolean
+    Property Get MaskColor() As OLE_COLOR
+    Property Get BoundCount() As Long
+End Interface
+
+[WindowsControl("/miscellaneous/ICONS??/ImageList??.png")]
+[ClassId("2F75D39C-A8E3-4D5E-844A-252BED31075B")]
+[InterfaceId("D120535D-59D2-4E52-A66C-4B6D9CAB9D5D")]
+[EventInterfaceId("40B40E37-E8A1-42E8-9A79-37F53E145404")]
+[COMCreatable(False)]
+[EventsUseDispInterface]
+Class ImageList
+     
+    #Region "INHERITANCE"
+
+        [WithDispatchForwarding] Implements Control
+        Implements WindowsControls.IWindowsControl
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseControlNotFocusable Via _BaseControl = New WinNativeFormsBASE.BaseControlNotFocusable(ControlTypeConstants.vbImageList)
+        Implements ITwinBasicDesignerExtensions
+        Implements TbImageListPrivate
+        
+    #End Region
+            
+    #Region "STATE"
+            
+        Enum ImageListColorDepth
+            ColorDepth4Bit = &H4
+            ColorDepth8Bit = &H8
+            ColorDepth16Bit = &H10
+            ColorDepth24Bit = &H18
+            ColorDepth32Bit = &H20
+        End Enum
+        
+        [CustomDesigner("designer_SpectrumWindows")]
+        Public BackColor As OLE_COLOR = vbWindowBackground
+        Public UseBackColor As Boolean = False
+        
+        [CustomDesigner("designer_SpectrumWindows")]
+        Public MaskColor As OLE_COLOR = &H00C0C0C0
+        Public UseMaskColor As Boolean = True
+                
+        [Serialize(True, "ImageHeight")]
+        Private ImageHeight_INIT As Long
+        [Serialize(True, "ImageWidth")]
+        Private ImageWidth_INIT As Long
+        
+        Public ColorDepth As ImageListColorDepth = ImageListColorDepth.ColorDepth32Bit
+
+        [Serialize(True)]
+        [NonBrowsable(True)]
+        [Hidden]
+        [CustomDesigner("BINARY")]      ' ensures that binary data is persisted for the serialized string, rather than just UTF8
+        Private InternalImages_INIT() As String
+        [Serialize(True)]
+        [NonBrowsable(True)]
+        [Hidden]
+        Private InternalKeys_INIT() As String
+        [Serialize(True)]
+        [NonBrowsable(True)]
+        [Hidden]
+        Private InternalTags_INIT() As String
+                
+        [Serialize(False)]
+        Private InternalListImages As ListImages
+        
+        [Serialize(False)]
+        [Hidden]
+        Friend BoundCount As Long
+        Private IsDesignMode As Boolean
+        Private InternalImageWidth As Long
+        Private InternalImageHeight As Long
+                
+    #End Region
+
+    #Region "EVENTS"
+
+    #End Region
+               
+    #Region "MEMBERS"
+                    
+        Private Sub ITwinBasicDesignerExtensions_GetPropertyExtensions(ByRef out() As String) _
+                Implements ITwinBasicDesignerExtensions.GetPropertyExtensions
+
+            ReDim out(0)
+            out(0) = "Custom"
+        End Sub
+
+        Private Sub ITwinBasicDesignerExtensions_InvokePropertyExtension(ByVal Name As String) _
+                Implements ITwinBasicDesignerExtensions.InvokePropertyExtension
+
+            If Name = "Custom" Then
+                With New ImageListPropertyPage(Me)
+                    .Show vbModal
+                End With
+            End If
+        End Sub
+        
+        Private Sub LoadFromPersistedState()
+            Me.ImageWidthPrivate = Me.ImageWidth_INIT
+            Me.ImageHeightPrivate = Me.ImageHeight_INIT
+            If (Me.IsDesignMode = False) And IsArrayInitialized(InternalImages_INIT) Then
+                Dim picIndex As Long
+                Dim expectedUbound As Long = UBound(InternalImages_INIT)
+                On Error GoTo DoRedimKeys
+                If UBound(InternalKeys_INIT) <> expectedUbound Then
+                    DoRedimKeys:
+                    ReDim Preserve InternalKeys_INIT(expectedUbound)    ' handles mismatch
+                End If
+                On Error GoTo DoRedimTags
+                If UBound(InternalTags_INIT) <> expectedUbound Then
+                    DoRedimTags:
+                    ReDim Preserve InternalTags_INIT(expectedUbound)    ' handles mismatch
+                End If
+                On Error GoTo 0
+                Dim picStr As String
+                Dim bArray() As Byte
+                Dim pic As StdPicture
+                For Each picStr In InternalImages_INIT
+                    On Error Resume Next
+                    bArray = picStr
+                    Set pic = Nothing
+                    Set pic = Global.LoadPicture(bArray)
+                    
+                    If pic Is Nothing Then
+                        ' Rather than balking on bad files here, we allow it through but with a substituted picture
+                        ' This prevents the problem of the image list not working if the current OS doesn't support the file format (e.g. Win7 not supporting 32-bit ICO)
+                        Const ImageData_Exclamation As Variant = LoadResDataInternal("Exclamation.gif", "OTHER")
+                        Set pic = Global.LoadPicture(ImageData_Exclamation)
+                    End If
+                    
+                    InternalListImages.Add(, InternalKeys_INIT(picIndex), pic, InternalTags_INIT(picIndex))
+                    Erase bArray
+                    picIndex += 1
+                Next
+            End If
+        End Sub
+        
+        Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
+                Implements IWindowsControl.Initialize
+            
+            Me.InternalStateReset()     ' resets all the base class state
+            BoundCount = 0
+            InternalImageWidth = 0
+            InternalImageHeight = 0
+            
+            With ControlContext.GetSerializer
+                If Not .Deserialize(Me) Then
+                    ' set defaults here
+                End If
+                Set InternalListImages = New ListImages
+                InternalListImages.OwnerWEAK = ObjPtr(Me)
+                IsDesignMode = .IsDesignMode
+            End With
+            
+            Me.Initialize(ControlContext)
+            
+            Dim InitData As WindowCreationData
+            InternalBaseControlBeforeCreateRootWindow(InitData)
+            
+            ControlContext.SetBaseControlInfoPtr(Me.InternalBaseControlInfoPtrX)
+            ControlContext.SetControlArrayIndex(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ControlArrayIndex)
+            
+            LoadFromPersistedState()
+        End Sub
+                
+        Private Sub HandleDestroy() _
+                Implements IWindowsControl.Destroy
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+            
+            ' disconnect anything that causes a circular reference here
+            ImageList_Destroy(InternalListImages.hImageList)
+            Set InternalListImages = Nothing
+            [_HiddenModule].ResetFirstMethodAccessFlag(Me)
+        End Sub
+
+        Private Sub Class_Terminate()
+            #If LOG_TERMINATE Then
+                Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            #End If
+        End Sub
+                
+        [Serialize(False)]
+        Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
+            Return ControlContext.GetForm
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get Object() As Object
+            Return Me
+        End Property
+        
+        Private Sub ITwinBasicDesignerExtensions_DesignerClick(ByVal X As Long, ByVal Y As Long)
+        End Sub
+        
+        Private Sub ITwinBasicDesignerExtensions_DesignTimePrepareSnapshot()
+        End Sub
+        
+        Private Function ITwinBasicDesignerExtensions_GetClientObject() As Object
+        End Function
+        
+        Private Sub ITwinBasicDesignerExtensions_GetIViewObject(out As stdole.IUnknown, outRect As WinNativeFormsBASE.RECT, outIsVisible As Boolean)
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get hImageList() As LongPtr
+            Return InternalListImages.hImageList
+        End Property
+        
+        Public Function Overlay(Key1 As Variant, Key2 As Variant) As StdPicture
+            Dim imageList As LongPtr = Me.InternalListImages.hImageList
+            Dim tempImageList As LongPtr
+            tempImageList = ImageList_Create(InternalImageWidth, InternalImageHeight, ILC_MASK Or ILC_COLOR24, 4, 4)
+            Dim icon1 As StdPicture = Me.InternalListImages(Key1).ExtractIcon()
+            Dim icon2 As StdPicture = Me.InternalListImages(Key2).ExtractIcon()
+            ImageList_AddIcon tempImageList, icon1.Handle
+            ImageList_AddIcon tempImageList, icon2.Handle
+            ImageList_SetOverlayImage(tempImageList, 1, 1)
+            Dim iconHandle As LongPtr = ImageList_GetIcon(tempImageList, 0, ILD_TRANSPARENT Or &H100)
+            ImageList_Destroy(tempImageList)
+            Return CType(Of StdPicture)(CreateStdPictureFromHandle(iconHandle, vbPicTypeIcon, True))
+        End Function
+                
+        Private Sub SyncListProps() _
+                Handles BackColor.OnPropertyLet, _
+                        UseBackColor.OnPropertyLet
+    
+            If InternalListImages.hImageList <> vbNullPtr Then
+                ImageList_SetBkColor InternalListImages.hImageList, If(UseBackColor, TranslateColor(BackColor), -1&)
+            End If
+        End Sub
+        
+        Private Sub SyncListProps2() _
+                Implements TbImageListPrivate.SyncListProps
+    
+            SyncListProps
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ImageWidth() As Long
+            Return InternalImageWidth
+        End Property
+
+        [Serialize(False)]
+        Public Property Let ImageWidth(Value As Long)
+            ImageWidthPrivate = Value
+        End Property
+        
+        [Serialize(False)]
+        Private Property Let ImageWidthPrivate(Value As Long)
+            If Value < 0 Then Err.Raise 380, , "Invalid property value"
+            If Me.InternalListImages.hImageList <> 0 Then Err.Raise 35611, , "Property is read-only if image list contains images"
+            InternalImageWidth = Value
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get ImageHeight() As Long
+            Return InternalImageHeight
+        End Property
+        
+        [Serialize(False)]
+        Public Property Let ImageHeight(Value As Long)
+            ImageHeightPrivate = Value
+        End Property
+        
+        [Serialize(False)]
+        Private Property Let ImageHeightPrivate(Value As Long)
+            If Value < 0 Then Err.Raise 380, , "Invalid property value"
+            If Me.InternalListImages.hImageList <> 0 Then Err.Raise 35611, , "Property is read-only if image list contains images"
+            InternalImageHeight = Value
+        End Property
+        
+        Private Function TbImageListPrivate_GetScaleX() As Double
+            Return ControlContext.GetScaleModePixelsMultiplierX_SELF()
+        End Function
+        
+        Private Function TbImageListPrivate_GetScaleY() As Double
+            Return ControlContext.GetScaleModePixelsMultiplierY_SELF()
+        End Function
+        
+        Private Sub TbImageListPrivate_SetWidthHeight(ByVal width As Long, ByVal height As Long)
+            ImageWidth_INIT = width
+            ImageHeight_INIT = height
+        End Sub
+        
+        Private Sub TbImageListPrivate_GetInitImageData(Images() As String, Keys() As String, Tags() As String)
+            Images = InternalImages_INIT
+            Keys = InternalKeys_INIT
+            Tags = InternalTags_INIT
+        End Sub
+        
+        Private Sub TbImageListPrivate_SetInitImageData(Images() As String, Keys() As String, Tags() As String)
+            InternalImages_INIT = Images
+            InternalKeys_INIT = Keys
+            InternalTags_INIT = Tags
+        End Sub
+                        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
+        End Sub
+        
+        [Serialize(False)]
+        Public Property Get ListImages() As ListImages
+            Return InternalListImages
+        End Property
+        
+        Private Property Get TbImageListPrivate_ImageWidth() As Long
+            Return Me.InternalImageWidth
+        End Property
+        Private Property Let TbImageListPrivate_ImageWidth(ByVal Value As Long)
+            Me.InternalImageWidth = Value
+        End Property
+        Private Property Get TbImageListPrivate_ImageHeight() As Long
+            Return Me.InternalImageHeight
+        End Property
+        Private Property Let TbImageListPrivate_ImageHeight(ByVal Value As Long)
+            Me.InternalImageHeight = Value
+        End Property
+        Private Property Get TbImageListPrivate_ColorDepth() As ImageListColorDepth
+            Return Me.ColorDepth
+        End Property
+        Private Property Get TbImageListPrivate_UseMaskColor() As Boolean
+            Return Me.UseMaskColor
+        End Property
+        Private Property Get TbImageListPrivate_MaskColor() As OLE_COLOR
+            Return Me.MaskColor
+        End Property
+        Private Property Get TbImageListPrivate_BoundCount() As Long
+            Return Me.BoundCount
+        End Property
+        
+    #End Region
+    
+End Class

@@ -1,0 +1,97 @@
+[ClassId("2DF94D2B-B99B-46B3-BA7B-7559FC0749A3")]
+[InterfaceId("354C85AD-3B28-4D1A-946E-3CAAF38AD691")]
+[COMCreatable(False)]
+[ComImport(True)]
+Class OLEDragDropHelper
+    [CustomDesigner("designer_RestrictedOLEDropMode")]
+        Public OLEDropMode As VBRUN.OLEDropConstants
+    
+    Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
+    Private RegisteredChildOLEDropCount As Long
+    Private IsRegisteredItselfForOLEDragDrop As Boolean
+    Private AutomaticIsAllowed As Boolean
+    Private IsContainer As Boolean
+    Private IsLightweightControl As Boolean
+    
+    Private OwnerControl As Object
+    Private OwnerControlContext As WindowsControls.WindowsControlContext
+    Private OwnerRootWindowElement As WindowsControls.WindowElement
+        
+    Sub Class_Terminate()
+        If IsRegisteredItselfForOLEDragDrop = True Then
+            On Error Resume Next
+            Me.RegisterOLEDragDrop(False)
+            IsRegisteredItselfForOLEDragDrop = False
+        End If
+    End Sub
+        
+    Friend Sub InternalStateResetOLEDragDrop()
+        If IsRegisteredItselfForOLEDragDrop = True Then
+            On Error Resume Next
+            Me.RegisterOLEDragDrop(False)
+            IsRegisteredItselfForOLEDragDrop = False
+        End If
+        
+        Set OLEDragDropHandler = Nothing
+        RegisteredChildOLEDropCount = 0
+        IsRegisteredItselfForOLEDragDrop = False
+        AutomaticIsAllowed = False
+        IsContainer = False
+        IsLightweightControl = False
+    End Sub
+    
+    Friend Sub OLEDragDropInit(ByRef OwnerControl As Object, _
+                ByRef OwnerControlContext As WindowsControls.WindowsControlContext, _
+                ByRef OwnerRootWindowElement As WindowsControls.WindowElement, _
+                ByVal IsContainer As Boolean, _
+                ByVal AutomaticIsAllowed As Boolean, _
+                ByVal IsLightweightControl As Boolean)
+        Set Me.OwnerControl = OwnerControl
+        Set Me.OwnerControlContext = OwnerControlContext
+        Set Me.OwnerRootWindowElement = OwnerRootWindowElement
+        Me.IsContainer = IsContainer
+        Me.AutomaticIsAllowed = AutomaticIsAllowed
+        Me.IsLightweightControl = IsLightweightControl
+    End Sub
+    
+    Friend Sub SyncOLEDropMode() _
+        Handles OLEDropMode.OnPropertyLet
+                
+        Dim Mode As Boolean
+        Dim OLEDropMode As Any = Me.OLEDropMode
+        If OLEDropMode = OLEDropConstants.vbOLEDropManual Or _
+            (AutomaticIsAllowed And (OLEDropMode = OLEDropConstants.vbOLEDropAutomatic)) Then
+        ElseIf OLEDropMode = OLEDropConstants.vbOLEDropNone Then
+            Mode = True
+        Else
+            Err.Raise 5
+        End If
+            
+        If Me.IsRegisteredItselfForOLEDragDrop = Mode Then
+        	If Me.IsLightweightControl Then
+                Dim Container As Any = OwnerControl.Container
+                If Container IsNot Nothing Then
+                    CType(Of OLEDragDropHelper)(Container).RegisterOLEDragDrop(Not Mode)
+                End If
+            Else
+                Me.RegisterOLEDragDrop(Not Mode)
+            End If
+            Me.IsRegisteredItselfForOLEDragDrop = Not Mode
+        End If
+    End Sub
+    
+    Friend Sub RegisterOLEDragDrop(Register As Boolean)
+        Dim OLEDragDropHandler As Any = Me.OLEDragDropHandler
+        If Register = True Then
+            Me.RegisteredChildOLEDropCount += 1
+            If Me.RegisteredChildOLEDropCount = 1 Then
+                CommonSyncOLEDropMode(OwnerControl, OLEDropConstants.vbOLEDropManual, OLEDragDropHandler, OwnerControlContext, OwnerRootWindowElement, IsContainer, AutomaticIsAllowed)
+            End If
+        Else
+            Me.RegisteredChildOLEDropCount -= 1
+            If Me.RegisteredChildOLEDropCount = 0 Then
+                If OLEDragDropHandler IsNot Nothing Then Me.OLEDragDropHandler.Disconnect()
+            End If
+        End If
+    End Sub
+End Class

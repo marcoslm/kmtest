@@ -1,20 +1,20 @@
-[ WindowsControl ("/miscellaneous/ICONS??/DTPicker??.png") ]
-[ ClassId ("02E8FCDC-84BC-4E60-996F-D99678A14604") ]
-[ InterfaceId ("83292960-B8D0-46D7-A29F-99342F5ECD46") ]
-[ COMCreatable (False) ]
-[ EventsUseDispInterface ]
+[WindowsControl("/miscellaneous/ICONS??/DTPicker??.png")]
+[ClassId("02E8FCDC-84BC-4E60-996F-D99678A14604")]
+[InterfaceId("83292960-B8D0-46D7-A29F-99342F5ECD46")]
+[COMCreatable(False)]
+[EventsUseDispInterface]
 Class DTPicker
-	
+	 
 	#Region "INHERITANCE"
 
-        [ WithDispatchForwarding ] Implements Control
+        [WithDispatchForwarding] Implements Control
         Implements WindowsControls.IWindowsControl
-        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbDTPicker)
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseControlFocusable Via _BaseControl = New WinNativeFormsBASE.BaseControlFocusable(ControlTypeConstants.vbDTPicker)
         
     #End Region
             
     #Region "STATE"
-        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        [CustomDesigner("designer_RestrictedOLEDropMode")]
             Public OLEDropMode As VBRUN.OLEDropConstants
             
             Public UpDown As Boolean = False
@@ -24,9 +24,8 @@ Class DTPicker
             Public CalendarShowTodayCircle As Boolean = True
             Public CalendarShowWeekNumbers As Boolean = False
             Public CalendarShowTrailingDates As Boolean = True
-
-            Public CausesValidation As Boolean = True
-        [ Unimplemented ]
+        
+        [Unimplemented]
             Public RightToLeft As Boolean = False
 
             Public HelpContextID As Long
@@ -35,45 +34,52 @@ Class DTPicker
         Private WithEvents RootWindowElement As WindowsControls.WindowElement
         Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
             
-            Private IsInitialized As Boolean = False
+            Private IsInitialized As Boolean
             Private CachedValue As Variant
             
             Public Format As DTPickerFormatConstants = DTPickerFormatConstants.dtpShortDate
             Public CustomFormat As String
             
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Serialize (True, "CalendarBackColor") ]
+        [Description("Opacity, given as a percentage, 0 - 100.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public Opacity As Double = 100
+        
+        [CustomDesigner("designer_SpectrumWindowsOrClear")]
+        [Description("A color, when set, that will appear fully transparent in the window.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public TransparencyKey As OLE_COLOR = -1
+            
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Serialize(True, "CalendarBackColor")]
         Private CalendarBackColor_INIT As OLE_COLOR = vbWindowBackground
 
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Serialize (True, "CalendarForeColor") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Serialize(True, "CalendarForeColor")]
         Private CalendarForeColor_INIT As OLE_COLOR = vbButtonText
 
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Serialize (True, "CalendarTitleBackColor") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Serialize(True, "CalendarTitleBackColor")]
         Private CalendarTitleBackColor_INIT As OLE_COLOR = vb3DFace
 
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Serialize (True, "CalendarTitleForeColor") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Serialize(True, "CalendarTitleForeColor")]
         Private CalendarTitleForeColor_INIT As OLE_COLOR = vbButtonText
 
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Serialize (True, "CalendarTrailingForeColor") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Serialize(True, "CalendarTrailingForeColor")]
         Private CalendarTrailingForeColor_INIT As OLE_COLOR = vbGrayText
 
         Public StartOfWeek As VbDayOfWeek
         
-        [ Serialize (True, "MinDate") ]
-            Public MinDate_INIT As Date = DateSerial(1601, 1, 1)
-        [ Serialize (True, "MaxDate") ]
-            Public MaxDate_INIT As Date = DateSerial(9999, 12, 31)
-        [ Serialize (True, "Value") ]
-            Public Value_INIT As Date = Date()
+        [Serialize(True, "MinDate")]
+            Private MinDate_INIT As Date = DateSerial(1601, 1, 1)
+        [Serialize(True, "MaxDate")]
+            Private MaxDate_INIT As Date = DateSerial(9999, 12, 31)
+        [Serialize(True, "Value")]
+            Private Value_INIT As Date = Date()
             
-        Private LastMouseUpX As Single = -1
-        Private LastMouseUpY As Single = -1
+        Private LastMouseUpX As Single
+        Private LastMouseUpY As Single
         Private LastMouseUpTime As LongLong
-
+        
     #End Region
 
     #Region "EVENTS"
@@ -87,19 +93,19 @@ Class DTPicker
         Event Format(ByVal CallbackField As String, FormattedString As String)
         Event FormatSize(ByVal CallbackField As String, Size As Integer)
             Event GotFocus()
-        [ Description ("") ]
+        [Description("")]
             Event LostFocus()
-        [ Description ("") ]
+        [Description("")]
             Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event Initialize()
-        [ Description ("") ]
+        [Description("")]
             Event DragDrop(Source As Control, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
         Event OLECompleteDrag(Effect As Long)
         Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
@@ -112,30 +118,15 @@ Class DTPicker
     #End Region
                
     #Region "MEMBERS"
-
-        Public Sub New()
-            ' This constructor is useful for allowing control inheritance
-        End Sub
-        
-        Public Sub New(Serializer As WindowsControls.SerializationInfo)
-            If Serializer Is Nothing Then Exit Sub
-            If Not Serializer.Deserialize(Me) Then
-                InitializeDefaultValues
-            End If
-        End Sub
-        
-        Private Sub InitializeDefaultValues()
-            StartOfWeek = GetSystemDayOfWeek()
-        End Sub
-        
+                
         Private Function GetSystemDayOfWeek() As VbDayOfWeek
-            Return ((7 - (Weekday(#02-Jan-2000#, vbUseSystemDayOfWeek) - 1)) Mod 7) + 1
+            Return CType(Of VbDayOfWeek)((7 - (Weekday(#02-Jan-2000#, vbUseSystemDayOfWeek) - 1)) Mod 7) + 1
         End Function
         
         Private Function GetStyles() As Long
             Dim Styles As Long
-        	Styles += If(UpDown, DTS_UPDOWN, 0)
-            Styles += If(CheckBox, DTS_SHOWNONE, 0)
+        	Styles += If(UpDown, DTS_UPDOWN, 0&)
+            Styles += If(CheckBox, DTS_SHOWNONE, 0&)
             
             Select Case Format
                 Case dtpLongDate
@@ -151,11 +142,11 @@ Class DTPicker
         
         Private Function GetStylesCalendar() As Long
             Dim Styles As Long
-        	Styles += If(CalendarShowToday, 0, MCS_NOTODAY)
-        	Styles += If(CalendarShowTodayCircle, 0, MCS_NOTODAYCIRCLE)
-            Styles += If(CalendarShowWeekNumbers, MCS_WEEKNUMBERS, 0)
-            Styles += If(CalendarShowTrailingDates, 0, MCS_NOTRAILINGDATES)
-            'Styles += If(IsDesignMode = False, MCS_DAYSTATE, 0)
+        	Styles += If(CalendarShowToday, 0&, MCS_NOTODAY)
+        	Styles += If(CalendarShowTodayCircle, 0&, MCS_NOTODAYCIRCLE)
+            Styles += If(CalendarShowWeekNumbers, MCS_WEEKNUMBERS, 0&)
+            Styles += If(CalendarShowTrailingDates, 0&, MCS_NOTRAILINGDATES)
+            'Styles += If(IsDesignMode = False, MCS_DAYSTATE, 0&)
             Return Styles
         End Function
         
@@ -165,7 +156,7 @@ Class DTPicker
                         CalendarShowWeekNumbers.OnPropertyLet, _
                         CalendarShowTrailingDates.OnPropertyLet
 
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCSTYLE, 0, GetStylesCalendar())
+            SendMessageLngPtr(DTM_SETMCSTYLE, 0, GetStylesCalendar())
         End Sub
         
         Private Sub SyncFormat() _
@@ -190,21 +181,55 @@ Class DTPicker
         	    Handles CustomFormat.OnPropertyLet
 
             If Format = dtpCustom Then
-                WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, DTM_SETFORMATW, 0, StrPtr(CustomFormat))
+                SendMessageLngPtr(DTM_SETFORMATW, 0, StrPtr(CustomFormat))
             Else
-                WinNativeFormsBASE.USER32_SendMessage(RootWindowElement, DTM_SETFORMATW, 0, 0)
+                SendMessageLngPtr(DTM_SETFORMATW, 0, 0)
             End If
+        End Sub
+        
+        Private Sub HandleLoad() _
+                Handles RootWindowElement.Load
+            
+            Dim Opacity As Any = Me.Opacity
+            If ((Opacity >= 0) And (Opacity < 100)) Or (TransparencyKey <> -1) Then
+                SyncOpacity
+            End If
+        End Sub
+        
+        Private Sub SyncOpacity() _ 
+                Handles Opacity.OnPropertyLet, _
+                        TransparencyKey.OnPropertyLet
+            
+            VB.CommonSyncOpacity(Me.TransparencyKey, Me.Opacity, Me.RootWindowElement.Handle)
         End Sub
         
         Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
                 Implements IWindowsControl.Initialize
             
-            ControlContext.SetControlArrayIndex(Me.IndexINIT)
-                
-            Dim styles As Long = GetStyles()
-            Dim extendedStyles As Long
-                
-            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "SysDateTimePick32", vbNullString, styles, extendedStyles, True)
+            Me.InternalStateReset()     ' resets all the base class state
+            
+            Me.IsInitialized = False
+            Me.CachedValue = Empty
+            Me.LastMouseUpX = -1
+            Me.LastMouseUpY = -1
+            Me.LastMouseUpTime = 0
+            
+            With ControlContext.GetSerializer
+                If Not .Deserialize(Me) Then
+                    StartOfWeek = GetSystemDayOfWeek()
+                End If
+                'IsDesignMode = .IsDesignMode
+            End With
+            
+            Dim Opacity As Any = Me.Opacity
+            If Opacity > 100 Then Me.Opacity = 100
+            If Opacity < 0 Then Me.Opacity = 0
+            
+            Dim InitData As WinNativeFormsBASE.WindowCreationData
+            InitData.ClassName = "SysDateTimePick32"
+            InitData.WindowStyles = GetStyles()
+            InitData.SubClass = True
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, InitData)
         End Sub
                 
         Private Sub HandleDestroy() _
@@ -215,6 +240,8 @@ Class DTPicker
             
             ' disconnect anything that causes a circular reference here
             If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+            Set Me.Font = Nothing
+            [_HiddenModule].ResetFirstMethodAccessFlag(Me)
         End Sub
 
         Private Sub Class_Terminate()
@@ -261,7 +288,7 @@ Class DTPicker
             Dim MaxDate As Date = Me.MaxDate
             Dim Value As Variant = Me.Value
                         
-            RootWindowElement.RecreateWindow(GetStyles())
+            RecreateWindow(GetStyles())
 
             Me.CalendarBackColor = CalendarBackColor
             Me.CalendarForeColor = CalendarForeColor
@@ -273,75 +300,62 @@ Class DTPicker
             
         End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get CalendarBackColor() As OLE_COLOR
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, 0))
+            Return SendMessageLng(DTM_GETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let CalendarBackColor(ByVal Value As OLE_COLOR)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, TranslateColor(Value))
+            SendMessageLngPtr(DTM_SETMCCOLOR, DTPickerColorArea.MCSC_MONTHBK, TranslateColor(Value))
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get CalendarForeColor() As OLE_COLOR
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TEXT, 0))
+            Return SendMessageLng(DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TEXT, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let CalendarForeColor(ByVal Value As OLE_COLOR)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TEXT, TranslateColor(Value))
+            SendMessageLngPtr(DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TEXT, TranslateColor(Value))
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get CalendarTitleBackColor() As OLE_COLOR
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, 0))
+            Return SendMessageLng(DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let CalendarTitleBackColor(ByVal Value As OLE_COLOR)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, TranslateColor(Value))
+            SendMessageLngPtr(DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLEBK, TranslateColor(Value))
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get CalendarTitleForeColor() As OLE_COLOR
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, 0))
+            Return SendMessageLng(DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let CalendarTitleForeColor(ByVal Value As OLE_COLOR)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, TranslateColor(Value))
+            SendMessageLngPtr(DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TITLETEXT, TranslateColor(Value))
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get CalendarTrailingForeColor() As OLE_COLOR
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, 0))
+            Return SendMessageLng(DTM_GETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let CalendarTrailingForeColor(ByVal Value As OLE_COLOR)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, TranslateColor(Value))
+            SendMessageLngPtr(DTM_SETMCCOLOR, DTPickerColorArea.MCSC_TRAILINGTEXT, TranslateColor(Value))
         End Property
-        
-        
-        
-
         
         Private Sub HandleMouseDown(ByVal Button As VBRUN.MouseButtonConstants, _
                                         ByVal ShiftState As VBRUN.ShiftConstants, _
                                         ByVal X As Single, ByVal Y As Single) _
                 Handles RootWindowElement.MouseDown
             
+            BeginMouseCapture(RootWindowElement)
             RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
         End Sub
         
@@ -360,12 +374,13 @@ Class DTPicker
                 
             Dim ScaledPixX As Double = (X / Me.ControlContext.GetScaleModePixelsMultiplierX)
             Dim ScaledPixY As Double = (Y / Me.ControlContext.GetScaleModePixelsMultiplierY)
-            Dim PixX As Long = ScaledPixX * Me.RootWindowElement.UnitPixelScale
-            Dim PixY As Long = ScaledPixY * Me.RootWindowElement.UnitPixelScale
+            Dim PixX As Long = CLng(ScaledPixX * Me.RootWindowElement.UnitPixelScale)
+            Dim PixY As Long = CLng(ScaledPixY * Me.RootWindowElement.UnitPixelScale)
             Dim IsDateDblClick As Boolean = False
             
             Dim _X As Single = X
             Dim _Y As Single = Y
+            Dim WasDoubleClick As Boolean = False
             
             If (LastMouseUpX = X) And (LastMouseUpY = Y) Then
                 Dim MouseUpTime As LongLong = GetTickCount()
@@ -373,6 +388,7 @@ Class DTPicker
                 Dim MouseClickTime As LongLong = (MouseUpTime - LastMouseUpTime)
                 If MouseClickTime < dblClickTime Then
                 	RaiseEvent DblClick()
+                    WasDoubleClick = True
                     _X = -1  ' prevent further double click messages
                     _Y = -1
                 End If
@@ -380,10 +396,14 @@ Class DTPicker
             
             RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
 
-            If IsInRect(ScaledPixX, ScaledPixY) Then
-                RaiseEvent Click()
+            If EndMouseCapture() Then
+                If WasDoubleClick = False Then
+                    If IsInRect(ScaledPixX, ScaledPixY) Then
+                        RaiseEvent Click()
+                    End If
+                End If
             End If
-            
+
             LastMouseUpX = _X
             LastMouseUpY = _Y
             LastMouseUpTime = GetTickCount()
@@ -401,11 +421,16 @@ Class DTPicker
             RaiseEvent LostFocus()
         End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
             Return ControlContext.GetForm
         End Property
 
+        [Serialize(False)]
+        Public Property Get Object() As Object
+            Return Me
+        End Property
+        
         Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
                 Handles RootWindowElement.DragOver
             
@@ -417,7 +442,7 @@ Class DTPicker
         End Sub
         
         Public Sub OLEDrag()
-            InternalOLEDrag(Me)
+            CommonOLEDrag(Me)
         End Sub
 
         Private Sub SyncOLEDropMode() _
@@ -426,11 +451,11 @@ Class DTPicker
             BaseSyncOLEDropMode (Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
         End Sub
                   
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get MinDate() As Date
         	Dim dates(0 To 1) As SYSTEMTIME
-            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MIN Then
-                Return DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay)
+            If SendMessageLng(DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MIN Then
+                Return CDate(DateSerial(dates(0).wYear, dates(0).wMonth, dates(0).wDay))
             End If
         End Property
         
@@ -438,49 +463,49 @@ Class DTPicker
         	Dim dates(1) As SYSTEMTIME
             DateToSystemTime(minDate, dates(0))
             DateToSystemTime(maxDate, dates(1))
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_SETRANGE, GDTR_MIN Or GDTR_MAX, VarPtr(dates(0)))
+            SendMessageLngPtr(DTM_SETRANGE, GDTR_MIN Or GDTR_MAX, VarPtr(dates(0)))
         End Sub
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let MinDate(NewValue As Date)
             If Int(NewValue) > Me.MaxDate Then
                 Err.Raise 35775, Description:="The value specified for the MinDate is higher than the current value of MaxDate"
             Else
-                NewValue = Int(NewValue)
+                NewValue = CDate(Int(NewValue))
             End If
             
             If Value < NewValue Then Value = NewValue
             SetDateRange(NewValue, Me.MaxDate)
         End Property
     
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get MaxDate() As Date
         	Dim dates(0 To 1) As SYSTEMTIME
-            If WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MAX Then
-                Return DateSerial(dates(1).wYear, dates(1).wMonth, dates(1).wDay)
+            If SendMessageLng(DTM_GETRANGE, 0, VarPtr(dates(0))) And GDTR_MAX Then
+                Return CDate(DateSerial(dates(1).wYear, dates(1).wMonth, dates(1).wDay))
             End If
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let MaxDate(NewValue As Date)
             If Int(NewValue) < Me.MinDate Then
                 Err.Raise 35775, , "The value specified for MaxDate is lower than the current value of MinDate"
             Else
-                NewValue = Int(NewValue)
+                NewValue = CDate(Int(NewValue))
             End If
             
             If Value > NewValue Then Value = NewValue
         	SetDateRange(Me.MinDate, NewValue)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Get Value() As Variant
             Dim ST As SYSTEMTIME
-            Dim flags As Long = CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_GETSYSTEMTIME, 0, VarPtr(ST)))
+            Dim flags As Long = SendMessageLng(DTM_GETSYSTEMTIME, 0, VarPtr(ST))
             Return SystemTimeToDate(flags, ST)
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Let Value(ByVal NewValue As Variant)
             If IsEmpty(NewValue) Then
                 NewValue = Null
@@ -505,42 +530,42 @@ Class DTPicker
                 If NewValue < Me.MinDate Or NewValue > Me.MaxDate Then
                     Err.Raise 35773, , "Specified date value does not fall within the MinDate and MaxDate properties"
                 End If
-                DateToSystemTime(NewValue, date)
+                DateToSystemTime(CDate(NewValue), date)
             Else
                 Err.Raise 380
             End If
             
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_SETSYSTEMTIME, flag, VarPtr(date))
+            SendMessageLngPtr(DTM_SETSYSTEMTIME, flag, VarPtr(date))
             Me.CachedValue = NewValue
-            RaiseEvent Change
+            If IsInitialized = True Then RaiseEvent Change
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Year() As Integer
-            Return VBA.Year(Me.Value)
+            Return CInt(VBA.Year(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Year(ByVal Value As Integer)
-            Me.Value = DateSerial(Value, VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+            Me.Value = CDate(DateSerial(Value, CInt(VBA.Month(Me.Value)), CInt(VBA.Day(Me.Value))) + TimeSerial(CInt(VBA.Hour(Me.Value)), CInt(VBA.Minute(Me.Value)), CInt(VBA.Second(Me.Value))))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Month() As Integer
-            Return VBA.Month(Me.Value)
+            Return CInt(VBA.Month(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Month(ByVal Value As Integer)
             If Value <= 0 Or Value >= 13 Then Err.Raise 380
-            Me.Value = DateSerial(VBA.Year(Me.Value), Value, VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+            Me.Value = CDate(DateSerial(CInt(VBA.Year(Me.Value)), Value, CInt(VBA.Day(Me.Value))) + TimeSerial(CInt(VBA.Hour(Me.Value)), CInt(VBA.Minute(Me.Value)), CInt(VBA.Second(Me.Value))))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Week() As Integer
             Dim DayOfWeek As VbDayOfWeek = StartOfWeek
-            Dim DateValue As Date = Me.Value
-            Week = DatePart("ww", DateValue, DayOfWeek, vbFirstFourDays)
+            Dim DateValue As Date = CDate(Me.Value)
+            Week = CInt(DatePart("ww", DateValue, DayOfWeek, vbFirstFourDays))
             If Week > 52 Then
                 ' from VBCCR: DatePart function can return wrong week number (see https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/200299)
                 If DatePart("ww", DateAdd("d", 7, DateValue), DayOfWeek, vbFirstFourDays) = 2 Then
@@ -549,65 +574,65 @@ Class DTPicker
             End If
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get hWndCalendar() As LongPtr
-            Return WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(RootWindowElement, DTM_GETMONTHCAL, 0, 0)
+            Return SendMessageLngPtr(DTM_GETMONTHCAL, 0, 0)
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Week(ByVal Value As Integer)
             If Value <= 0 Or Value >= 54 Then Err.Raise 380
             Dim changeDelta As Long = Value - Me.Week
             If changeDelta <> 0 Then Me.Value = DateAdd("ww", changeDelta, Me.Value)
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Day() As Integer
-            Return VBA.Day(Me.Value)
+            Return CInt(VBA.Day(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Day(ByVal Value As Integer)
             If Value <= 0 Or Value > Me.DayCount Then Err.Raise 380
-            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), Value) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), VBA.Second(Me.Value))
+            Me.Value = DateSerial(CInt(VBA.Year(Me.Value)), CInt(VBA.Month(Me.Value)), Value) + TimeSerial(CInt(VBA.Hour(Me.Value)), CInt(VBA.Minute(Me.Value)), CInt(VBA.Second(Me.Value)))
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Hour() As Integer
-            Return VBA.Hour(Me.Value)
+            Return CInt(VBA.Hour(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Hour(ByVal Value As Integer)
             If Value <= 0 Or Value >= 24 Then Err.Raise 380
-            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(Value, VBA.Minute(Me.Value), VBA.Second(Me.Value))
+            Me.Value = DateSerial(CInt(VBA.Year(Me.Value)), CInt(VBA.Month(Me.Value)), CInt(VBA.Day(Me.Value))) + TimeSerial(Value, CInt(VBA.Minute(Me.Value)), CInt(VBA.Second(Me.Value)))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Minute() As Integer
-            Return VBA.Minute(Me.Value)
+            Return CInt(VBA.Minute(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Minute(ByVal Value As Integer)
             If Value <= 0 Or Value >= 60 Then Err.Raise 380
-            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), Value, VBA.Second(Me.Value))
+            Me.Value = DateSerial(CInt(VBA.Year(Me.Value)), CInt(VBA.Month(Me.Value)), CInt(VBA.Day(Me.Value))) + TimeSerial(CInt(VBA.Hour(Me.Value)), Value, CInt(VBA.Second(Me.Value)))
         End Property
                     
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Second() As Integer
-            Return VBA.Second(Me.Value)
+            Return CInt(VBA.Second(Me.Value))
         End Property
 
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Second(ByVal Value As Integer)
             If Value <= 0 Or Value >= 60 Then Err.Raise 380
-            Me.Value = DateSerial(VBA.Year(Me.Value), VBA.Month(Me.Value), VBA.Day(Me.Value)) + TimeSerial(VBA.Hour(Me.Value), VBA.Minute(Me.Value), Value)
+            Me.Value = CDate(DateSerial(CInt(VBA.Year(Me.Value)), CInt(VBA.Month(Me.Value)), CInt(VBA.Day(Me.Value))) + TimeSerial(CInt(VBA.Hour(Me.Value)), CInt(VBA.Minute(Me.Value)), Value))
         End Property
                             
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get DayCount() As Long
-            Return VBA.Day(DateSerial(Me.Year, Me.Month + 1, 0))
+            Return CLng(VBA.Day(DateSerial(Me.Year, Me.Month + 1, 0)))
         End Property
         
         Private Sub SyncStartOfWeek() _
@@ -618,12 +643,12 @@ Class DTPicker
             WinNativeFormsBASE.WindowsAPI.SendMessageW(Me.hWndCalendar, MCM_SETFIRSTDAYOFWEEK, 0, (startWeek + 5) Mod 7)
         End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get DayOfWeek() As VbDayOfWeek
-            Return Weekday(Me.Value)
+            Return CType(Of VbDayOfWeek)(Weekday(Me.Value))
         End Property
 
-        Public Function SystemTimeToDate(flags As Long, st As SYSTEMTIME) As Variant
+        Private Function SystemTimeToDate(flags As Long, st As SYSTEMTIME) As Variant
             If flags = GDT_VALID Then
             	With st
                 	Return DateSerial(st.wYear, st.wMonth, st.wDay) + TimeSerial(st.wHour, st.wMinute, st.wSecond)
@@ -633,19 +658,19 @@ Class DTPicker
             End If
         End Function
         
-        Public Sub DateToSystemTime(ByVal Value As Date, st As SYSTEMTIME)
+        Private Sub DateToSystemTime(ByVal Value As Date, st As SYSTEMTIME)
         	With st
-                .wYear = VBA.Year(Value)
-                .wMonth = VBA.Month(Value)
-                .wDay = VBA.Day(Value)
-                .wDayOfWeek = VBA.Weekday(Value)
-                .wHour = VBA.Hour(Value)
-                .wMinute = VBA.Minute(Value)
-                .wSecond = VBA.Second(Value)
+                .wYear = CInt(VBA.Year(Value))
+                .wMonth = CInt(VBA.Month(Value))
+                .wDay = CInt(VBA.Day(Value))
+                .wDayOfWeek = CInt(VBA.Weekday(Value))
+                .wHour = CInt(VBA.Hour(Value))
+                .wMinute = CInt(VBA.Minute(Value))
+                .wSecond = CInt(VBA.Second(Value))
             End With
         End Sub
         
-        Public Function IsDateNullEqual(date1 As Variant, date2 As Variant) As Boolean
+        Private Function IsDateNullEqual(date1 As Variant, date2 As Variant) As Boolean
         	If IsNull(date1) Then
             	If IsNull(date2) Then
                 	Return True
@@ -692,7 +717,7 @@ Class DTPicker
                 Dim hDC As LongPtr = WinNativeFormsBASE.GetDC(RootWindowElement.Handle)
                 Dim font As stdole.IFont = Me.Font
                 Dim hFontOld As LongPtr = WinNativeFormsBASE.SelectObject(hDC, font.hFont)
-                GetTextExtentPoint32W(hDC, String(Size, "W"), Size, .szMax)
+                GetTextExtentPoint32W(hDC, String$(Size, "W"), Size, .szMax)
                 If hFontOld <> 0 Then WinNativeFormsBASE.SelectObject(hDC, hFontOld)
                 WinNativeFormsBASE.ReleaseDC(RootWindowElement.Handle, hDC)
             End With
@@ -714,8 +739,8 @@ Class DTPicker
                 If .pszFormat <> 0 Then
                     Dim CallbackFieldId As String = WinNativeFormsBASE.SysAllocString(.pszFormat)
                 End If
-                Dim CallbackDate As Date = SystemTimeToDate(GDT_VALID, .ST)
-                RaiseEvent CallbackKeyDown(.nVirtKey And &HFF, GetShiftState(), CallbackFieldId, CallbackDate)
+                Dim CallbackDate As Date = CDate(SystemTimeToDate(GDT_VALID, .ST))
+                RaiseEvent CallbackKeyDown(CInt(.nVirtKey And &HFF), CInt(GetShiftState()), CallbackFieldId, CallbackDate)
                 DateToSystemTime(CallbackDate, .ST)
             End With
         End Sub
@@ -742,6 +767,11 @@ Class DTPicker
                 Handles RootWindowElement.Validate
 
             RaiseEvent Validate(Cancel)
+        End Sub
+        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
         End Sub
     
     #End Region

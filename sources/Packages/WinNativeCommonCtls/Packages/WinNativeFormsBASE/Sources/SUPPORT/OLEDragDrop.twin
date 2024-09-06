@@ -36,7 +36,7 @@ Module OLEDragDrop
             If IsFileList = True Then
                 _dataObject.SetData(, vbCFFiles)
                 Dim filePath As String
-                For Each filePath In Split(AutoSetValue, vbCrLf)
+                For Each filePath In Split(CStr(AutoSetValue), vbCrLf)
                     _dataObject.Files.Add(filePath)
                 Next
             Else

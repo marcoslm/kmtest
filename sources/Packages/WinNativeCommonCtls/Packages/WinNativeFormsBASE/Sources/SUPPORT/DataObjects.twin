@@ -1,17 +1,27 @@
-[ InterfaceId ("A40D839D-B1EF-475E-96C7-333CB5E2B977") ]
-[ COMCreatable (False) ]
+[InterfaceId("A40D839D-B1EF-475E-96C7-333CB5E2B977")]
+[COMCreatable(False)]
 Private Class DataObjectReadOnly
     Implements DataObject
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function SysAllocStringLen Lib "oleaut32" (ByVal CopyFrom As LongPtr, ByVal Length As Long) As String
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function SysAllocStringByteLen Lib "oleaut32" (ByVal CopyFrom As LongPtr, ByVal Length As Long) As String
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function SysAllocString Lib "oleaut32" (ByVal CopyFrom As LongPtr) As String
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal uFlags As Long, ByVal dwBytes As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalSize Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalLock Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalUnlock Lib "kernel32" (ByVal hMem As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function OleCreatePictureIndirect Lib "oleaut32" (ByRef lpPictDesc As Any, ByVal riid As LongPtr, ByVal fOwn As Long, ByRef outObject As Any) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function MultiByteToWideChar Lib "kernel32" (ByVal CodePage As Long, ByVal dwFlags As Long, ByVal lpMultiByteStr As LongPtr, ByVal cchMultiByte As Long, ByVal lpWideCharStr As LongPtr, ByVal cchWideChar As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Sub ReleaseStgMedium Lib "ole32" (ByRef medium As STGMEDIUM)
 
     Type GUID2
@@ -33,7 +43,7 @@ Private Class DataObjectReadOnly
         hMF As LongPtr      ' HMETAFILE
     End Type
     
-    [ PackingAlignment (1) ]
+    [PackingAlignment(1)]
     Type BMP_HEADER
     	bfType As Integer
         bfSize As Long
@@ -94,18 +104,18 @@ Private Class DataObjectReadOnly
     	Err.Raise 425, , "Invalid object use"
     End Sub
     
-    Private Sub DataObject_SetData(Optional ByVal Value As Variant, [ TypeHint (ClipboardConstants) ] Optional ByVal Format As Variant) _
+    Private Sub DataObject_SetData(Optional ByVal Value As Variant, [TypeHint(ClipboardConstants)] Optional ByVal Format As Variant) _
             Implements DataObject.SetData
             
     	Err.Raise 425, , "Invalid object use"
     End Sub
     
-    Private Function DataObject_GetData([ TypeHint (ClipboardConstants) ] ByVal sFormat As Integer) As Variant _
+    Private Function DataObject_GetData([TypeHint(ClipboardConstants)] ByVal sFormat As Integer) As Variant _
             Implements DataObject.GetData
 
     	If sFormat = ClipboardConstants.vbCFText Then
             ' Always try to get unicode text where possible...
-        	sFormat = ClipboardConstants.vbCFUnicodeText
+        	sFormat = CInt(ClipboardConstants.vbCFUnicodeText)
         End If
         
         Dim _format As FORMATETC
@@ -139,7 +149,7 @@ Private Class DataObjectReadOnly
         
         If TryGetData(_format, _medium) = False Then
         	If sFormat = ClipboardConstants.vbCFUnicodeText Then
-                sFormat = ClipboardConstants.vbCFText
+                sFormat = CInt(ClipboardConstants.vbCFText)
                 GoTo TryAgain
             ElseIf _format.tymed = TYMED.TYMED_HGLOBAL Then
                 _format.tymed = TYMED.TYMED_ISTREAM ' Allow IStream as an alternative for any HGLOBAL expected type
@@ -178,7 +188,7 @@ Private Class DataObjectReadOnly
                 _medium.unionData = 0           ' we took ownership
             Case TYMED.TYMED_GDI
                 ' try to get the palette...
-                _format.cfFormat = vbCFPalette
+                _format.cfFormat = CInt(vbCFPalette)
                 Dim _medium2 As STGMEDIUM
                 On Error Resume Next
                 InternalObject.GetData _format, _medium2
@@ -205,14 +215,15 @@ Private Class DataObjectReadOnly
                     Case ClipboardConstants.vbCFText, ClipboardConstants.vbCFRTF
                         retVal = SysAllocStringByteLen(unionData, CLng(unionDataLen))
                         retVal = StrConv(retVal, vbUnicode)
-                        retVal = SysAllocString(StrPtr(retVal))     ' if null char inside data, then that is the terminator
+                        retVal = SysAllocString(StrPtr(CStr(retVal)))     ' if null char inside data, then that is the terminator
                     Case ClipboardConstants.vbCFUnicodeText
                         retVal = SysAllocStringByteLen(unionData, CLng(unionDataLen))
-                        retVal = SysAllocString(StrPtr(retVal))     ' if null char inside data, then that is the terminator
+                        retVal = SysAllocString(StrPtr(CStr(retVal)))     ' if null char inside data, then that is the terminator
                     Case ClipboardConstants.vbCFFiles
                         retVal = FilesListToArray(unionData)
                     Case Else
                         ' return a byte array (VBx doesn't do this)
+                        Dim retVal2() As Byte
                         ReDim retVal2(CLng(unionDataLen) - 1) As Byte
                         WinNativeFormsBASE.RtlMoveMemory(VarPtr(retVal2(0)), unionData, unionDataLen)
                         retVal = retVal2
@@ -230,7 +241,7 @@ Private Class DataObjectReadOnly
         Return retVal
     End Function
     
-    Private Function DataObject_GetFormat([ TypeHint (ClipboardConstants) ] ByVal sFormat As Integer) As Boolean _
+    Private Function DataObject_GetFormat([TypeHint(ClipboardConstants)] ByVal sFormat As Integer) As Boolean _
             Implements DataObject.GetFormat
             
     	Dim supportedFormat As DataObjectFormat
@@ -245,7 +256,7 @@ Private Class DataObjectReadOnly
             
         On Error GoTo Unsupported
     	AllowFilesArray = True
-            Dim ArrayOfFiles As Variant = DataObject_GetData(ClipboardConstants.vbCFFiles)
+            Dim ArrayOfFiles As Variant = DataObject_GetData(CInt(ClipboardConstants.vbCFFiles))
         AllowFilesArray = False
         Return New DataObjectFilesReadOnly(ArrayOfFiles)
         Exit Function
@@ -276,7 +287,7 @@ Private Class DataObjectReadOnly
     	Dim supportedFormat As DataObjectFormat
         For Each supportedFormat In DataObject_AvailableFormats
             If supportedFormat.Name = Format Then
-                Return DataObject_GetData(supportedFormat.FormatType)
+                Return DataObject_GetData(CInt(supportedFormat.FormatType))
             End If
         Next
         Err.Raise 5
@@ -287,7 +298,7 @@ Private Class DataObjectReadOnly
         Dim readAmount As Long
         
         Dim s As WinNativeFormsBASE.IStream
-        Set s = ObjPtrToObject(istreamPtr)
+        Set s = CType(Of WinNativeFormsBASE.IStream)(ObjPtrToObject(istreamPtr))
         
         Const GMEM_MOVEABLE As Long = 2
         With s
@@ -320,7 +331,7 @@ Private Class DataObjectReadOnly
     Private Function TryGetData(ByRef format As FORMATETC, ByRef medium As STGMEDIUM) As Boolean
     	On Error Resume Next
         InternalObject.GetData(format, medium)
-        Return Err.LastHResult >= 0
+        Return Err.LastHresult >= 0
     End Function
     
     Private Function FilesListToArray(header As DROPFILES) As Variant
@@ -329,6 +340,7 @@ Private Class DataObjectReadOnly
         Dim FileLen As Long
         Dim ProcessFilesList_BufCount As Long = 64
         Dim ProcessFilesList_Count As Long = 0
+        Dim retVal() As String
         ReDim retVal(ProcessFilesList_BufCount - 1) As String
         
         Do
@@ -410,7 +422,7 @@ Private Class DataObjectReadOnly
     End Sub
 End Class
 
-[ InterfaceId ("00020404-0000-0000-C000-000000000046") ]        ' IEnumVARIANT
+[InterfaceId("00020404-0000-0000-C000-000000000046")]        ' IEnumVARIANT
 NotDispatchable Private Class SimpleArrayEnumerator
     Private ArrayData As Variant
     Private Index As Long
@@ -454,8 +466,8 @@ NotDispatchable Private Class SimpleArrayEnumerator
     End Sub
 End Class
 
-[ InterfaceId ("E9184B83-C2FF-418A-B724-7F7DEAB14D8B") ]
-[ COMCreatable (False) ]
+[InterfaceId("E9184B83-C2FF-418A-B724-7F7DEAB14D8B")]
+[COMCreatable(False)]
 Private Class DataObjectFilesReadOnly
     Implements DataObjectFiles
     
@@ -468,7 +480,7 @@ Private Class DataObjectFilesReadOnly
     	If (Index < 0) Or (Index > UBound(Me.ArrayOfFiles)) Then
         	Err.Raise 5
     	End If
-        Return Me.ArrayOfFiles(Index)
+        Return CStr(Me.ArrayOfFiles(Index))
     End Function
     
     Private Property Get DataObjectFiles_Count() As Long _
@@ -495,7 +507,7 @@ Private Class DataObjectFilesReadOnly
     	Err.Raise 5
     End Sub
     
-    [ Enumerator ]
+    [Enumerator]
     Private Function DataObjectFiles_NewEnum() As stdole.IUnknown _
             Implements DataObjectFiles.[_NewEnum]
             
@@ -507,8 +519,8 @@ Private Class DataObjectFilesReadOnly
     End Sub
 End Class
 
-[ COMCreatable (False) ]
-[ InterfaceId ("D36E54B7-7161-406A-80A2-90A3ED9DB5B3") ]
+[COMCreatable(False)]
+[InterfaceId("D36E54B7-7161-406A-80A2-90A3ED9DB5B3")]
 Public Class DataObjectFormatReadOnly
     Implements DataObjectFormat
 
@@ -599,8 +611,8 @@ Public Class DataObjectFormatReadOnly
     End Sub
 End Class
 
-[ COMCreatable (False) ]
-[ InterfaceId ("4D7D556C-E736-49B3-BDBC-FCC5AB388E1B") ]
+[COMCreatable(False)]
+[InterfaceId("4D7D556C-E736-49B3-BDBC-FCC5AB388E1B")]
 Public Class DataObjectFormatsReadOnly
     Implements DataObjectFormats
     
@@ -621,11 +633,11 @@ Public Class DataObjectFormatsReadOnly
     	Return UBound(Me.InternalArray) + 1
     End Property
     
-    [ Enumerator ]
+    [Enumerator]
     Private Function DataObjectFormats_NewEnum() As Variant _
             Implements DataObjectFormats.[_NewEnum]
             
-    	Return New SimpleArrayEnumerator(Me.InternalArray)
+    	Return CVar(New SimpleArrayEnumerator(Me.InternalArray))
     End Function
     
     Public Sub New(InternalObject As IDataObject)
@@ -642,7 +654,7 @@ Public Class DataObjectFormatsReadOnly
             Dim supportedFormat As FORMATETC
             Dim fetched As Long
         	enumerator.Next(1, supportedFormat, fetched)
-            If Err.LastHResult = WinNativeFormsBASE.S_FALSE Then Exit While
+            If Err.LastHresult = WinNativeFormsBASE.S_FALSE Then Exit While
             If fetched <> 1 Then Exit While
             
             Count += 1
@@ -650,7 +662,7 @@ Public Class DataObjectFormatsReadOnly
                 BufCount *= 2
                 ReDim Preserve Me.InternalArray(BufCount - 1)
             End If
-            Set Me.InternalArray(Count - 1) = New DataObjectFormatReadOnly(supportedFormat.cfFormat, supportedFormat.dwAspect, supportedFormat.lindex, supportedFormat.tymed)
+            Set Me.InternalArray(Count - 1) = New DataObjectFormatReadOnly(CType(Of ClipboardConstants)(supportedFormat.cfFormat), CType(Of AspectTypeConstants)(supportedFormat.dwAspect), supportedFormat.lindex, CType(Of StorageTypeContants)(supportedFormat.tymed))
         Wend
         
         ' Truncate to actual size...

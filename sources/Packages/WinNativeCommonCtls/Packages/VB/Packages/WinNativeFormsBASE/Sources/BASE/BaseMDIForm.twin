@@ -1,0 +1,279 @@
+[ClassId("160C7415-00F6-4168-9B1C-208EB798FF85")]
+[InterfaceId("7351D838-71D6-4F4D-BACC-CD1D4CA98F0F")]
+[COMCreatable(False)]
+Private Class BaseMDIForm
+
+    Implements BaseControlRect Via BaseControlRect
+    Implements IWindowsFormBase
+    
+    [Serialize(False)]
+        Private FormControlContext As WindowsControls.WindowsFormContext
+    [Serialize(False)]
+        Private WithEvents RootWindowElementBaseEvents As WindowsControls.WindowElement
+    [Description("A unique GUID that is used for associating a class with a form")]
+        Public FormDesignerId As String             ' FIXME should support GUID datatype
+    [Description("")]
+    [Serialize(True, "MousePointer")]
+        Private MousePointerINIT As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+    [Serialize(True, "MouseIcon")]
+    [CustomDesigner("designer_IconBytes")]
+        Private ReadOnly MouseIconINIT() As Byte
+        Private InternalIgnoreShowWindow As Boolean
+    
+    [Description("")]
+    [Serialize(True, "StartUpPosition")]
+        Private ReadOnly StartUpPositionINIT As StartUpPositionConstants = StartUpPositionConstants.vbStartUpWindowsDefault
+    [Description("")]
+        Public Moveable As Boolean = True
+    [Description("")]
+        ' Exists in VB6, but doesn't seem to have an effect on forms.
+        Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+    [Description("Adjusts the visibility of this control at runtime")]
+    [Serialize(True, "Visible")]
+        Private VisibleINIT As Boolean = True
+    [Description("")]
+    [Serialize(True, "Enabled")]
+        Private EnabledINIT As Boolean = True
+    [Description("")]
+    [Serialize(True, "Caption")]
+        Private CaptionINIT As String
+    [Serialize(True, "WindowState")]
+        Private InternalWindowState As FormWindowStateConstants = FormWindowStateConstants.vbNormal
+    
+    Sub New()
+        'Debug.Print "BaseForm.New"
+        Me.VisibleINIT = True
+        Me.EnabledINIT = True
+        
+        Set Me.BaseControlRect = New BaseControlRect(ControlTypeConstants.vbForm)
+    End Sub
+    
+    Friend Sub InternalStateReset()
+        InternalIgnoreShowWindow = False
+        Me.BaseControlRect.InternalStateReset()
+    End Sub
+        
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                                ByRef InitData As WindowCreationData) As WindowElement
+        InitData.Caption = Me.CaptionINIT
+        InitData.BaseControlInfoPtr = InternalBaseControlBeforeCreateRootWindow(InitData)
+        With CType(Of BaseControlInfo)(InitData.BaseControlInfoPtr)
+            .StartUpPosition = StartUpPositionINIT
+            .InitialFormWindowState = InternalWindowState
+            .FormBorderStyle = vbSizable
+            .MousePointer = MousePointerINIT
+            .ControlArrayIndex = -1
+        End With
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.FormControlContext = CType(Of WindowsFormContext)(_ControlContext)
+        InitData.WindowStyles += If(Me.EnabledINIT, 0&, WS_DISABLED) + _
+                                    If(Me.VisibleINIT, WS_VISIBLE, 0&)
+        Dim RootWindowElementBase As Any = CType(Of WindowElement)(ControlContext.CreateWindowElement(InitData))
+        Set Me.RootWindowElementBase = RootWindowElementBase
+        Set Me.RootWindowElementBaseEvents = RootWindowElementBase
+        
+        IgnoreMousePointerChanged = True
+        CommonLoadPictureInit(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon, Me.MouseIconINIT)
+        IgnoreMousePointerChanged = False
+        Return RootWindowElementBase
+    End Function
+        
+    [Serialize(False)]
+    Public Property Get WindowState() As FormWindowStateConstants
+        Return InternalWindowState
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let WindowState(ByVal Value As FormWindowStateConstants)
+        InternalWindowState = Value
+        If Me.Visible = True Then
+            'Dim info As String = "WindowStateChanged: " & WindowState
+            'Debug.Print info
+            InternalSyncWindowState
+            'Debug.Print info & " [DONE]"
+        End If
+    End Property
+
+    Private Sub InternalSyncWindowStateToHwnd() _
+            Handles RootWindowElementBaseEvents.PreResize
+            
+        'MsgBox "InternalSyncWindowStateToHwnd(1)"
+ 
+        If InternalIgnoreShowWindow = True Then Exit Sub
+        'Debug.Print "InternalSyncWindowStateToHwnd(ResizeEvent)... STARTED"
+        
+        'MsgBox "InternalSyncWindowStateToHwnd(2)"
+        
+        If Me.Visible = True Then
+            'MsgBox "InternalSyncWindowStateToHwnd(2)"
+            
+            Dim placement As WINDOWPLACEMENT = USER32_GetWindowPlacement(Me.RootWindowElementBase)
+            Dim newWindowState As FormWindowStateConstants
+            Select Case placement.showCmd
+                Case SW_SHOWMAXIMIZED
+                    newWindowState = FormWindowStateConstants.vbMaximized
+                Case SW_SHOWMINIMIZED
+                    newWindowState = FormWindowStateConstants.vbMinimized
+                Case Else
+                    newWindowState = FormWindowStateConstants.vbNormal
+            End Select
+            InternalWindowState = newWindowState
+        End If
+    
+        'Debug.Print "InternalSyncWindowStateToHwnd(ResizeEvent): " & WindowState & " [DONE]"
+    End Sub
+    
+    Private Sub InternalSyncWindowState() _
+            Handles RootWindowElementBaseEvents.ShowWindow
+        
+        'Debug.Print "InternalSyncWindowState(ShowWindowEvent)... STARTED"
+        
+        If Me.InternalIgnoreShowWindow = True Then Exit Sub
+
+        Dim RootWindowElementBase As Any = Me.RootWindowElementBase
+        Dim placement As WINDOWPLACEMENT = USER32_GetWindowPlacement(RootWindowElementBase)
+        Select Case InternalWindowState
+            Case FormWindowStateConstants.vbMaximized
+                placement.showCmd = SW_SHOWMAXIMIZED
+            Case FormWindowStateConstants.vbMinimized
+                placement.showCmd = SW_SHOWMINIMIZED
+            Case FormWindowStateConstants.vbNormal
+                placement.showCmd = SW_SHOWNORMAL
+            Case Else
+                Err.Raise 5
+        End Select
+        Me.InternalIgnoreShowWindow = True
+        USER32_SetWindowPlacement(RootWindowElementBase, placement)
+        Me.InternalIgnoreShowWindow = False
+        
+        'Debug.Print "InternalSyncWindowState(ShowWindowEvent): " & WindowState & " [DONE]"
+    End Sub
+    
+    Friend Function Handle() As LongPtr
+        Return CommonGetHWND()
+    End Function
+    
+    [Serialize(False)]
+    [Description("")]
+    Property Get Caption() As String
+        Return GetWindowTextCtl()
+    End Property
+    
+    [Serialize(False)]
+    [Description("")]
+    Property Let Caption(Value As String)
+        LetWindowTextCtl(Value)
+    End Property
+        
+    [Serialize(False)]
+    [Description("")]
+    Property Get Enabled() As Boolean
+        Return CommonGetEnabled()
+    End Property
+    
+    [Serialize(False)]
+    [Description("")]
+    Property Let Enabled(Value As Boolean)
+        CommonLetEnabled(Value)
+    End Property
+    
+    [Serialize(False)]
+    [Description("Adjusts the visibility of this control at runtime")]
+    Property Get Visible() As Boolean
+        Return GetStyleFlagCtl(WS_VISIBLE)
+    End Property
+    
+    [Serialize(False)]
+    [Description("Adjusts the visibility of this control at runtime")]
+    Property Let Visible(Value As Boolean)
+        If Me.Visible <> Value Then
+            If Value = True Then
+                Me.Show vbModeless
+                Refresh()
+            Else
+                WindowsAPI.ShowWindow(Me.Handle, SW_HIDE)
+            End If
+        End If
+    End Property
+    
+    Sub Hide()
+        Visible = False
+    End Sub
+
+    Sub Refresh()
+        CommonRefresh()
+    End Sub
+
+    Public Sub Show([TypeHint(FormShowConstants)] Optional ByVal Modal As Variant, Optional ByVal OwnerForm As Variant)
+        If IsMissing(Modal) Then Modal = vbModeless
+        If IsMissing(OwnerForm) Then Set OwnerForm = Nothing
+        Me.FormControlContext.Show(Modal = vbModal, OwnerForm)
+    End Sub
+            
+    Public Sub Close()
+        Me.FormControlContext.Close()
+    End Sub
+
+    Friend Sub BaseSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, ByRef DragDropHandler As OLEDragDropHandler, ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+        CommonSyncOLEDropMode(RootThis, OLEDropMode, DragDropHandler, ControlContext, RootWindowElementBase, IsContainer, AllowedAutomatic)
+    End Sub
+    
+    Public Sub ZOrder([TypeHint(ZOrderConstants)] Optional ByVal Position As Variant)
+        CommonZOrder(Position, Handle)
+    End Sub
+        
+    [Serialize(False)]
+    Public Property Get MouseIcon() As StdPicture
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon
+    End Property
+
+    [Serialize(False)]
+    Public Property Set MouseIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+        CommonMousePointerChanged()
+    End Property
+
+    [Serialize(False)]
+    Public Property Let MouseIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+        CommonMousePointerChanged()
+    End Property
+                        
+    [Serialize(False)]
+    Public Property Get hWnd() As LongPtr
+        Return CommonGetHWND()
+    End Property
+
+    Public Sub SyncMoveable() _
+            Handles Moveable.OnPropertyLet
+        Me.RootWindowElementBase.MoveableChanged(Me.Moveable)
+    End Sub
+    
+    Private Property Get HandleGetFlags() As WindowsControls.EnumIWindowsControlFlags _
+            Implements IWindowsFormBase.GetFlags
+        Return If(Me.VisibleINIT, EnumIWindowsControlFlags.VisibleAtInitialization, 0&)
+    End Property
+     
+    [Serialize(False)]
+    Public Property Get StartUpPosition() As StartUpPositionConstants
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).StartUpPosition
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get MousePointer() As MousePointerConstants
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let MousePointer(ByVal Value As MousePointerConstants)
+        CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer = Value
+        CommonMousePointerChanged()
+    End Property
+    
+    [Serialize(False), Description("A collection of all controls attached to this form")]
+    [TypeHint(WindowsControlsCollection)]
+    Public Property Get Controls() As Object        ' WindowsControls.WindowsControlsCollection  changed to Object to avoid unnecessary COM exposure of WindowsControls.WindowsControlsCollection
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ChildControlsWEAK
+    End Property
+End Class

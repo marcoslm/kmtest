@@ -1,0 +1,24 @@
+Private Module ImagesHelper
+
+    [UseGetLastError(False), DLLStackCheck(False)]
+    Private Declare PtrSafe Function GetObjectW Lib "gdi32" (ByVal hObject As LongPtr, ByVal nCount As Long, ByRef lpObject As Any) As Long
+    
+    Private Type BITMAP
+        BMType As Long
+        BMWidth As Long
+        BMHeight As Long
+        BMWidthBytes As Long
+        BMPlanes As Integer
+        BMBitsPixel As Integer
+        BMBits As LongPtr
+    End Type
+
+    Function GetBitsPerPixelFromPic(pic As StdPicture) As Long
+        Dim Bmp As BITMAP
+        If pic.Handle <> 0 Then
+            GetObjectW(pic.Handle, LenB(Bmp), Bmp)
+        End If
+        Return Bmp.BMBitsPixel
+    End Function
+
+End Module

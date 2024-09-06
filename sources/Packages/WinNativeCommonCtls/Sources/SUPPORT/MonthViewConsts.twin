@@ -7,7 +7,7 @@ Module MonthViewConsts
         MCS_NOTODAYCIRCLE = &H0008
         MCS_NOTODAY = &H0010
         MCS_NOTRAILINGDATES = &H0040
-        MCS_SHORTDAYSOFWEEK = &H0080
+        MCS_SHORTDAYSOFWEEK = &H0080 
         MCS_NOSELCHANGEONNAV = &H0100
     End Enum
     
@@ -104,7 +104,7 @@ Module MonthViewConsts
     
     Public Type MCHITTESTINFO
         cbSize As Long
-        PT As WinNativeFormsBase.POINT
+        PT As WinNativeFormsBASE.POINT
         uHit As MonthViewHitTestValues
         ST As SYSTEMTIME
     End Type

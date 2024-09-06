@@ -1,10 +1,20 @@
 
-[ InterfaceId ("FCFB3D25-A0FA-1068-A738-08002B3371B5") ]
-[ COMExtensible ]   ' turns off TYPEFLAG_FNONEXTENSIBLE, making this essentially the same as Object
+[InterfaceId("FCFB3D25-A0FA-1068-A738-08002B3371B5")]
+[COMExtensible]   ' turns off TYPEFLAG_FNONEXTENSIBLE, making this essentially the same as Object
 Private Interface Control
 End Interface
 
-[ InterfaceId ("F090D785-19CB-4910-A6F0-7B70CE8F0570") ]
+[InterfaceId("F090D785-19CB-4910-A6F0-7B70CE8F0570")]
 Private Interface IScheduledCallback Extends stdole.IUnknown
 	Sub Execute()
+End Interface
+ 
+[InterfaceId("C91431A3-9CEC-47C8-9406-31D66BB31CA4")]       ' FIXME copy also in VB namespace
+Private Interface ITwinBasicDesignerExtensions Extends stdole.IUnknown
+    Sub GetPropertyExtensions(ByRef out() As String)
+    Sub InvokePropertyExtension(ByVal Name As String)
+    Sub DesignTimePrepareSnapshot()
+    Function GetClientObject() As Object
+    Sub DesignerClick(ByVal X As Long, ByVal Y As Long)
+    Sub GetIViewObject(ByRef out As stdole.IUnknown, ByRef outRect As WinNativeFormsBASE.RECT, ByRef outIsVisible As Boolean)
 End Interface

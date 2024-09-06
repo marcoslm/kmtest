@@ -1,15 +1,15 @@
-[ WindowsControl ("/miscellaneous/ICONS??/ProgressBar??.png") ]
-[ ClassId ("60728020-5535-491E-BEDE-449A3CDE96EA") ]
-[ InterfaceId ("59880EA4-ED08-4DF7-8B8D-2F820FC3A395") ]
-[ COMCreatable (False) ]
-[ EventsUseDispInterface ]
+[WindowsControl("/miscellaneous/ICONS??/ProgressBar??.png")]
+[ClassId("60728020-5535-491E-BEDE-449A3CDE96EA")]
+[InterfaceId("59880EA4-ED08-4DF7-8B8D-2F820FC3A395")]
+[COMCreatable(False)]
+[EventsUseDispInterface]
 Class ProgressBar
 	
 	#Region "INHERITANCE"
 
-        [ WithDispatchForwarding ] Implements Control
+        [WithDispatchForwarding] Implements Control
         Implements WindowsControls.IWindowsControl
-        Implements WinNativeFormsBase.BaseControlFocusable Via _BaseControl = New WinNativeFormsBase.BaseControlFocusable(ControlTypeConstants.vbProgressBar)
+        [ImplementsViaPrivateFriendlies] Implements WinNativeFormsBASE.BaseControlNotFocusable2 Via _BaseControl = New WinNativeFormsBASE.BaseControlNotFocusable2(ControlTypeConstants.vbProgressBar)
         
     #End Region
     
@@ -32,61 +32,71 @@ Class ProgressBar
         
     #Region "STATE"
     
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Description ("") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Description("")]
             Public BackColor As OLE_COLOR = VBRUN.SystemColorConstants.vbButtonFace
-        [ CustomDesigner ("designer_SpectrumWindows") ]
-        [ Description ("") ]
+        [CustomDesigner("designer_SpectrumWindows")]
+        [Description("")]
             Public ForeColor As OLE_COLOR = VBRUN.SystemColorConstants.vbHighlight
 
-        [ Description ("") ]
+        [Description("")]
             Public MarqueeAnimation As Boolean = False
-        [ Description ("") ]
+        [Description("")]
             Public MarqueeSpeed As Long = 80
-        [ Description ("") ]
+        [Description("")]
             Public State As PrbState = PrbState.PrbStateNormal
-        [ Description ("") ]
+        [Description("")]
             Public SmoothReverse As Boolean = False
-        [ Description ("") ]
+        [Description("")]
             Public Orientation As PrbOrientation = PrbOrientation.PrbOrientationHorizontal
-        [ Description ("") ]
+        [Description("")]
             Public Scrolling As PrbScrolling = PrbScrolling.PrbScrollingStandard
-        [ CustomDesigner ("designer_RestrictedOLEDropMode") ]
+        [CustomDesigner("designer_RestrictedOLEDropMode")]
             Public OLEDropMode As VBRUN.OLEDropConstants
+            
+        [Description("Opacity, given as a percentage, 0 - 100.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public Opacity As Double = 100
+        
+        [CustomDesigner("designer_SpectrumWindowsOrClear")]
+        [Description("A color, when set, that will appear fully transparent in the window.  REQUIRES TARGET OS 6.2+ FOR CHILD CONTROLS.")]
+            Public TransparencyKey As OLE_COLOR = -1
+        
 
         Private WithEvents RootWindowElement As WindowsControls.WindowElement
         Private OLEDragDropHandler As WinNativeFormsBASE.OLEDragDropHandler
 
-        [ Serialize (True, "Min") ]
+        [Serialize(True, "Min")]
             Private Min_INIT As Long = 0
-        [ Serialize (True, "Max") ]
+        [Serialize(True, "Max")]
             Private Max_INIT As Long = 100
-        [ Serialize (True, "Value") ]
+        [Serialize(True, "Value")]
             Private Value_INIT As Long = 40
-        [ Serialize (True, "Step") ]
+        [Serialize(True, "Step")]
             Private Step_INIT As Long = 10
             
+        Private IsInitialized As Boolean
+                        
     #End Region
 
     #Region "EVENTS"
     
-        [ Description ("") ]
+        [Description("")]
             Event Change()
-        [ Description ("") ]
+        [Description("")]
             Event Click()
-        [ Description ("") ]
+        [Description("")]
             Event DblClick()
-        [ Description ("") ]
+        [Description("")]
             Event MouseDown(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseMove(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event Initialize()
-        [ Description ("") ]
+        [Description("")]
             Event DragDrop(Source As Control, X As Single, Y As Single)
-        [ Description ("") ]
+        [Description("")]
             Event DragOver(Source As Control, X As Single, Y As Single, State As Integer)
         Event OLECompleteDrag(Effect As Long)
         Event OLEDragDrop(Data As DataObject, Effect As Long, Button As Integer, Shift As Integer, X As Single, Y As Single)
@@ -99,33 +109,53 @@ Class ProgressBar
                
     #Region "MEMBERS"
 
-        Public Sub New()
-            ' This constructor is useful for allowing control inheritance
+        Private Sub HandleLoad() _
+                Handles RootWindowElement.Load
+            
+            Dim Opacity As Any = Me.Opacity
+            If ((Opacity >= 0) And (Opacity < 100)) Or (TransparencyKey <> -1) Then
+                SyncOpacity
+            End If
         End Sub
         
-        Public Sub New(Serializer As WindowsControls.SerializationInfo)
-            If Serializer Is Nothing Then Exit Sub
-            If Not Serializer.Deserialize(Me) Then
-                ' InitializeDefaultValues
-            End If
+        Private Sub SyncOpacity() _ 
+                Handles Opacity.OnPropertyLet, _
+                        TransparencyKey.OnPropertyLet
+            
+            VB.CommonSyncOpacity(Me.TransparencyKey, Me.Opacity, Me.RootWindowElement.Handle)
         End Sub
         
         Private Sub HandleInitialize(ByVal ControlContext As WindowsControls.WindowsControlContext) _
                 Implements IWindowsControl.Initialize
             
-            ControlContext.SetControlArrayIndex(Me.IndexINIT)
-                
-            Dim styles As Long
-            Dim extendedStyles As Long
-                
-                styles += If(Me.Orientation = PrbOrientationVertical, PBS_VERTICAL, 0)
-                Select Case Me.Scrolling
-                    Case PrbScrollingSmooth: styles += PBS_SMOOTH
-                    Case PrbScrollingMarquee: styles += PBS_MARQUEE
-                End Select
-                styles += If(SmoothReverse = True, PBS_SMOOTHREVERSE, 0)
-                        
-            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, "msctls_progress32", vbNullString, styles, extendedStyles, True)
+            Me.InternalStateReset()     ' resets all the base class state
+            Me.IsInitialized = False
+            
+            With ControlContext.GetSerializer
+                If Not .Deserialize(Me) Then
+                    ' set defaults here
+                End If
+                'IsDesignMode = .IsDesignMode
+            End With
+            
+            Dim Opacity As Any = Me.Opacity
+            If Opacity > 100 Then Me.Opacity = 100
+            If Opacity < 0 Then Me.Opacity = 0
+            
+            Dim styles As Long = If(Me.Orientation = PrbOrientationVertical, PBS_VERTICAL, 0&) + _
+                                    If(SmoothReverse = True, PBS_SMOOTHREVERSE, 0&)
+            Select Case Me.Scrolling
+                Case PrbScrollingSmooth: styles += PBS_SMOOTH
+                Case PrbScrollingMarquee: styles += PBS_MARQUEE
+            End Select
+                    
+            Dim InitData As WinNativeFormsBASE.WindowCreationData
+            InitData.ClassName = "msctls_progress32"
+            InitData.WindowStyles = styles
+            'InitData.ExtendedStyles = WinNativeFormsBASE.WS_EX_NOACTIVATE
+            InitData.SubClass = True
+            InitData.Flags = PreventActivation
+            Set Me.RootWindowElement = CreateRootWindowElement(ControlContext, InitData)
         End Sub
                 
         Private Sub HandleDestroy() _
@@ -136,6 +166,8 @@ Class ProgressBar
             
             ' disconnect anything that causes a circular reference here
             If OLEDragDropHandler IsNot Nothing Then OLEDragDropHandler.Disconnect()
+            Set Me.Font = Nothing
+            [_HiddenModule].ResetFirstMethodAccessFlag(Me)
         End Sub
 
         Private Sub Class_Terminate()
@@ -151,12 +183,15 @@ Class ProgressBar
             Me.Max = Max_INIT
             Me.Value = Value_INIT
             Me.Step = Step_INIT
+            
             SyncBackColor()
             SyncForeColor()
             SyncState()
             SyncMarquee()
             SyncOLEDropMode()
             RaiseEvent Initialize()
+            
+            IsInitialized = True
         End Sub
         
         Private Sub HandleMouseDoubleClick(ByVal Button As VBRUN.MouseButtonConstants, _
@@ -170,10 +205,8 @@ Class ProgressBar
                                         ByVal ShiftState As VBRUN.ShiftConstants, _
                                         ByVal X As Single, ByVal Y As Single) _
                 Handles RootWindowElement.MouseDown
-            
+            BeginMouseCapture(RootWindowElement)
             RaiseEvent MouseDown(CInt(Button), CInt(ShiftState), X, Y)
-
-            RaiseEvent Click()          ' FIXME
         End Sub
         
         Private Sub HandleMouseMove(ByVal Button As VBRUN.MouseButtonConstants, _
@@ -189,110 +222,99 @@ Class ProgressBar
                                     ByVal X As Single, ByVal Y As Single) _
                 Handles RootWindowElement.MouseUp
                 
+            Dim ScaledPixX As Double = (X / Me.ControlContext.GetScaleModePixelsMultiplierX)
+            Dim ScaledPixY As Double = (Y / Me.ControlContext.GetScaleModePixelsMultiplierY)
+            
             RaiseEvent MouseUp(CInt(Button), CInt(ShiftState), X, Y)
+
+            If EndMouseCapture() Then
+                If IsInRect(ScaledPixX, ScaledPixY) Then
+                    RaiseEvent Click()
+                End If
+            End If
         End Sub
         
         Private Sub SyncBackColor() _
                 Handles BackColor.OnPropertyLet
             
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETBKCOLOR, 0, TranslateColor(Me.BackColor))
+            SendMessageLngPtr(PBM_SETBKCOLOR, 0, TranslateColor(Me.BackColor))
         End Sub
 
         Private Sub SyncForeColor() _
                 Handles ForeColor.OnPropertyLet
             
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETBARCOLOR, 0, TranslateColor(Me.ForeColor))
+            SendMessageLngPtr(PBM_SETBARCOLOR, 0, TranslateColor(Me.ForeColor))
         End Sub
         
         Private Sub SyncState() _
                 Handles State.OnPropertyLet
             
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETSTATE, Me.State, 0)
+            SendMessageLngPtr(PBM_SETSTATE, Me.State, 0)
         End Sub
         
         Private Sub SyncMarquee() _
                 Handles MarqueeAnimation.OnPropertyLet, _
                         MarqueeSpeed.OnPropertyLet
                         
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETMARQUEE, If(Me.MarqueeAnimation, 1, 0), Me.MarqueeSpeed)
+            SendMessageLngPtr(PBM_SETMARQUEE, If(Me.MarqueeAnimation, 1, 0), Me.MarqueeSpeed)
         End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Min() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_GETRANGE, 1, 0))
+            Return SendMessageLng(PBM_GETRANGE, 1, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Min(ByVal Value As Long)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETRANGE32, Value, Me.Max)
+            SendMessageLngPtr(PBM_SETRANGE32, Value, Me.Max)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Max() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_GETRANGE, 0, 0))
+            Return SendMessageLng(PBM_GETRANGE, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Max(ByVal Value As Long)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETRANGE32, Me.Min, Value)
+            SendMessageLngPtr(PBM_SETRANGE32, Me.Min, Value)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Step() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_GETSTEP, 0, 0))
+            Return SendMessageLng(PBM_GETSTEP, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Let Step(ByVal Value As Long)
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETSTEP, Me.Step, 0)
+            SendMessageLngPtr(PBM_SETSTEP, Me.Step, 0)
         End Property
         
         Public Sub StepIt()
-            Me.ControlContext.EnsureFormIsLoaded()
-            WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_STEPIT, 0, 0)
+            SendMessageLngPtr(PBM_STEPIT, 0, 0)
             RaiseEvent Change
         End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Get Value() As Long
-            Me.ControlContext.EnsureFormIsLoaded()
-            Return CLng(WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_GETPOS, 0, 0))
+            Return SendMessageLng(PBM_GETPOS, 0, 0)
         End Property
         
-        [ Serialize (False) ]
+        [Serialize(False), DefaultMember]
         Public Property Let Value(ByVal NewValue As Long)
             If Me.Value <> NewValue Then
-                WinNativeFormsBASE.WindowsAPI.USER32_SendMessage(Me.RootWindowElement, PBM_SETPOS, NewValue, 0)
-                RaiseEvent Change
+                SendMessageLngPtr(PBM_SETPOS, NewValue, 0)
+                If IsInitialized = True Then RaiseEvent Change
             End If
         End Property
-
-        Private Sub OnTouchedFormProperties() _
-                Handles BackColor.OnPropertyGet, _
-                        ForeColor.OnPropertyGet, _
-                        MarqueeAnimation.OnPropertyGet, _
-                        MarqueeSpeed.OnPropertyGet, _
-                        State.OnPropertyGet, _
-                        SmoothReverse.OnPropertyGet, _
-                        Orientation.OnPropertyGet, _
-                        Scrolling.OnPropertyGet
-                            
-            Me.ControlContext.EnsureFormIsLoaded()
-        End Sub
         
-        [ Serialize (False) ]
+        [Serialize(False)]
         Public Property Get Parent() As Object ' As Form  FIXME, needs to work also for UCs
             Return ControlContext.GetForm
+        End Property
+        
+        [Serialize(False)]
+        Public Property Get Object() As Object
+            Return Me
         End Property
 
         Private Sub HandleDragOver(ByVal Source As Object, ByVal X As Double, ByVal Y As Double, ByVal State As Long) _
@@ -305,7 +327,7 @@ Class ProgressBar
             End If
         End Sub
         
-        Public Sub SyncStyles() _
+        Private Sub SyncStyles() _
                 Handles SmoothReverse.OnPropertyLet, _
                         Orientation.OnPropertyLet, _
                         Scrolling.OnPropertyLet
@@ -328,13 +350,18 @@ Class ProgressBar
         End Sub
         
         Public Sub OLEDrag()
-            InternalOLEDrag(Me)
+            CommonOLEDrag(Me)
         End Sub
 
         Private Sub SyncOLEDropMode() _
                 Handles OLEDropMode.OnPropertyLet
                 
             BaseSyncOLEDropMode(Me, Me.OLEDropMode, Me.OLEDragDropHandler, False, True)
+        End Sub
+        
+        Private Sub Class_BeforeFirstMethodAccess()
+            'Debug.Print CurrentComponentName & "." & CurrentProcedureName
+            [_HiddenModule].EnsureContainerIsLoaded(Me)
         End Sub
         
     #End Region

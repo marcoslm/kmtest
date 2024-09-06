@@ -1,0 +1,201 @@
+[COMCreatable(False)]
+[ClassId("AA2E3A9E-ADE7-46F0-9D8B-0B8426778B4B")]
+[InterfaceId("574EF578-4A9F-47C0-B992-BB1A09627A3D")]
+[ComImport(True)]
+Class ListImages
+    
+    [Hidden]
+    Friend hImageList As LongPtr
+    Private InternalImages As Collection = New Collection
+        
+    Friend OwnerWEAK As LongPtr            ' ImageList
+    
+    Public Function Add([TypeHint(Long)] Optional Index As Variant, [TypeHint(String)] Optional Key As Variant, [TypeHint(StdPicture)] Optional Picture As Variant, Optional Tag As Variant) As ListImage
+        If IsMissing(Picture) Then
+            Err.Raise 35607, , "Required argument is missing"
+        End If
+        
+        If IsObject(Picture) = False Then
+            Err.Raise 13    ' type mismatch
+        End If
+        
+        Dim realPicture As Any = CType(Of IPicture)(Picture)
+        If (realPicture Is Nothing) OrElse (realPicture.Handle = vbNullPtr) Then
+            Err.Raise 481, , "Invalid picture"
+        End If
+        
+        Dim KeyStr As String
+        If IsMissing(Key) = False Then
+            KeyStr = CStr(Key)      ' will throw type mismatch if necessary
+            
+            If IsNumeric(KeyStr) Then
+                Err.Raise 35603, , "Invalid key"
+            End If
+        End If
+        
+        Dim position As Long
+        If IsMissing(Index) Then
+            position = Count + 1
+        Else
+            If IsNumeric(Index) = False Then
+                Err.Raise 13        ' type mismatch
+            End If
+            
+            If (Index < 1) Or (Index > (InternalImages.Count + 1)) Then
+                Err.Raise 35600, , "Index out of bounds"
+            End If
+            
+            position = CLng(Index)
+        End If
+        
+        Dim TagStr As String
+        If IsMissing(Tag) = False Then
+            TagStr = CStr(Tag)      ' will throw type mismatch if necessary
+        End If
+        
+        Dim inputWidth As Long
+        Dim inputHeight As Long
+        VB.ScaleOLEPictureDimensionsToPixels(vbPicTypeNone, CLng(Picture.Width), inputWidth, CLng(Picture.Height), inputHeight)
+    
+        Dim Owner As Any = CType(Of TbImageListPrivate)(WinNativeFormsBASE.ObjPtrToObject(OwnerWEAK))
+        If hImageList = 0 Then
+            If Owner.ImageWidth = 0 Then
+                Owner.ImageWidth = inputWidth
+            End If
+            If Owner.ImageHeight = 0 Then
+                Owner.ImageHeight = inputHeight
+            End If
+            
+            hImageList = ImageList_Create(Owner.ImageWidth, Owner.ImageHeight, ILC_MASK Or Owner.ColorDepth, 4, 4)
+            Owner.SyncListProps()
+        End If
+
+        Dim CreatedMaskedIcon As Boolean
+        If Owner.ColorDepth <> ColorDepth32Bit Then
+            CreatedMaskedIcon = True
+        End If
+        Dim scaledPicture As IPicture = RuntimeCreateScaledPicture(realPicture, Owner.ImageWidth, Owner.ImageHeight, True, CreatedMaskedIcon)
+        
+        If hImageList = vbNullPtr Then
+            Err.Raise 35607, , "Internal error allocating ImageList"
+        End If
+            
+        Dim OrigCount As Long, NewCount As Long
+        OrigCount = InternalImages.Count
+        
+        If scaledPicture.Type = vbPicTypeBitmap Then
+            If Owner.UseMaskColor = True Then
+                ImageList_AddMasked(hImageList, scaledPicture.Handle, TranslateColor(Owner.MaskColor))
+            Else
+                ImageList_Add(hImageList, scaledPicture.Handle, vbNullPtr)
+            End If
+        ElseIf scaledPicture.Type = vbPicTypeIcon Then
+            ImageList_AddIcon(hImageList, scaledPicture.Handle)
+        End If
+        
+        ' Check the count increased
+        NewCount = ImageList_GetImageCount(hImageList)
+        If NewCount = OrigCount Then
+            Err.Raise 35607, , "Internal error adding picture to ImageList"
+        End If
+        
+        Dim i As Long, j As Long
+        For i = OrigCount To position Step -1
+            For j = i To (i + NewCount - OrigCount - 1)
+                ImageList_Copy(hImageList, j, hImageList, j - 1, ILCF_SWAP)
+            Next j
+        Next i
+        
+        Dim newListItem As Any = New ListImage(ObjPtr(Me), position, KeyStr, CType(Of StdPicture)(realPicture), TagStr)
+        
+        If OrigCount > 0 Then
+            If Len(KeyStr) = 0 Then
+                InternalImages.Add(newListItem, , , position - 1)
+            Else
+                InternalImages.Add(newListItem, Key, , position - 1)
+            End If
+        Else
+            If Len(KeyStr) = 0 Then
+                InternalImages.Add(newListItem)
+            Else
+                InternalImages.Add(newListItem, Key)
+            End If
+        End If
+
+        If position <> InternalImages.Count Then
+            ResyncCollection()
+        End If
+        Return newListItem
+        
+    End Function
+    
+    Public Sub Clear()
+        Dim Owner As Any = CType(Of TbImageListPrivate)(WinNativeFormsBASE.ObjPtrToObject(OwnerWEAK))
+        If Owner.BoundCount > 0 Then
+            Err.Raise 35617, , "ImageList cannot be modified while another control is bound to it"
+        End If
+        
+        ImageList_Destroy(hImageList)
+        hImageList = 0
+        InternalImages.Clear()
+        Owner.ImageWidth = 0
+        Owner.ImageHeight = 0
+    End Sub
+    
+    [Unimplemented]
+    [Hidden]
+    Public Property Get ControlDefault(Index As Variant) As ListImage
+    End Property
+        
+    Public Property Get Count() As Long
+        Return InternalImages.Count
+    End Property
+    
+    [DefaultMember]
+    Public Property Get Item(Index As Variant) As ListImage
+        Return CType(Of ListImage)(InternalImages(Index))
+    End Property
+    
+    Public Property Get Exists(Index As Variant) As Boolean
+        Return InternalImages.Exists(CStr(Index))
+    End Property
+    
+    [Enumerator]
+    Function _NewEnum() As Object
+        Return InternalImages.[_NewEnum]
+    End Function
+    
+    Sub Remove(Index As Variant)
+        Dim Owner As Any = CType(Of TbImageListPrivate)(WinNativeFormsBASE.ObjPtrToObject(OwnerWEAK))
+        If Owner.BoundCount > 0 Then
+            Err.Raise 35617, , "ImageList cannot be modified while another control is bound to it"
+        End If
+        
+        If IsNumeric(Index) Then
+        Else
+            On Error GoTo InvalidKey
+            Dim KeyStr As String = CStr(Index)
+        End If
+        
+        On Error GoTo ElementNotFound
+        Dim InternalItem As Any = CType(Of ListImage)(InternalImages(Index))
+        ImageList_Remove(hImageList, InternalItem.Index)
+        InternalImages.Remove(InternalItem.Index)
+        ResyncCollection()
+        Exit Sub
+        
+    InvalidKey:
+        Err.Raise 35603, , "Invalid key"
+    
+    ElementNotFound:
+        Err.Raise 35601, , "Element not found"
+    End Sub
+    
+    Private Sub ResyncCollection()
+        Dim i As Long
+        For i = 1 To InternalImages.Count
+            InternalImages(i).Index = i
+        Next i
+    End Sub
+    
+End Class

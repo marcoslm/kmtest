@@ -2,6 +2,7 @@ Private Class IgnoreMe
 
 End Class
 
+[InterfaceId("3E204D18-7744-4178-B869-0A8501133BD8")]
 Private Class DataObjectWriteOnlyEnumerator
 	Implements WinNativeFormsBASE.IEnumFORMATETC
     
@@ -27,7 +28,7 @@ Private Class DataObjectWriteOnlyEnumerator
         
         If currentIndex <= arrTopIndex Then
         	With dataObject.InternalAvailableData(currentIndex)
-                rgelt.cfFormat = .Format
+                rgelt.cfFormat = CInt(.Format)
                 rgelt.dwAspect = 1
                 rgelt.lindex = -1
                 rgelt.ptd = 0
@@ -75,8 +76,8 @@ Private Class DataObjectWriteOnlyEnumerator
     End Sub
 End Class
 
-[ InterfaceId ("BF0C5299-E8B2-4DF0-A199-78D56C0ED2B6") ]
-[ COMCreatable (False) ]
+[InterfaceId("BF0C5299-E8B2-4DF0-A199-78D56C0ED2B6")]
+[COMCreatable(False)]
 Private Class DataObjectFilesWrite
     Implements DataObjectFiles
     
@@ -85,7 +86,7 @@ Private Class DataObjectFilesWrite
     Public Function DataObjectFiles_Item(ByVal Index As Long) As String _
             Implements DataObjectFiles.Item
         
-        Return InternalCollection.Item(Index)
+        Return CStr(InternalCollection.Item(Index))
     End Function
     
     Private Property Get DataObjectFiles_Count() As Long _
@@ -114,7 +115,7 @@ Private Class DataObjectFilesWrite
     	InternalCollection.Remove(index)
     End Sub
     
-    [ Enumerator ]
+    [Enumerator]
     Private Function DataObjectFiles_NewEnum() As stdole.IUnknown _
             Implements DataObjectFiles.[_NewEnum]
             
@@ -126,8 +127,8 @@ Private Class DataObjectFilesWrite
     End Sub
 End Class
 
-[ InterfaceId ("5E0DA24E-71EA-4D93-B2CA-2CD984729841") ]
-[ COMCreatable (False) ]
+[InterfaceId("5E0DA24E-71EA-4D93-B2CA-2CD984729841")]
+[COMCreatable(False)]
 Private Class DataObjectSource
     Implements DataObject
     Implements WinNativeFormsBASE.IDataObject
@@ -155,13 +156,21 @@ Private Class DataObjectSource
         bmiColors(256) As Long
     End Type
     
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalAlloc Lib "kernel32" (ByVal uFlags As Long, ByVal dwBytes As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Sub RtlMoveMemory Lib "kernel32" (ByVal lpDest As LongPtr, ByVal lpSource As LongPtr, ByVal Size As LongPtr)
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalLock Lib "kernel32" (ByVal hMem As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GlobalUnlock Lib "kernel32" (ByVal hMem As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function SHCreateMemStreamPtr Lib "shlwapi" Alias "SHCreateMemStream" (ByVal pInit As LongPtr, ByVal cbInit As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function GetDIBits Lib "gdi32" (ByVal hdc As LongPtr, ByVal hbm As LongPtr, ByVal start As Long, ByVal cLines As Long, ByVal lpvBits As LongPtr, ByRef lpbmi As BITMAPINFO_RGBA, ByVal usage As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function CopyImage Lib "user32" (ByVal handle As LongPtr, ByVal Type As Long, ByVal cx As Long, ByVal cy As Long, ByVal flags As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Private DeclareWide PtrSafe Function OleDuplicateData Lib "ole32" (ByVal handle As LongPtr, ByVal cfFormat As Long, ByVal flags As Long) As LongPtr
     
     Private Type DataObjectData
@@ -196,7 +205,7 @@ Private Class DataObjectSource
         Err.Raise 425, , "Invalid object use"
     End Function
     
-    Private Function DataObject_GetFormat([ TypeHint (ClipboardConstants) ] ByVal sFormat As Integer) As Boolean
+    Private Function DataObject_GetFormat([TypeHint(ClipboardConstants)] ByVal sFormat As Integer) As Boolean
         Dim supportedFormat As DataObjectFormat
         For Each supportedFormat In DataObject_AvailableFormats
             If supportedFormat.FormatType = sFormat Then Return True
@@ -227,7 +236,7 @@ Private Class DataObjectSource
             ElseIf IsNull(Value) Then
             	GoTo BadDataFormat
             ElseIf TypeOf Value Is stdole.StdPicture Then
-                Set picture = Value
+                Set picture = CType(Of stdole.StdPicture)(Value)
                 Select Case picture.Type
                 	Case vbPicTypeBitmap
                         Format = ClipboardConstants.vbCFDIB
@@ -260,7 +269,7 @@ Private Class DataObjectSource
                         If TypeOf Value IsNot stdole.StdPicture Then
                             GoTo BadDataFormat
                         End If
-                        Set picture = Value
+                        Set picture = CType(Of stdole.StdPicture)(Value)
                         If picture.Type <> vbPicTypeBitmap Then
                             GoTo BadDataFormat
                         End If
@@ -270,7 +279,7 @@ Private Class DataObjectSource
                         If TypeOf Value IsNot stdole.StdPicture Then
                             GoTo BadDataFormat
                         End If
-                        Set picture = Value
+                        Set picture = CType(Of stdole.StdPicture)(Value)
                         If picture.Type <> vbPicTypeEMetafile Then
                             GoTo BadDataFormat
                         End If
@@ -280,7 +289,7 @@ Private Class DataObjectSource
                         If TypeOf Value IsNot stdole.StdPicture Then
                             GoTo BadDataFormat
                         End If
-                        Set picture = Value
+                        Set picture = CType(Of stdole.StdPicture)(Value)
                         If picture.Type <> vbPicTypeMetafile Then
                             GoTo BadDataFormat
                         End If
@@ -318,7 +327,7 @@ Private Class DataObjectSource
         End If
         'Debug.Print Now() & " " & CurrentComponentName & "." & CurrentProcedureName & "...5"
         ReDim Preserve InternalAvailableData(arrBoundTop + 1)
-        InternalAvailableData(arrBoundTop + 1).Format = Format
+        InternalAvailableData(arrBoundTop + 1).Format = CType(Of ClipboardConstants)(Format)
         If IsObject(Value) Then
             Set InternalAvailableData(arrBoundTop + 1).Value = Value
         Else
@@ -393,7 +402,7 @@ Private Class DataObjectSource
                         End If
 
                         If TypeOf .Value Is stdole.StdPicture Then
-                            Dim picture As stdole.StdPicture = .Value
+                            Dim picture As Any = CType(Of stdole.StdPicture)(.Value)
                             Select Case picture.Type
                             	Case PictureTypeConstants.vbPicTypeBitmap
                                     If .Format = ClipboardConstants.vbCFDIB Then
@@ -483,8 +492,8 @@ Private Class DataObjectSource
                                     GoTo BadStorageType
                             End Select
                         Else
-                            Dim strValue As String = .Value
-                            If .Format = vbCFText Then strValue = StrConv(strValue, vbFromUnicode)
+                            Dim strValue As String = CStr(.Value)
+                            If .Format = vbCFText Then strValue = CStr(StrConv(strValue, vbFromUnicode))
 
                             Select Case pformatetcIn.tymed
                                 Case WinNativeFormsBASE.TYMED_HGLOBAL
@@ -568,7 +577,7 @@ Private Class DataObjectSource
     Private Sub IDataObject_QueryGetData(pformatetc As WinNativeFormsBASE.FORMATETC)
         On Error Resume Next
         IDataObject_GetData(pformatetc, CLngPtr(0&))        ' we use nullptr output to verify-only
-        Err.ReturnHResult = Err.LastHResult
+        Err.ReturnHResult = Err.LastHresult
     End Sub
     
     Private Sub IDataObject_SetData(pformatetc As WinNativeFormsBASE.FORMATETC, pmedium As WinNativeFormsBASE.STGMEDIUM, ByVal fRelease As Long)
@@ -577,9 +586,10 @@ Private Class DataObjectSource
     End Sub
 End Class
 
-[ COMCreatable (False) ]
+[COMCreatable(False)]
+[InterfaceId("317CEDEE-AECC-448F-96C3-AAB4D8035274")]
 Class OLEDropSource
-    Implements WinNativeFormsBase.IDropSource
+    Implements WinNativeFormsBASE.IDropSource
     
     Private control As Object
     Private mouseWasDown As Boolean = False

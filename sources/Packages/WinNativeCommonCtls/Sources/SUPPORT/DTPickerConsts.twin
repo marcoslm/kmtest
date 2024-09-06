@@ -6,7 +6,7 @@ Module DTPickerConsts
         DTS_SHORTDATEFORMAT = &H0000
         DTS_LONGDATEFORMAT = &H0004
         DTS_SHORTDATECENTURYFORMAT = &H000C
-        DTS_TIMEFORMAT = &H0009
+        DTS_TIMEFORMAT = &H0009 
         DTS_APPCANPARSE = &H0010
         DTS_RIGHTALIGN = &H0020
     End Enum
@@ -81,7 +81,7 @@ Module DTPickerConsts
     Public Type NMDATETIMEFORMATQUERY
         hdr As NMHDR
         pszFormat As LongPtr
-        szMax As WinNativeFormsBase.SIZE
+        szMax As WinNativeFormsBASE.SIZE
     End Type
             
     Public Type NMDATETIMESTRING

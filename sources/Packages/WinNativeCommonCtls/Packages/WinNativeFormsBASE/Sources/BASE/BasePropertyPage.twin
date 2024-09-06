@@ -1,0 +1,125 @@
+[ClassId("E6D88785-C455-4185-9269-16D12AFB346A")]
+[InterfaceId("2E22DF96-7BA8-4075-9F7C-5E0FE696FDEA")]
+[COMCreatable(False)]
+Private Class BasePropertyPage
+ 
+    Implements BaseControlRect Via BaseControlRect
+
+    [Serialize(False)]
+        Private FormControlContext As WindowsControls.WindowsFormContext
+    [Description("A unique GUID that is used for associating a class with a form")]
+        Public FormDesignerId As String             ' FIXME should support GUID datatype
+    [Description("Adjusts the left position of this form, only if the StartupPosition is tbStartUpManual")]
+        Public ReadOnly HasDC As Boolean = True
+    [Description("")]
+    [Serialize(True, "MousePointer")]
+        Private MousePointerINIT As VBRUN.MousePointerConstants = VBRUN.MousePointerConstants.vbDefault
+    [Serialize(True, "MouseIcon")]
+    [CustomDesigner("designer_IconBytes")]
+        Private ReadOnly MouseIconINIT() As Byte
+    
+    [Description("")]
+    [Serialize(True, "KeyPreview")]
+        Private KeyPreviewINIT As Boolean = False
+    [Description("")]
+        ' Exists in VB6, but doesn't seem to have an effect on forms.
+        Public Appearance As VBRUN.AppearanceConstants = VBRUN.AppearanceConstants.vbAppear3d
+
+    [Description("")]
+    [Serialize(True, "Caption")]
+        Private CaptionINIT As String
+
+    Sub New()
+        'Debug.Print "BaseForm.New"
+        Set Me.BaseControlRect = New BaseControlRect(ControlTypeConstants.vbForm)
+    End Sub
+            
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                                ByRef InitData As WindowCreationData) As WindowElement
+        With CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .MousePointer = MousePointerINIT
+            .KeyPreview = KeyPreviewINIT
+            .ControlArrayIndex = -1
+        End With
+        InitData.BaseControlInfoPtr = InternalBaseControlBeforeCreateRootWindow(InitData)
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.FormControlContext = CType(Of WindowsFormContext)(_ControlContext)
+        
+        Set Me.RootWindowElementBase = CType(Of WindowElement)(ControlContext.CreateWindowElement(InitData))
+        
+        IgnoreMousePointerChanged = True
+        CommonLoadPictureInit(CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon, Me.MouseIconINIT)
+        IgnoreMousePointerChanged = False
+                
+        Return Me.RootWindowElementBase
+    End Function
+    
+    [Serialize(False)]
+    [Description("")]
+    Property Get Caption() As String
+        Return GetWindowTextCtl()
+    End Property
+    
+    [Serialize(False)]
+    [Description("")]
+    Property Let Caption(Value As String)
+        LetWindowTextCtl(Value)
+    End Property
+    
+    Sub Refresh()
+    	CommonRefresh()
+    End Sub
+
+    Friend Sub BaseSyncOLEDropMode(ByVal RootThis As Object, ByVal OLEDropMode As OLEDropConstants, ByRef DragDropHandler As OLEDragDropHandler, ByVal IsContainer As Boolean, ByVal AllowedAutomatic As Boolean)
+        CommonSyncOLEDropMode(RootThis, OLEDropMode, DragDropHandler, ControlContext, RootWindowElementBase, IsContainer, AllowedAutomatic)
+    End Sub
+    
+    [Serialize(False)]
+    Public Property Get MouseIcon() As StdPicture
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon
+    End Property
+
+    [Serialize(False)]
+    Public Property Set MouseIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+        CommonMousePointerChanged()
+    End Property
+
+    [Serialize(False)]
+    Public Property Let MouseIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MouseIcon = Value
+        CommonMousePointerChanged()
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get hWnd() As LongPtr
+        Return CommonGetHWND()
+    End Property
+                
+    [Serialize(False)]
+    Public Property Get MousePointer() As MousePointerConstants
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let MousePointer(ByVal Value As MousePointerConstants)
+        CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).MousePointer = Value
+        CommonMousePointerChanged()
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get KeyPreview() As Boolean
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).KeyPreview
+    End Property
+
+    [Serialize(False)]
+    Public Property Let KeyPreview(ByVal Value As Boolean)
+        CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).KeyPreview = Value
+    End Property
+    
+    [Serialize(False), Description("A collection of all controls attached to this form")]
+    [TypeHint(WindowsControlsCollection)]
+    Public Property Get Controls() As Object        ' WindowsControls.WindowsControlsCollection  changed to Object to avoid unnecessary COM exposure of WindowsControls.WindowsControlsCollection
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ChildControlsWEAK
+    End Property
+End Class

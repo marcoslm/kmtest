@@ -1,7 +1,7 @@
 Module UpDownConsts
 
     Public Enum UpDownStyles
-        UDS_WRAP = &H0001
+        UDS_WRAP = &H0001 
         UDS_SETBUDDYINT = &H0002
         UDS_ALIGNRIGHT = &H0004
         UDS_ALIGNLEFT = &H0008

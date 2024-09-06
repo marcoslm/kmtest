@@ -1,6 +1,6 @@
-[ COMCreatable (False) ]
-[ ClassId ("073DDC73-2326-449E-8A02-F22E7B6B7203") ]
-[ InterfaceId ("4B49AD54-5B45-479A-B474-C63F3E6AB594") ]
+[COMCreatable(False)]
+[ClassId("073DDC73-2326-449E-8A02-F22E7B6B7203")]
+[InterfaceId("4B49AD54-5B45-479A-B474-C63F3E6AB594")]
 Class ColumnHeader
 	
     Enum ListColumnAlignmentConstants
@@ -12,21 +12,22 @@ Class ColumnHeader
     Private CachedKey As String
     Private ContainerList As ListView
     Private InternalIndex As Long
-        
+         
     Public Tag As Variant
             
-    Public Icon As Variant      ' FIXME
+    Public InternalIcon As Variant
 
-    Public Sub New(lv As ListView, Key As String)
+    Public Sub New(lv As ListView, Key As String, Icon As Variant)
     	Set Me.ContainerList = lv
         Me.CachedKey = Key
+        Me.InternalIcon = Icon
     End Sub
     
     Friend Sub ChangeIndexInternal(Value As Long)
         Me.InternalIndex = Value
     End Sub
 
-    [ Description ("The index of the item within the root listview collection of header items") ]
+    [Description("The index of the item within the root listview collection of header items")]
     Public Property Get Index() As Long
     	Return Me.InternalIndex + 1
     End Property
@@ -34,17 +35,17 @@ Class ColumnHeader
     	Err.Raise 383, , "Property is read-only"
     End Property
     
-    [ Description ("The key of the item used in the root listview collection of header items") ]
+    [Description("The key of the item used in the root listview collection of header items")]
     Public Property Get Key() As String
     	Return Me.CachedKey
     End Property
 
-    [ Description ("The key of the item used in the root listview collection of header items") ]
+    [Description("The key of the item used in the root listview collection of header items")]
     Public Property Let Key(ByVal NewKey As String)
         ' FIXME this is shit, could be a feature offered by the collection instead
         Dim index As Long = Me.Index
         Dim collection As Collection = Me.ContainerList.ColumnHeaders.GetInternalCollection()
-        Dim Item As ColumnHeader = collection(index)
+        Dim Item As Any = CType(Of ColumnHeader)(collection(index))
         If NewKey = vbNullString Then
             collection.Add(Item, , index)
         Else
@@ -57,23 +58,59 @@ Class ColumnHeader
     Private Sub Class_Terminate()
         'Debug.Print "ListItem Class_Terminate"
     End Sub
+        
+    Public Property Get Icon() As Variant
+        Return InternalIcon
+    End Property
+    Public Property Let Icon(Value As Variant)
+        CommonVerifyImage(Value, Me.ContainerList.ColumnHeaderIcons)
+        InternalIcon = Value
+        If Me.ContainerList.View = lvwReport Then
+            Dim lvColumn As LVCOLUMNW
+            With lvColumn
+                .mask = LVCF_IMAGE
+                .iImage = InternalGetIconIndexRaw()
+            End With
+            WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+        End If
+    End Property
     
-    [ DefaultMember ]
-    [ Description ("The text (label) of the header that appears when the item is rendered") ]
-    Public Property Get Text() As String
+    Friend Sub RemoveIcon()
+        InternalIcon = 0
         Dim lvColumn As LVCOLUMNW
         With lvColumn
-            .mask = LVCF_TEXT
-            .pszText = Me.ContainerList.InternalGetStringBuffer
-            .cchTextMax = Me.ContainerList.InternalBufferLen
+            .mask = LVCF_IMAGE
+            .iImage = -1
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
+    End Sub
+    
+    Friend Function InternalGetIconIndexRaw() As Long
+        If IsMissing(InternalIcon) Then
+            Return -1
+        ElseIf VarType(InternalIcon) = vbString Then
+            Return Me.ContainerList.ColumnHeaderIcons.ListImages(InternalIcon).Index - 1
+        Else
+            Return CLng(InternalIcon) - 1
+        End If
+    End Function
+    
+    [DefaultMember]
+    [Description("The text (label) of the header that appears when the item is rendered")]
+    Public Property Get Text() As String
+        Dim lvColumn As LVCOLUMNW
+        lvColumn.mask = LVCF_TEXT
+        With CType(Of ListViewInternalData)(CType(Of TbListViewPrivate)(Me.ContainerList).GetInternalDataPtr())
+            lvColumn.pszText = StrPtr(.InternalBuffer)
+            lvColumn.cchTextMax = .InternalBufferLen
         End With
         If WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn)) <> 0 Then
             Return WinNativeFormsBASE.OLEAUT32_SysAllocString(lvColumn.pszText)
         End If
     End Property
     
-    [ DefaultMember ]
-    [ Description ("The text (label) of the header that appears when the item is rendered") ]
+    [DefaultMember]
+    [Description("The text (label) of the header that appears when the item is rendered")]
     Public Property Let Text(ByVal Value As String)
         Dim lvColumn As LVCOLUMNW
         With lvColumn
@@ -97,14 +134,28 @@ Class ColumnHeader
         Dim lvColumn As LVCOLUMNW
         lvColumn.mask = LVCF_WIDTH
         WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
-        Return lvColumn.cx * Me.ContainerList.InternalGetPixelsMultiplierX
+        
+        With CType(Of TbListViewPrivate)(Me.ContainerList)
+            Return CSng((lvColumn.cx * .GetScaleX) / .UnitPixelScale)()
+        End With
+    End Property
+    
+    Property Let Width(ByVal Value As Single)
+        Dim lvColumn As LVCOLUMNW
+        With lvColumn
+            .mask = LVCF_WIDTH
+            With CType(Of TbListViewPrivate)(Me.ContainerList)
+                lvColumn.cx = CLng((Value * .UnitPixelScale) / .GetScaleX)
+            End With
+        End With
+        WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_SETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
     End Property
     
     Public Property Get Alignment() As ListColumnAlignmentConstants
         Dim lvColumn As LVCOLUMNW
         lvColumn.mask = LVCF_FMT
         WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_GETCOLUMNW, Me.InternalIndex, VarPtr(lvColumn))
-        Return lvColumn.fmt
+        Return CType(Of ListColumnAlignmentConstants)(lvColumn.fmt)
     End Property
     
     Public Property Let Alignment(ByVal Value As ListColumnAlignmentConstants)

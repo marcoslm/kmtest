@@ -1,103 +1,192 @@
 ' FIXME We need an atribute for making this class REQUIRE qualification, to avoid conflicts
 Private Module WindowsAPI
    
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetWindowTextW Lib "user32" (ByVal hWnd As LongPtr, ByVal Text As String) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindowTextLengthW Lib "user32" (ByVal hWnd As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindowTextW Lib "user32" (ByVal hWnd As LongPtr, ByVal Text As String, ByVal TextLen As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SendMessageW Lib "user32" (ByVal HWnd As LongPtr, ByVal wMsg As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetWindowLongW Lib "user32" (ByVal HWnd As LongPtr, ByVal Index As Long, ByVal Value As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindowLongW Lib "user32" (ByVal HWnd As LongPtr, ByVal Index As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetClientRect Lib "user32" (ByVal hWnd As LongPtr, ByRef outRect As RECT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function EnableWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal bEnable As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal uCmd As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetFocus Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function RedrawWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal lprcUpdate As LongPtr, ByVal hrgnUpdate As LongPtr, ByVal flags As RedrawFlags) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ShowWindow Lib "user32" (ByVal hWnd As LongPtr, ByVal nCmdShow As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetParent Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function FillRect Lib "user32" (ByVal hdc As LongPtr, ByRef rect As RECT, ByVal brush As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DrawFocusRect Lib "user32" (ByVal hdc As LongPtr, ByRef rect As RECT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetCapture Lib "user32" () As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetDC Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ReleaseDC Lib "user32" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetScrollInfo Lib "user32" (ByVal hWnd As LongPtr, ByVal nBar As SCROLLTYPE, ByRef lpsi As SCROLLINFO) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetScrollInfo Lib "user32" (ByVal hWnd As LongPtr, ByVal nBar As SCROLLTYPE, ByRef lpsi As SCROLLINFO, ByVal redraw As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function EnableScrollBar Lib "user32" (ByVal hWnd As LongPtr, ByVal wSBflags As SCROLLTYPE, ByVal wArrows As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DrawFrameControl Lib "user32" (ByVal hDC As LongPtr, ByRef outRect As RECT, ByVal Type As Long, ByVal InitialState As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ClientToScreen Lib "user32" (ByVal hWnd As LongPtr, ByRef point As POINT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function InvalidateRect Lib "user32" (ByVal hWnd As LongPtr, ByRef lpRect As RECT, ByVal bErase As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetComboBoxInfo Lib "user32" (ByVal hWnd As LongPtr, ByRef CBI As COMBOBOXINFO) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindowRect Lib "user32" (ByVal hWnd As LongPtr, ByRef rect As RECT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ScreenToClient Lib "user32" (ByVal hWnd As LongPtr, ByRef lpPoint As POINT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetWindowPlacement Lib "user32" (ByVal hWnd As LongPtr, ByRef lpwndpl As WINDOWPLACEMENT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
+    Public DeclareWide PtrSafe Function SetWindowPlacement Lib "user32" (ByVal hWnd As LongPtr, ByRef lpwndpl As WINDOWPLACEMENT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetSysColorBrush Lib "user32" (ByVal nIndex As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetCapture Lib "user32" (ByVal hWnd As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ReleaseCapture Lib "user32" () As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DrawEdge Lib "user32" (ByVal hdc As LongPtr, ByRef rect As WinNativeFormsBASE.RECT, ByVal edge As Long, ByVal grfFlags As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetLayeredWindowAttributes Lib "user32" (ByVal hwnd As LongPtr, ByVal crColor As Long, ByVal nAlpha As Byte, ByVal dwFlags As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetActiveWindow Lib "user32" () As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetWindowPos Lib "user32" (ByVal hWnd As LongPtr, ByVal hWndInsertAfter As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal cx As Long, ByVal cy As Long, ByVal wFlags As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetKeyState Lib "user32" (ByVal nVirtKey As Long) As Integer
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DragDetect Lib "user32" (ByVal hWnd As LongPtr, ByVal PX As Integer, ByVal PY As Integer) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetCursorPos Lib "user32" (ByRef lpPoint As WinNativeFormsBASE.POINT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetAsyncKeyState Lib "user32" (ByVal VKey As Long) As Integer
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function lstrcmpiW Lib "kernel32" (ByVal lpString1 As String, ByVal lpString2 As String) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function lstrcmpW Lib "kernel32" (ByVal lpString1 As String, ByVal lpString2 As String) As Long
     
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DoDragDrop Lib "ole32" (ByVal pDataObj As WinNativeFormsBASE.IDataObject, ByVal pDropSource As WinNativeFormsBASE.IDropSource, ByVal dwOKEffects As Long, pdwEffect As Long) As Long
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateFontW Lib "gdi32" (ByVal cHeight As Long, ByVal cWidth As Long, ByVal cEscapement As Long, ByVal cOrientation As Long, ByVal cWeight As Long, ByVal bItalic As Long, ByVal bUnderline As Long, ByVal bStrikeOut As Long, ByVal iCharSet As Long, ByVal iOutPrecision As Long, ByVal iClipPrecision As Long, ByVal iQuality As Long, ByVal iPitchAndFamily As Long, ByVal pszFaceName As String) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetTextColor Lib "gdi32" (ByVal HDC As LongPtr, ByVal Color As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetBkColor Lib "gdi32" (ByVal HDC As LongPtr, ByVal Color As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetBkMode Lib "gdi32" (ByVal HDC As LongPtr, ByVal Mode As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateSolidBrush Lib "gdi32" (ByVal Color As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DeleteObject Lib "gdi32" (ByVal handle As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetCurrentObject Lib "gdi32" (ByVal HDC As LongPtr, ByVal Type As WindowGDIObjectTypes) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateFontIndirectW Lib "gdi32" (ByRef lpLogFont As LOGFONT) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetObjectW Lib "gdi32" (ByVal hObject As LongPtr, ByVal nCount As Long, ByRef lpObject As Any) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetTextMetricsW Lib "gdi32" (ByVal HDC As LongPtr, ByRef lptm As TEXTMETRIC) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function TextOutW Lib "gdi32" (ByVal HDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal lpString As String, ByVal StringLen As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateCompatibleDC Lib "gdi32" (ByVal hdc As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateCompatibleBitmap Lib "gdi32" (ByVal hdc As LongPtr, ByVal cx As Long, ByVal cy As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DeleteDC Lib "gdi32" (ByVal hDC As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SelectObject Lib "gdi32" (ByVal hDC As LongPtr, ByVal object As LongPtr) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function BitBlt Lib "gdi32" (ByVal hDC As LongPtr, ByVal x As Long, ByVal y As Long, ByVal cx As Long, ByVal cy As Long, ByVal hdcSrc As LongPtr, ByVal x1 As Long, ByVal y1 As Long, ByVal ROP As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetDeviceCaps Lib "gdi32" (ByVal hDC As LongPtr, ByVal index As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetStretchBltMode Lib "gdi32" (ByVal hdc As LongPtr, ByVal nStretchMode As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetBrushOrgEx Lib "gdi32" (ByVal hDC As LongPtr, ByVal nXOrg As Long, ByVal nYOrg As Long, ByVal lppt As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetClipBox Lib "gdi32" (ByVal hDC As LongPtr, ByRef lprect As RECT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CreateRectRgn Lib "gdi32" (ByVal x1 As Long, ByVal y1 As Long, ByVal x2 As Long, ByVal y2 As Long) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SelectClipRgn Lib "gdi32" (ByVal hdc As LongPtr, ByVal hrgn As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetTextExtentPointW Lib "gdi32" (ByVal hDc As LongPtr, ByVal lpString As String, ByVal c As Long, ByRef lpsz As WinNativeFormsBASE.SIZE) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function TextOutW Lib "gdi32" (ByVal HDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal lpString As LongPtr, ByVal StringLen As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetTextAlign Lib "gdi32" (ByVal HDC As LongPtr, ByVal align As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetTextCharacterExtra Lib "gdi32" (ByVal HDC As LongPtr, ByVal extra As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetTextJustification Lib "gdi32" (ByVal HDC As LongPtr, ByVal extra As Long, ByVal count As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SetMapMode Lib "gdi32" (ByVal HDC As LongPtr, ByVal iMode As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function ExtTextOutW Lib "gdi32" (ByVal HDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal options As Long, ByRef rect As WinNativeFormsBASE.RECT, ByVal lpString As String, ByVal StringLen As Long, ByVal lpDx As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function Rectangle Lib "gdi32" (ByVal hdc As LongPtr, ByVal left As Long, ByVal top As Long, ByVal right As Long, ByVal bottom As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetStockObject Lib "gdi32" (ByVal i As Long) As LongPtr
 
 #If WIN64 Then
     ' pointXY passed in a single register on x64
+    [UseGetLastError(False)]
     Public DeclareWide PtrSafe Function LBItemFromPt Lib "comctl32" (ByVal hWnd As LongPtr, ByVal pointXY As LongLong, ByVal AutoScroll As Long) As Long
 #Else
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function LBItemFromPt Lib "comctl32" (ByVal hWnd As LongPtr, ByVal pointX As Long, ByVal pointY As Long, ByVal AutoScroll As Long) As Long
 #End If
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function OpenThemeData Lib "uxtheme" (ByVal hWnd As LongPtr, ByVal pszClassList As String) As LongPtr
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function CloseThemeData Lib "uxtheme" (ByVal Theme As LongPtr) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function IsThemeBackgroundPartiallyTransparent Lib "uxtheme" (ByVal Theme As LongPtr, iPartId As Long, iStateId As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DrawThemeParentBackground Lib "uxtheme" (ByVal hWnd As LongPtr, ByVal hDC As LongPtr, ByRef pRect As RECT) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function DrawThemeBackground Lib "uxtheme" (ByVal Theme As LongPtr, ByVal hDC As LongPtr, ByVal iPartId As Long, ByVal iStateId As Long, ByRef pRect As RECT, ByRef pClipRect As RECT) As Long
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Sub RtlMoveMemory Lib "kernel32" (ByVal lpDest As LongPtr, ByVal lpSource As LongPtr, ByVal Size As LongPtr)
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function MulDiv Lib "kernel32" (ByVal nNumber As Long, ByVal nNumerator As Long, ByVal nDenominator As Long) As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetVolumeInformationW Lib "kernel32" (ByVal lpRootPathName As String, ByVal lpVolumeNameBuffer As String, ByVal nVolumeNameSize As Long, ByVal lpVolumeSerialNumber As LongPtr, ByVal lpMaximumComponentLength As LongPtr, ByVal lpFileSystemFlags As LongPtr, ByVal lpFileSystemNameBuffer As String, ByVal nFileSystemNameSize As Long) As Long
-    Public DeclareWide PtrSafe Function GetDriveTypeW Lib "kernel32" (ByVal lpRootPathName As String) As DriveType
+    [UseGetLastError(False), DLLStackCheck(False)]
+    Public DeclareWide PtrSafe Function GetDriveTypeW Lib "kernel32" (ByVal lpRootPathName As String) As WinNativeFormsBASE.DriveType
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SysAllocStringLen Lib "oleaut32" (ByVal CopyFrom As String, ByVal Length As Long) As String
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function SysAllocString Lib "oleaut32" (ByVal CopyFrom As LongPtr) As String
 
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function WNetGetConnectionW Lib "mpr" (ByVal lpLocalName As String, ByVal lpRemoteName As String, ByRef lpnLength As Long) As Long
 
     ' -----------------------------------------------------------------------------------------------------------------------------------------
@@ -118,9 +207,9 @@ Private Module WindowsAPI
     Public Const OLEIVERB_PRIMARY As Long = 0
     Public Const OLEIVERB_SHOW As Long = -1
     Public Const OLEIVERB_HIDE As Long = -3
-    Public Const OLEIVERB_INPLACEACTIVATE As Long = -4
-    Public Const OLEIVERB_UIACTIVATE As Long = -5
-
+    Public Const OLEIVERB_UIACTIVATE As Long = -4
+    Public Const OLEIVERB_INPLACEACTIVATE As Long = -5
+    
     Public Const STATFLAG_NONAME As Long = 1
         
     ' FIXME all these would be best with an [ Inlined ] attribute
@@ -132,7 +221,7 @@ Private Module WindowsAPI
         Dim itemLength As Long = CLng(SendMessageW(hwnd, WM_GETTEXTLENGTH, 0, 0))
         Dim outValue As String = WindowsAPI.OLEAUT32_AllocateBSTR(vbNullString, itemLength)
         Dim realLength As Long = CLng(SendMessageW(hwnd, WM_GETTEXT, itemLength + 1, StrPtr(outValue)))
-        If realLength < itemLength Then outValue = VBA.Left(outValue, realLength) ' for completeness, see docs for WM_GETTEXTLENGTH
+        If realLength < itemLength Then outValue = VBA.Left$(outValue, realLength) ' for completeness, see docs for WM_GETTEXTLENGTH
         Return outValue
     End Function
     
@@ -261,8 +350,9 @@ Private Module WindowsAPI
             
         Dim LF As LOGFONT
         GetObjectW(Font.hFont, LenB(LF), LF)
-        LF.LFQuality = CLEARTYPE_QUALITY
+        LF.LFQuality = CByte(CLEARTYPE_QUALITY)
         Dim newFont As LongPtr = CreateFontIndirectW(LF)
+        'Debug.Print "**** CREATED HFONT: " & newFont
     
         SendMessageW(Element.Handle, WM_SETFONT, newFont, 1)
         Return newFont
@@ -273,6 +363,11 @@ Private Module WindowsAPI
         USER32_GetWindowPlacement.length = LenB(USER32_GetWindowPlacement)
         GetWindowPlacement(Element.Handle, USER32_GetWindowPlacement)
     End Function
+    
+    Public Sub USER32_SetWindowPlacement(ByRef Element As WindowsControls.WindowElement, ByRef wp As WINDOWPLACEMENT)
+        If Element Is Nothing Then Err.Raise errInvalidArgument
+    	SetWindowPlacement(Element.Handle, wp)
+    End Sub
         
     Public Function GDI32_GetWindowFontHeight(ByRef Element As WindowsControls.WindowElement) As Long
         If Element Is Nothing Then Err.Raise errInvalidArgument
@@ -500,7 +595,7 @@ Private Module WindowsAPI
         Return GetVolumeInformationW(lpRootPathName, lpVolumeNameBuffer, nVolumeNameSize, lpVolumeSerialNumber, lpMaximumComponentLength, lpFileSystemFlags, lpFileSystemNameBuffer, nFileSystemNameSize)
     End Function
     
-    Public Function KERNEL32_GetDriveTypeW(ByRef lpRootPathName As String) As Long
+    Public Function KERNEL32_GetDriveTypeW(ByRef lpRootPathName As String) As WinNativeFormsBASE.DriveType
         Return GetDriveTypeW(lpRootPathName)
     End Function
     

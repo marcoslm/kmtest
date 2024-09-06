@@ -1,97 +1,111 @@
-[ ClassId ("02370256-1788-4FFE-AD64-E150AB402686") ]
-[ InterfaceId ("C1A69641-F7E0-49B9-BC3C-EFEC42AF0728") ]
-[ COMCreatable (False) ]
+[ClassId("02370256-1788-4FFE-AD64-E150AB402686")]
+[InterfaceId("C1A69641-F7E0-49B9-BC3C-EFEC42AF0728")]
+[COMCreatable(False)]
 Private Class BaseControlWindowlessPoints
-
+ 
     Implements BaseControlPoints Via BaseControlPoints
 
-    [ Description ("") ]
-        Public Visible As Boolean = True
+    [Serialize(True, "Index")]
+    Private IndexINIT As Long = -1
 
-    [ Serialize (False) ]
+    [Serialize(False)]
+    Public Property Get Index() As Long
+        Dim IndexINIT As Any = CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ControlArrayIndex
+        If IndexINIT = -1 Then
+            'Err.Raise 343, , "Object not an array"
+            Err.ReturnHResult = &H800A0157
+            Return 0
+        End If
+        Return IndexINIT
+    End Property
+    
+    [Description("")]
+    [Serialize(True, "Visible")]
+        Private VisibleINIT As Boolean = True
+
+    [Serialize(False)]
         Private RootWindowElementBase As WindowsControls.WindowElement
 
     Sub New(ByVal ControlType As ControlTypeConstants)
         Set Me.BaseControlPoints = New BaseControlPoints(ControlType)
     End Sub
 
-    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown) As WindowElement
-        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
-        Set Me.RootWindowElementBase = Me.ControlContext.CreateWindowElement(vbNullString, vbNullString, 0, 0, False)
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                           ByRef InitData As WindowCreationData) As WindowElement
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .WindowlessVisible = Me.VisibleINIT
+            .ControlArrayIndex = Me.IndexINIT
+        End With
+        InitData.BaseControlInfoPtr = InternalBaseControlBeforeCreateRootWindow(InitData)
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.RootWindowElementBase = CType(Of WindowElement)(Me.ControlContext.CreateWindowElement(InitData))
         Return Me.RootWindowElementBase
     End Function
     
-    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
-        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
-    End Sub
-
-    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
-    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
-    End Function
-
-    [ DispId (-856) ]
+    [DispId(-856)]
     Public Property Get Container() As Object
         On Error Resume Next
-        Me.ControlContext.EnsureFormIsLoaded()
-    	Return Me.RootWindowElementBase.Container
+        Return Me.RootWindowElementBase.Container
     End Property
-
-    Private Sub OnPropertyChanged_Visible() _
-            Handles Visible.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        Me.ControlContext.WindowlessRefresh()
-    End Sub
-
-    Private Sub OnTouchedFormProperties() _
-            Handles Visible.OnPropertyGet
-                    
-        Me.ControlContext.EnsureFormIsLoaded()
-    End Sub
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Get X1() As Double
         Return Me.ControlContext.GetScaledX1
     End Property
     
-    [ Serialize (False) ]
-    [ BindOnlyIfNoArguments ]
+    [Serialize(False)]
+    [BindOnlyIfNoArguments]
     Public Property Let X1(ByVal Value As Double)
         Me.ControlContext.SetScaledX1(Value)
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Get Y1() As Double
         Return Me.ControlContext.GetScaledY1
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Let Y1(ByVal Value As Double)
         Me.ControlContext.SetScaledY1(Value)
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Get X2() As Double
         Return Me.ControlContext.GetScaledX2
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Let X2(ByVal Value As Double)
         Me.ControlContext.SetScaledX2(Value)
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Get Y2() As Double
         Return Me.ControlContext.GetScaledY2
     End Property
     
-    [ Serialize (False) ]
+    [Serialize(False)]
     Public Property Let Y2(ByVal Value As Double)
         Me.ControlContext.SetScaledY2(Value)
     End Property
     
-    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+    Public Sub ZOrder([TypeHint(ZOrderConstants)] Optional ByVal Position As Variant)
         CommonZOrderWindowless(Position, Me.ControlContext)
     End Sub
-
+    
+    Friend Sub WindowlessRefresh()
+        Me.ControlContext.WindowlessRefresh()
+    End Sub
+    
+    [Serialize(False)]
+    Property Get Visible() As Boolean
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible
+    End Property
+        
+    [Serialize(False)]
+    Property Let Visible(ByVal Value As Boolean)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible = Value
+        WindowlessRefresh()
+    End Property
+    
 End Class

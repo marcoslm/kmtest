@@ -1,6 +1,6 @@
-[ COMCreatable (False) ]
-[ ClassId ("6BE611E8-2585-421E-A9B4-309345D510F2") ]
-[ InterfaceId ("FBD19C6B-6A7A-4693-A9C8-995A8EE95285") ]
+[COMCreatable(False)]
+[ClassId("6BE611E8-2585-421E-A9B4-309345D510F2")]
+[InterfaceId("FBD19C6B-6A7A-4693-A9C8-995A8EE95285")]
 Class ColumnHeaders
     Public ContainerList As ListView
     Private InternalCollection As Collection = New Collection
@@ -8,6 +8,7 @@ Class ColumnHeaders
     
     Public Sub New(lv As ListView)
     	Set Me.ContainerList = lv
+        Me.InternalCollection.KeyCompareMode = vbBinaryCompare
     End Sub
     
     Private Sub Class_Terminate()
@@ -18,12 +19,12 @@ Class ColumnHeaders
     	Set GetInternalCollection = InternalCollection
     End Function
     
-    [ Enumerator ]      ' FIXME currently has to be PUBLIC for [ Enumerator ] to work
+    [Enumerator]      ' FIXME currently has to be PUBLIC for [ Enumerator ] to work
     Public Function _NewEnum() As stdole.IUnknown
     	Return InternalCollection.[_NewEnum]
     End Function
     
-    [ Description ("Adds a column to the listview") ]
+    [Description("Adds a column to the listview")]
     Public Function Add(Optional ByVal Index As Variant, _ 
                     Optional ByVal Key As Variant, _
                     Optional ByVal Text As Variant, _
@@ -43,22 +44,34 @@ Class ColumnHeaders
             End If
             If Index = (currentCollectionCount + 1) Then AppendToEnd = True
         End If
-        Dim keyStr As String = If(IsMissing(Key), vbNullString, Key)
-        Dim textStr As String = If(IsMissing(Text), vbNullString, Text)
-        Dim widthPixels As Long = If(IsMissing(Width), DEFAULT_COLUMN_WIDTH * Me.ContainerList.InternalUnitPixelScale, Width)
-    	Dim alignmentVal As Long = If(IsMissing(Alignment), LVCFMT_LEFT, Alignment)
-        Dim NewItem As ColumnHeader = New ColumnHeader(Me.ContainerList, keyStr)
-        If AddItemInternal(NewItem, Index, widthPixels, alignmentVal, textStr) = False Then
+        
+        CommonVerifyImage(Icon, Me.ContainerList.ColumnHeaderIcons)
+        
+        Dim keyStrOrNullString As String = If(IsMissing(Key), vbNullString, CStr(Key))
+        Dim keyStrOrMissing As Variant = If(IsMissing(Key), Key, CStr(Key))
+        Dim textStr As String = If(IsMissing(Text), vbNullString, CStr(Text))
+        
+        With CType(Of TbListViewPrivate)(Me.ContainerList)
+            Dim widthPixels As Long = If(IsMissing(Width), CLng(DEFAULT_COLUMN_WIDTH * .UnitPixelScale), CLng((Width * .UnitPixelScale) / .GetScaleX))
+    	End With
+        Dim alignmentVal As Long = If(IsMissing(Alignment), CLng(LVCFMT_LEFT), CLng(Alignment))
+        Dim NewItem As ColumnHeader = New ColumnHeader(Me.ContainerList, keyStrOrNullString, Icon)
+        If IsMissing(Key) = False Then
+        	If Me.InternalCollection.Exists(keyStrOrNullString) Then
+            	Err.Raise 35602, "Key is not unique in collection"
+        	End If
+        End If
+        If AddItemInternal(NewItem, CLng(Index), widthPixels, alignmentVal, textStr, Icon) = False Then
         	Err.Raise 5
         End If
         If AppendToEnd Then
-        	Me.InternalCollection.Add(NewItem, Key)
+        	Me.InternalCollection.Add(NewItem, keyStrOrMissing)
         Else
             Dim newIndex As Long = NewItem.Index
             If newIndex > 1 Then
-                Me.InternalCollection.Add(NewItem, Key, , newIndex - 1)
+                Me.InternalCollection.Add(NewItem, keyStrOrMissing, , newIndex - 1)
             Else
-                Me.InternalCollection.Add(NewItem, Key, 1)
+                Me.InternalCollection.Add(NewItem, keyStrOrMissing, 1)
             End If
             SyncIndices()
         End If
@@ -74,17 +87,18 @@ Class ColumnHeaders
     '     Debug.Print "ColumnHeaders.DumpContents END ------------------------"
     ' End Sub
     
-    Private Function AddItemInternal(ByRef NewItem As ColumnHeader, ByVal Index As Long, ByVal Width As Long, ByVal Alignment As Long, Optional ByVal Text As String) As Boolean
+    Private Function AddItemInternal(ByRef NewItem As ColumnHeader, ByVal Index As Long, ByVal Width As Long, ByVal Alignment As Long, Optional ByVal Text As String, Optional ByVal Icon As Variant) As Boolean
         If Index = 1 Then
             If Alignment <> LVCFMT_LEFT Then
             	Err.Raise 5, , "The first column in a ListView control must be left aligned"
             End If
         End If
-
+        
         Dim lvc As LVCOLUMNW
-        lvc.mask = LVCF_FMT Or LVCF_TEXT Or LVCF_WIDTH
+        lvc.mask = LVCF_FMT Or LVCF_TEXT Or LVCF_WIDTH Or LVCF_IMAGE
         lvc.fmt = Alignment
         lvc.cx = Width
+        lvc.iImage = NewItem.InternalGetIconIndexRaw()
         lvc.pszText = StrPtr(Text)
         Dim newIndex As Long = CLng(WinNativeFormsBASE.SendMessageW(ContainerList.hWnd, ListViewConsts.LVM_INSERTCOLUMNW, Index - 1, VarPtr(lvc)))
         If newIndex = -1 Then
@@ -94,31 +108,42 @@ Class ColumnHeaders
         Return True
     End Function
     
-    [ Description ("Removes all items from the listview") ]
+    [Description("Removes all items from the listview")]
     Public Sub Clear()
-        Dim Count As Long = Me.Count
-        While Count > 0
-            WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_DELETECOLUMN, Count - 1, 0)
-            Count -= 1
-        Wend
-    
-    	Set Me.InternalCollection = New Collection
+        With CType(Of ListViewInternalData)(CType(Of TbListViewPrivate)(Me.ContainerList).GetInternalDataPtr())
+            If .IsDestroying = False Then
+                Dim Count As Long = Me.Count
+                While Count > 0
+                    WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerList.hWnd, ListViewConsts.LVMessages.LVM_DELETECOLUMN, Count - 1, 0)
+                    Count -= 1
+                Wend
+            End If
+                
+            Set Me.InternalCollection = New Collection
+        End With
     End Sub
     
-    [ Description ("Removes the count of all items that have been added to the listview") ]
+    Friend Sub ClearAllIcons()
+        Dim Item As ColumnHeader
+        For Each Item In InternalCollection
+            Item.RemoveIcon()
+        Next
+    End Sub
+    
+    [Description("Removes the count of all items that have been added to the listview")]
     Public Property Get Count() As Long
     	Return Me.InternalCollection.Count
     End Property
     
-    [ DefaultMember ]
-    [ Description ("Provides access to the added listview items collection, using either the Key of an item as originally passed to Add(), or the Index of the item") ]
+    [DefaultMember]
+    [Description("Provides access to the added listview items collection, using either the Key of an item as originally passed to Add(), or the Index of the item")]
     Public Property Get Item(ByRef Index As Variant) As ColumnHeader
-    	Return Me.InternalCollection.Item(Index)
+    	Return CType(Of ColumnHeader)(Me.InternalCollection.Item(Index))
     End Property
     
-    [ Description ("Removes an entry from the listview, given the Index or Key of the item") ]
+    [Description("Removes an entry from the listview, given the Index or Key of the item")]
     Public Sub Remove(ByRef Index As Variant)
-        Dim itemToRemove As ColumnHeader = Me.InternalCollection.Item(Index)
+        Dim itemToRemove As Any = CType(Of ColumnHeader)(Me.InternalCollection.Item(Index))
         Me.InternalCollection.Remove(Index)
         SyncIndices()
         

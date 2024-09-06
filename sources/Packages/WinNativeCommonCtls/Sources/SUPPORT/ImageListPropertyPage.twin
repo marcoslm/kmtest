@@ -1,0 +1,595 @@
+[Description("")]
+[FormDesignerId("413445E1-D65F-45D7-9699-6194A15CD293")]
+[PredeclaredId]
+[COMCreatable(False)]
+[ComImport(True)]
+Class ImageListPropertyPage
+
+    [UseGetLastError(False), DLLStackCheck(False)]
+    Private Declare PtrSafe Function GdiAlphaBlend Lib "gdi32" (ByVal hDestDC As LongPtr, ByVal X As Long, ByVal Y As Long, ByVal nWidth As Long, ByVal nHeight As Long, ByVal hSrcDC As LongPtr, ByVal XSrc As Long, ByVal YSrc As Long, ByVal nWidthSrc As Long, ByVal nHeightSrc As Long, ByVal BlendFunc As LongPtr) As Long
+    
+    Type ImageListEntry
+        ImageData As String
+        Key As String
+        Tag As String
+        
+        CachedOrigWidth As Long
+        CachedOrigHeight As Long
+        CachedOrigInfo As String
+        CachedPicture As StdPicture
+    End Type
+    
+    Private OwnerControl As ImageList
+    Private SelectedImageIdx As Long = 0
+    
+    Private List() As ImageListEntry
+    
+    Private IgnoreChanges As Boolean
+    Private PicImageCtl_Count As Long = 1      ' Includes count of hidden control array first element
+
+    Private TotalStorageSize As LongLong = 0
+    
+    Private ImageListWidth As Long
+    Private ImageListHeight As Long
+        
+    Private ThumbnailSize As Long
+    Const ThumnailPadding As Long = 2
+        
+    Private Property Get ThumbnailPixelSize() As Long
+        If ThumbnailSize = 0 Then
+            ThumbnailSize = CLng(PicImageCtl(0).ScaleX(CSng(PicImageCtl(0).Height), vbTwips, vbPixels) - (ThumnailPadding * 2))
+            Debug.Assert ThumbnailSize > 0
+        End If
+        Return ThumbnailSize
+    End Property
+    
+    Sub New()
+    End Sub
+    
+	Sub New(OwnerControl As ImageList)
+        Set Me.OwnerControl = OwnerControl
+	End Sub
+        
+    Private Sub Form_Load()
+        Dim existingPics() As String
+        Dim existingKeys() As String
+        Dim existingTags() As String
+        If OwnerControl IsNot Nothing Then
+            Me.Caption = OwnerControl.Name & " Properties"
+
+            'Stop
+            CType(Of TbImageListPrivate)(OwnerControl).GetInitImageData(existingPics, existingKeys, existingTags)
+            
+            Select Case OwnerControl.ColorDepth
+                Case ColorDepth4Bit
+                    ColorDepth.ListIndex = 0
+                Case ColorDepth8Bit
+                    ColorDepth.ListIndex = 1
+                Case ColorDepth16Bit
+                    ColorDepth.ListIndex = 2
+                Case ColorDepth24Bit
+                    ColorDepth.ListIndex = 3
+                Case ColorDepth32Bit
+                    ColorDepth.ListIndex = 4
+            End Select
+            
+            If IsArrayInitialized(existingPics) AndAlso (UBound(existingPics) >= 0) Then
+                'Debug.Print "existingPics: " & (UBound(existingPics) + 1)
+                
+                Dim existingPicsCount As Long = UBound(existingPics)
+                ReDim Preserve existingKeys(existingPicsCount) '  match the array bounds for safety
+                ReDim Preserve existingTags(existingPicsCount) '  match the array bounds for safety
+                
+                Dim picIndex As Long = 0
+                While picIndex <= existingPicsCount
+                    'Stop
+                    'Debug.Print "** TEST INPUT LENGTH: " & LenB(existingPics(picIndex))
+                    InsertPic(-1, existingPics(picIndex), existingKeys(picIndex), existingTags(picIndex))
+                    picIndex += 1
+                Wend
+                
+                If existingPicsCount > 0 Then SelectImage(1)
+            End If
+            setSize(OwnerControl.ImageWidth, OwnerControl.ImageHeight)
+            If (OwnerControl.ImageWidth = 16) And (OwnerControl.ImageHeight = 16) Then
+                size16.Value = True
+            ElseIf (OwnerControl.ImageWidth = 32) And (OwnerControl.ImageHeight = 32) Then
+                size32.Value = True
+            ElseIf (OwnerControl.ImageWidth = 48) And (OwnerControl.ImageHeight = 48) Then
+                size48.Value = True
+            End If
+        End If
+    End Sub
+    
+    Private Sub HScroll1_Change()
+        PBoxInner.Left = -HScroll1.Value
+    End Sub
+    
+    Private Sub HScroll1_Scroll()
+        HScroll1_Change()
+    End Sub
+    
+    Private Function GetFormattedStorageSize(value As LongLong) As String
+        If value < 1000 Then
+            Return value & " bytes"
+        ElseIf value < 1000000 Then
+            Return FormatNumber(value / 1000^, 1) & " KB"
+        ElseIf value < 1000000000 Then
+            Return FormatNumber(value / 1000000^, 1) & " MB"
+        End If
+    End Function
+    
+    Private Sub InsertPic(Position As Long, PicData As String, Optional Key As String, Optional Tag As String)
+       ' Debug.Print "InsertPic: " & LenB(PicData)
+        
+       ' First, check the image data is valid:
+       Dim byteArray() As Byte
+       byteArray = PicData
+       Dim pic As StdPicture = Global.LoadPicture(byteArray)
+       If pic Is Nothing Then
+           On Error GoTo 0
+           Err.Raise 5, , "Unsupported picture format"
+       End If
+       
+        Dim index As Long = PicImageCtl_Count
+        PicImageCtl_Count += 1
+                
+        ReDim Preserve Me.List(index - 1)
+        
+        Dim DontChangeSelected As Boolean
+        If Position = -1 Then
+            Position = PicImageCtl_Count - 1
+            DontChangeSelected = True
+        End If
+        
+        If Position <> (PicImageCtl_Count - 1) Then
+            ' move existing items to make space for this inserted element
+            ' FIXME could use memcpy
+            Dim PositionEnd As Long = PicImageCtl_Count - 1
+            While PositionEnd > Position
+                PositionEnd -= 1
+                Me.List(PositionEnd) = Me.List(PositionEnd - 1)
+            Wend
+        End If
+
+        Me.List(Position - 1).ImageData = PicData
+        Me.List(Position - 1).Key = Key
+        Me.List(Position - 1).Tag = Tag
+        Set Me.List(Position - 1).CachedPicture = Nothing
+        Call GetPicFromIndex(Position, pic)      ' this causes info to be cached etc
+                
+        Me.TotalStorageSize += LenB(PicData)
+        Me.StorageSize.Text = GetFormattedStorageSize(Me.TotalStorageSize)
+        
+        Load PicImageCtl(index)
+        PicImageCtl(index).BackColor = vbWhite
+        PicImageCtl(index).Dock = vbDockLeft
+        PicImageCtl(index).Visible = True
+        PicImageCtl(index).Width = PicImageCtl(index).Height
+        'Set PicImageCtl(index).Picture = Pic
+        'Command2(1).Dock = Command2(1).Dock
+        
+        Load Splitter(index)
+        Splitter(index).Dock = vbDockLeft
+        Splitter(index).Visible = True
+        
+        ' FIXME bodge, this forces dockable layout to be recalculated
+        WinNativeFormsBASE.SendMessageW(Me.hWnd, WinNativeFormsBASE.WM_SIZE, -1, 0)
+                
+        Dim RightmostPoint As Double = Splitter(index).Left + Splitter(index).Width
+        'Debug.Print "RightmostPoint: " & RightmostPoint, "PBoxWidth: " & Picture1.Width
+        
+        PBoxInner.Width = RightmostPoint
+        If RightmostPoint > Picture1.Width Then
+            Dim ScrollAmount As Double = RightmostPoint - Picture1.Width
+            'PBoxInner.Left = -ScrollAmount
+            HScroll1.Max = CLng(ScrollAmount)
+            'HScroll1.Value = ScrollAmount
+            HScroll1.Enabled = True
+            HScroll1.SmallChange = CLng(PicImageCtl(index).Width)
+            HScroll1.LargeChange = CLng(Picture1.Width)
+        Else
+            HScroll1.Enabled = False
+        End If
+        
+        If DontChangeSelected = False Then
+            SelectImage(Position)
+        End If
+        If PicImageCtl_Count = 2 And ImageListWidth = 0 And ImageListHeight = 0 Then
+            sizeCustom.Value = True
+            ImgListWidth.Text = List(0).CachedOrigWidth
+            ImgListHeight.Text = List(0).CachedOrigHeight
+        End If
+        
+        ImageCount.Text = PicImageCtl_Count - 1
+    End Sub
+    
+    Private Function GetPicFromIndex(Index As Long, Optional PreCachedPic As StdPicture) As StdPicture
+        Dim pic As StdPicture = List(Index - 1).CachedPicture
+        If pic Is Nothing Then
+            On Error Resume Next
+            
+            Dim byteArray() As Byte
+            byteArray = List(Index - 1).ImageData
+        
+            Dim origPic As StdPicture = PreCachedPic
+            If origPic Is Nothing Then Set origPic = Global.LoadPicture(byteArray)
+            If origPic Is Nothing Then
+                ' Rather than balking on bad files here, we allow it through but with a substituted picture
+                ' This prevents the problem of the image list not working if the current OS doesn't support the file format (e.g. Win7 not supporting 32-bit ICO)
+                Const ImageData_Exclamation As Variant = LoadResDataInternal("Exclamation.gif", "OTHER")
+                Set pic = Global.LoadPicture(ImageData_Exclamation)
+            End If
+            Set pic = CType(Of StdPicture)(RuntimeCreateScaledPicture(origPic, ThumbnailPixelSize, ThumbnailPixelSize, False, False))
+            
+            Dim picWidth As Long
+            Dim picHeight As Long
+            Dim info As String
+            If origPic IsNot Nothing Then
+                VB.ScaleOLEPictureDimensionsToPixels(vbPicTypeNone, origPic.Width, picWidth, origPic.Height, picHeight)
+                
+                Select Case pic.Type
+                    Case vbPicTypeBitmap
+                        info = GetBitsPerPixelFromPic(origPic) & "bpp bitmap"
+                    Case vbPicTypeEMetafile
+                        info = "enhanced-metafile"
+                    Case vbPicTypeMetafile
+                        info = "metafile"
+                    Case vbPicTypeIcon
+                        info = "icon"
+                    Case Else
+                End Select
+                
+                Set List(Index - 1).CachedPicture = pic
+                List(Index - 1).CachedOrigWidth = picWidth
+                List(Index - 1).CachedOrigHeight = picHeight
+                List(Index - 1).CachedOrigInfo = info
+            End If
+            
+        End If
+        Return pic
+    End Function
+    
+    Private Sub PicImageCtl_Paint(Index As Integer)
+        Dim pic As StdPicture = GetPicFromIndex(CLng(Index))
+        If pic IsNot Nothing Then
+            If pic.Type = vbPicTypeBitmap Then
+                Dim inputWidth As Long
+                Dim inputHeight As Long
+                VB.ScaleOLEPictureDimensionsToPixels(vbPicTypeNone, pic.Width, inputWidth, pic.Height, inputHeight)
+                
+                Dim hDCBmp As LongPtr, hBmpOld As LongPtr
+                hDCBmp = WinNativeFormsBASE.CreateCompatibleDC(vbNullPtr)
+                If hDCBmp <> vbNullPtr Then
+                    hBmpOld = WinNativeFormsBASE.SelectObject(hDCBmp, pic.Handle)
+                    GdiAlphaBlend PicImageCtl(Index).hDC, ThumnailPadding, ThumnailPadding, ThumbnailPixelSize, ThumbnailPixelSize, hDCBmp, 0, 0, inputWidth, inputHeight, &H1FF0000
+                    WinNativeFormsBASE.SelectObject(hDCBmp, hBmpOld)
+                    WinNativeFormsBASE.DeleteDC(hDCBmp)
+                End If
+            Else
+                PicImageCtl(Index).PaintPicture(pic, Screen.TwipsPerPixelX * 2, Screen.TwipsPerPixelY * 2, PicImageCtl(Index).Width - (Screen.TwipsPerPixelX * 4), PicImageCtl(Index).Height - (Screen.TwipsPerPixelY * 4))
+            End If
+        End If
+    End Sub
+    
+    Private Sub PicImageCtl_Click(Index As Integer)
+        SelectImage(CLng(Index))
+    End Sub
+    
+    Private Sub SelectedImageKey_Change()
+        If IgnoreChanges Then Exit Sub
+        List(SelectedImageIdx - 1).Key = SelectedImageKey.Text
+    End Sub
+    
+    Private Sub SelectedImageTag_Change()
+        If IgnoreChanges Then Exit Sub
+        List(SelectedImageIdx - 1).Tag = SelectedImageTag.Text
+    End Sub
+
+    Private Sub EnsureVisible(Index As Long)
+        If PicImageCtl(Index).Left < -PBoxInner.Left Then
+            HScroll1.Value = CLng(PicImageCtl(Index).Left)
+        ElseIf (Splitter(Index).Left + Splitter(Index).Width) > (-PBoxInner.Left + Picture1.Width) Then
+            HScroll1.Value = CLng((Splitter(Index).Left + Splitter(Index).Width) - Picture1.Width)
+        End If
+    End Sub
+    
+    Private Sub SelectImage(Index As Long)
+        If SelectedImageIdx <> 0 Then PicImageCtl(SelectedImageIdx).BackColor = vbWhite
+        PicImageCtl(Index).BackColor = vbRed
+        SelectedImageIdx = Index
+        
+        SelectedImageIndex.Text = SelectedImageIdx
+
+        On Error Resume Next
+        IgnoreChanges = True
+            SelectedImageKey.Text = ""
+            SelectedImageKey.Text = List(Index - 1).Key
+            SelectedImageKey.Locked = False
+            
+            SelectedImageTag.Text = ""
+            SelectedImageTag.Text = List(Index - 1).Tag
+            SelectedImageTag.Locked = False
+            
+            SelectedImageStorageSize.Text = ""
+            SelectedImageStorageSize.Text = GetFormattedStorageSize(LenB(List(Index - 1).ImageData))
+            
+            SelectedImageInfo.Text = List(Index - 1).CachedOrigWidth & "x" & List(Index - 1).CachedOrigHeight & " " & List(Index - 1).CachedOrigInfo
+        IgnoreChanges = False
+        
+        MoveLeft.Enabled = True
+        MoveRight.Enabled = True
+        RemovePicture.Enabled = True
+        RemoveAll.Enabled = True
+
+        EnsureVisible(Index)
+        
+        FocusRetainer.SetFocus
+    End Sub
+    
+    Private Function LoadPicFromFilePath(filePath As String, outPicData As String) As Boolean
+        On Error GoTo ErrorHandler
+        Dim fileNumber As Integer
+        fileNumber = FreeFile
+        Open filePath For Binary Access Read As #fileNumber
+        Dim fileSize As Long
+        fileSize = LOF(fileNumber)
+        Dim byteArray() As Byte
+        ReDim byteArray(0 To fileSize - 1)
+        Get #fileNumber,, byteArray
+        Close #fileNumber
+        outPicData = byteArray
+        'Debug.Print "LoadPicFromFilePath: " & LenB(outPicData)
+        Return True
+
+    ErrorHandler:
+        MsgBox "Error loading picture '" & filePath & "':" & vbCrLf & _
+                Err.Description & " (&H" & Err.Number & ")"
+        Return False
+    End Function
+    
+    Private Sub InsertPicture_Click()
+        With New CommonDialog
+            .DialogTitle = "Open Project..."
+            .Filter = "All Picture Files|*.ico;*.cur;*.bmp;*.dib;*.gif;*.jpg;*.png|All Files (*.*)|*.*"
+            .Flags = CdlOFNAllowMultiSelect Or CdlOFNExplorer
+            .MaxFileSize = 1034000
+            If .ShowOpen() Then
+                Dim filePath As String
+                Dim rootPath As String
+                Dim filesArray As Variant = Split(.FileName, Chr(0))
+                For Each filePath In filesArray
+                    If Len(rootPath) = 0 AndAlso (UBound(filesArray) > 1) Then
+                        rootPath = filePath
+                    Else
+                        Dim picData As String = ""
+                        If LoadPicFromFilePath(rootPath & filePath, picData) Then
+                            On Error Resume Next
+                            InsertPic(SelectedImageIdx + 1, picData)
+                            
+                            If Err.Number <> 0 Then
+                                MsgBox "Failed to load file '" & rootPath & filePath & "'" & vbCrLf & vbCrLf & _
+                                        Err.Description & " (" & Err.Number & ")"
+                            End If
+                        End If
+                    End If
+                Next
+            End If
+        End With
+    End Sub
+    
+    Private Sub RemovePicture_Click()
+        
+        Dim itemIndex As Long = SelectedImageIdx
+        
+        Me.TotalStorageSize -= LenB(Me.List(itemIndex - 1).ImageData)
+        Me.StorageSize.Text = GetFormattedStorageSize(Me.TotalStorageSize)
+        
+        While itemIndex < (PicImageCtl_Count - 1)
+            ' FIXME could do memcpy's here
+            List(itemIndex - 1) = List(itemIndex)
+            itemIndex += 1
+        Wend
+        
+        Unload Splitter(PicImageCtl_Count - 1)
+        Unload PicImageCtl(PicImageCtl_Count - 1)
+        PicImageCtl_Count -= 1
+        
+        Dim lastSelectedIndex As Long = SelectedImageIdx
+        SelectedImageIdx = 0
+        
+        If lastSelectedIndex < PicImageCtl_Count Then
+            SelectImage(lastSelectedIndex)
+        ElseIf PicImageCtl_Count > 1 Then
+            SelectImage(lastSelectedIndex - 1)
+        Else
+            RemoveAll_Click
+        End If
+        
+        ImageCount.Text = PicImageCtl_Count - 1
+    End Sub
+    
+    Private Sub Unselect()
+        SelectedImageIdx = 0
+        IgnoreChanges = True
+        SelectedImageIndex.Text = "0"
+        SelectedImageKey.Text = ""
+        SelectedImageKey.Locked = True
+        SelectedImageTag.Text = ""
+        SelectedImageTag.Locked = True
+        SelectedImageStorageSize.Text = "0 bytes"
+        SelectedImageInfo.Text = ""
+        MoveLeft.Enabled = False
+        MoveRight.Enabled = False
+        IgnoreChanges = False
+        RemovePicture.Enabled = False
+    End Sub
+    
+    Private Sub RemoveAll_Click()
+        Unselect()
+        RemoveAll.Enabled = False
+        Erase List
+        
+        While PicImageCtl_Count > 1
+            Unload Splitter(PicImageCtl_Count - 1)
+            Unload PicImageCtl(PicImageCtl_Count - 1)
+            PicImageCtl_Count -= 1
+        Wend
+        ImageCount.Text = PicImageCtl_Count - 1
+        
+        ImageListWidth = 0
+        ImageListHeight = 0
+        ImgListWidth.Text = ImageListWidth
+        ImgListHeight.Text = ImageListHeight
+        
+        Me.TotalStorageSize = 0
+        Me.StorageSize.Text = "0 bytes"
+    End Sub
+    
+    Private Sub MoveLeft_Click()
+        Dim itemIndex As Long = SelectedImageIdx
+        If itemIndex = 1 Then Exit Sub
+        
+        Dim EntryToMove As ImageListEntry
+        EntryToMove = List(itemIndex - 1)
+        List(itemIndex - 1) = List(itemIndex - 2)
+        List(itemIndex - 2) = EntryToMove
+        SelectImage(itemIndex - 1)
+    End Sub
+    
+    Private Sub MoveRight_Click()
+        Dim itemIndex As Long = SelectedImageIdx
+        If itemIndex = PicImageCtl_Count - 1 Then Exit Sub
+        
+        Dim EntryToMove As ImageListEntry
+        EntryToMove = List(itemIndex - 1)
+        List(itemIndex - 1) = List(itemIndex)
+        List(itemIndex) = EntryToMove
+        SelectImage(itemIndex + 1)
+    End Sub
+    
+    Private Sub size16_Click()
+        setSize(16, 16)
+    End Sub
+    
+    Private Sub size32_Click()
+        setSize(32, 32)
+    End Sub
+    
+    Private Sub size48_Click()
+        setSize(48, 48)
+    End Sub
+    
+    Private Sub setSize(pixelWidth As Long, pixelHeight As Long)
+        Me.ImageListWidth = pixelWidth
+        Me.ImageListHeight = pixelHeight
+        IgnoreChanges = True
+        ImgListWidth.Text = pixelWidth
+        ImgListHeight.Text = pixelHeight
+        IgnoreChanges = False
+    End Sub
+    
+    Private Sub ImgListHeight_Change()
+        If IgnoreChanges Then Exit Sub
+        Me.sizeCustom.Value = True
+        If IsNumeric(Me.ImgListHeight.Text) Then
+            Me.ImageListHeight = CLng(Me.ImgListHeight.Text)
+        End If
+    End Sub
+    
+    Private Sub ImgListWidth_Change()
+        If IgnoreChanges Then Exit Sub
+        Me.sizeCustom.Value = True
+        If IsNumeric(Me.ImgListWidth.Text) Then
+            Me.ImageListWidth = CLng(Me.ImgListWidth.Text)
+        End If
+    End Sub
+    
+    Private Function GetImageDataArray() As String()
+        Dim out() As String
+        If IsArrayInitialized(Me.List) Then
+            Dim listCount As Long = UBound(Me.List)
+            ReDim out(listCount)
+
+            Dim index As Long
+            For index = 0 To listCount
+                out(index) = List(index).ImageData
+            Next
+        End If
+        'Debug.Print "GetImageDataArray: " & LenB(out(0))
+        Return out
+    End Function
+    
+    Private Function GetImageKeysArray() As String()
+        Dim out() As String
+        If IsArrayInitialized(Me.List) Then
+            Dim listCount As Long = UBound(Me.List)
+            ReDim out(listCount)
+
+            Dim index As Long
+            For index = 0 To listCount
+                out(index) = List(index).Key
+            Next
+        End If
+        Return out
+    End Function
+    
+    Private Function GetImageTagsArray() As String()
+        Dim out() As String
+        If IsArrayInitialized(Me.List) Then
+            Dim listCount As Long = UBound(Me.List)
+            ReDim out(listCount)
+
+            Dim index As Long
+            For index = 0 To listCount
+                out(index) = List(index).Tag
+            Next
+        End If
+        Return out
+    End Function
+    
+    Private Sub OK_Click()
+        If Me.OwnerControl IsNot Nothing Then
+            With Me.OwnerControl
+                With CType(Of TbImageListPrivate)(Me.OwnerControl)
+                    .SetWidthHeight(ImageListWidth, ImageListHeight)
+                End With
+                CType(Of TbImageListPrivate)(OwnerControl).SetInitImageData(GetImageDataArray(), GetImageKeysArray(), GetImageTagsArray())
+                .ColorDepth = CType(Of ImageListColorDepth)(Val(ColorDepth.Text))
+            End With
+        End If
+        Me.Close
+    End Sub
+    
+    Private Sub Cancel_Click()
+        Me.Close
+    End Sub
+    
+    Private Sub FocusRetainer_KeyDown(KeyCode As Integer, Shift As Integer)
+        If KeyCode = vbKeyDelete Then
+            If RemovePicture.Enabled Then RemovePicture_Click()
+        ElseIf KeyCode = vbKeyLeft Then
+            If MoveLeft.Enabled Then
+                If Shift And vbAltMask Then
+                    MoveLeft_Click()
+                Else
+                    If SelectedImageIdx > 1 Then
+                        SelectImage(SelectedImageIdx - 1)
+                    End If
+                End If
+            End If
+        ElseIf KeyCode = vbKeyRight Then
+            If MoveRight.Enabled Then
+                If Shift And vbAltMask Then
+                    MoveRight_Click()
+                Else
+                    If SelectedImageIdx < (PicImageCtl_Count - 1) Then
+                        SelectImage(SelectedImageIdx + 1)
+                    End If
+                End If
+            End If
+        End If
+        KeyCode = 0
+    End Sub
+        
+End Class

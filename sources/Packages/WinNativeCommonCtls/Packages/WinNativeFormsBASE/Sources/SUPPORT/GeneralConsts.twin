@@ -1,7 +1,7 @@
 Private Module GeneralConsts
     
     Private Const LF_FACESIZE As Long = 32
-
+ 
     Type RECT
         Left As Long
         Top As Long
@@ -135,8 +135,12 @@ Private Module GeneralConsts
         CBS_CHECKEDHOT = 6
         CBS_CHECKEDPRESSED = 7
         CBS_CHECKEDDISABLED = 8
+        CBS_MIXEDNORMAL = 9
+        CBS_MIXEDHOT = 10
+        CBS_MIXEDPRESSED = 11
+        CBS_MIXEDDISABLED = 12
     End Enum
-    
+        
     Public Enum UxThemeRadioButtonStates
         RBS_UNCHECKEDNORMAL = 1
         RBS_UNCHECKEDHOT = 2

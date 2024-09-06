@@ -3,7 +3,7 @@ Private Module ScrollBarConsts
     Public Enum ScrollBarStyles
         SBS_HORZ = &H0000
         SBS_VERT = &H0001
-        SBS_TOPALIGN = &H0002
+        SBS_TOPALIGN = &H0002 
         SBS_LEFTALIGN = &H0002
         SBS_BOTTOMALIGN = &H0004
         SBS_RIGHTALIGN = &H0004

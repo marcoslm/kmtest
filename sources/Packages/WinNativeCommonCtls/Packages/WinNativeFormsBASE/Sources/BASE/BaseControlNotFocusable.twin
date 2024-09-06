@@ -1,24 +1,31 @@
-[ ClassId ("E97AA5FD-7787-4818-B77E-5999646A5843") ]
-[ InterfaceId ("C1723E23-2BFB-4F5B-9409-85C2BF41134C") ]
-[ COMCreatable (False) ]
+[ClassId("E97AA5FD-7787-4818-B77E-5999646A5843")]
+[InterfaceId("C1723E23-2BFB-4F5B-9409-85C2BF41134C")]
+[COMCreatable(False)]
 Private Class BaseControlNotFocusable
-
+ 
     Implements BaseControlRect Via BaseControlRect
+    
+    [Serialize(True, "Index")]
+    Private IndexINIT As Long = -1
+
+    [Serialize(False)]
+    Public Property Get Index() As Long
+        Dim IndexINIT As Any = CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ControlArrayIndex
+        If IndexINIT = -1 Then
+            'Err.Raise 343, , "Object not an array"
+            Err.ReturnHResult = &H800A0157
+            Return 0
+        End If
+        Return IndexINIT
+    End Property
         
     Sub New(ByVal ControlType As ControlTypeConstants)
         Set Me.BaseControlRect = New BaseControlRect(ControlType)
     End Sub
     
     Friend Sub Initialize(_ControlContext As stdole.IUnknown)
-        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).ControlArrayIndex = IndexINIT
     End Sub
-
-    Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
-        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
-    End Sub
-
-    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
-    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
-    End Function
     
 End Class

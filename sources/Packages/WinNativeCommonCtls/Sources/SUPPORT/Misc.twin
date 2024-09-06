@@ -1,7 +1,10 @@
 Private Module Miscellaneous
         
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetTickCount Lib "kernel32" () As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetDoubleClickTime Lib "user32" () As Long
+    [UseGetLastError(False), DLLStackCheck(False)]
     Public DeclareWide PtrSafe Function GetTextExtentPoint32W Lib "gdi32" (ByVal hDC As LongPtr, ByVal lpsz As String, ByVal cbString As Long, ByRef lpSize As WinNativeFormsBASE.SIZE) As Long
 
     Private globalEmptyString As String ' = ""   FIXME not working in compiled builds
@@ -15,10 +18,15 @@ Private Module Miscellaneous
         Return retVal
     End Function
     
+    Public Function CommonTreeViewGetNodeFromHandle(ByRef tv As TreeView, ByVal Handle As LongPtr) As Node
+        Return CType(Of TbTreeViewPrivate)(tv).GetNodeFromHandle(Handle)
+    End Function
+    
     Public Sub SyncBorderStyle(objControl As Control)
     	
-        Dim styles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE)
-        Dim exStyles As Long = WinNativeFormsBASE.GetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE)
+        Dim ctlHwnd As Any = CLngPtr(objControl.hwnd)
+        Dim styles As Long = WinNativeFormsBASE.GetWindowLongW(ctlHwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE)
+        Dim exStyles As Long = WinNativeFormsBASE.GetWindowLongW(ctlHwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE)
         
         styles = styles And Not WinNativeFormsBASE.WS_BORDER
         exStyles = exStyles And Not WinNativeFormsBASE.WS_EX_CLIENTEDGE
@@ -31,11 +39,11 @@ Private Module Miscellaneous
             End If
         End If
         
-        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE, styles)
-        WinNativeFormsBASE.SetWindowLongW(objControl.hwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE, exStyles)
+        WinNativeFormsBASE.SetWindowLongW(ctlHwnd, WinNativeFormsBASE.WindowProperties.GWL_STYLE, styles)
+        WinNativeFormsBASE.SetWindowLongW(ctlHwnd, WinNativeFormsBASE.WindowProperties.GWL_EXSTYLE, exStyles)
         
         'this is needed to ensure windows cached stuff is updated after changing GWL_STYLE
-        WinNativeFormsBASE.SetWindowPos(objControl.hwnd, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOACTIVATE)
+        WinNativeFormsBASE.SetWindowPos(ctlHwnd, 0&, 0, 0, 0, 0, WinNativeFormsBASE.SetWindowPosFlags.SWP_NOSIZE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOMOVE Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOZORDER Or WinNativeFormsBASE.SetWindowPosFlags.SWP_FRAMECHANGED Or WinNativeFormsBASE.SetWindowPosFlags.SWP_NOACTIVATE)
     End Sub
     
 End Module

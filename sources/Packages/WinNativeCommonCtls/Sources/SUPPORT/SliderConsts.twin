@@ -5,7 +5,7 @@ Module SliderConsts
         TBS_VERT = &H0002
         TBS_HORZ = &H0000
         TBS_TOP = &H0004
-        TBS_BOTTOM = &H0000
+        TBS_BOTTOM = &H0000 
         TBS_LEFT = &H0004
         TBS_RIGHT = &H0000
         TBS_BOTH = &H0008

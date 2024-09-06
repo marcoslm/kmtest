@@ -1,5 +1,77 @@
 Module Misc
 
-	' add your procedures here
-
+    Public Type WindowCreationData
+        BaseControlInfoPtr As LongPtr
+        ClassName As String
+        Caption As String
+        WindowStyles As Long
+        ExtendedStyles As Long
+        InternalSectionId As Long
+        Flags As EnumWindowElementFlags
+        SubClass As Boolean
+    End Type
+     
+    Public Type BaseControlInfo
+        Name As String
+        InitialCaption As String
+        ToolTipText As String
+        MouseIcon As StdPicture
+        DragIcon As StdPicture
+        ChildControlsWEAK As Object
+        AnchorsDataPtr As LongPtr
+        BaseGraphicsInfoPtr As LongPtr
+        StartUpPosition As StartUpPositionConstants
+        FormBorderStyle As FormBorderStyleConstants
+        InitialFormWindowState As FormWindowStateConstants
+        Dock As DockModeConstants
+        MousePointer As MousePointerConstants
+        DragMode As DragModeConstants
+        ControlArrayIndex As Long
+        TabIndex As Long
+        PixelsLeft As Double
+        PixelsTop As Double
+        PixelsWidth As Double
+        PixelsHeight As Double
+        PixelsX1 As Double
+        PixelsY1 As Double
+        PixelsX2 As Double
+        PixelsY2 As Double
+        MinWidth As Double
+        MinHeight As Double
+        MaxWidth As Double
+        MaxHeight As Double
+        HasTabIndex As Boolean
+        TabStop As Boolean
+        ControlBox As Boolean
+        MaxButton As Boolean
+        MinButton As Boolean
+        ShowInTaskbar As Boolean
+        MdiScrollBars As Boolean
+        TabFocusAutoSelect As Boolean
+        VisualStyles As Boolean
+        WhatsThisButton As Boolean
+        CanGetFocus As Boolean
+        KeyPreview As Boolean
+        WindowlessEnabled As Boolean
+        WindowlessVisible As Boolean
+        CausesValidation As Boolean
+        EventsAreFrozen As Boolean
+        AlwaysShowKeyboardCues As Boolean
+        AutoShowChildren As Boolean
+        MouseCaptured As Boolean
+    End Type
+    
+    Public Function ArrayHasData(ByRef array As Variant) As Boolean
+        Return IsArrayInitialized(array) AndAlso (UBound(array) > -1)
+    End Function
+    
+    Public Function CommonLoadPictureInit(ByRef outPicture As StdPicture, ByRef pictureDataINIT As Variant /*() As Byte*/) As Boolean
+        If ArrayHasData(pictureDataINIT) Then
+            ' LoadPicture can now be passed a byte-array containing an in-memory stream
+            On Error Resume Next
+            Set outPicture = CType(Of StdPicture)([_HiddenModule].LoadPictureInternal(pictureDataINIT))
+            Return True
+        End If
+    End Function
+    
 End Module

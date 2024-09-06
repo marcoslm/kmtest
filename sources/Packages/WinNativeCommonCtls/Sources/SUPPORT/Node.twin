@@ -1,6 +1,6 @@
-[ COMCreatable (False) ]
-[ ClassId ("B7FC28EA-AA1E-4BF7-914B-C3268D082598") ]
-[ InterfaceId ("0265D29E-31F9-49B4-93D2-EBAB1F025F93") ]
+[COMCreatable(False)]
+[ClassId("B7FC28EA-AA1E-4BF7-914B-C3268D082598")]
+[InterfaceId("0265D29E-31F9-49B4-93D2-EBAB1F025F93")]
 Class Node
 	
     ' FIXME could make this more lightweight
@@ -14,47 +14,90 @@ Class Node
     Private ContainerTree As TreeView
     Friend Handle As LongPtr
     
-    [ Description ("Returns the parent node associated with this node") ]
+    [Description("Returns the parent node associated with this node")]
     Public Parent As Node                       ' FIXME could obtain this from the treeview hierachy instead
-    [ Description ("Determines if the child nodes of this tree node are sorted when displayed on screen") ]
+    [Description("Determines if the child nodes of this tree node are sorted when displayed on screen")]
     Public Sorted As Boolean = False
-    [ Description ("Determines the alphabetical sort order when Sorted=True") ]
+    [Description("Determines the alphabetical sort order when Sorted=True")]
     Public SortOrder As TreeSortOrderConstants = TreeSortOrderConstants.tvwAscending
-    [ Description ("Determines if the comparison algorithm uses Text (case-insensitive) or Binary (case-sensitive) matching") ]
+    [Description("Determines if the comparison algorithm uses Text (case-insensitive) or Binary (case-sensitive) matching")]
     Public SortType As TreeSortTypeConstants = TreeSortTypeConstants.tvwText
-    [ Description ("A custom tag to associate arbitary data with this tree node") ]
+    [Description("A custom tag to associate arbitary data with this tree node")]
     Public Tag As Variant
     
-    [ Description ("The back color used when rendering this node") ]
+    [Description("The back color used when rendering this node")]
     Public BackColor As OLE_COLOR = SystemColorConstants.vbWindowBackground
-    [ Description ("The fore color (font color) used when rendering this node") ]
+    [Description("The fore color (font color) used when rendering this node")]
     Public ForeColor As OLE_COLOR = SystemColorConstants.vbWindowText
+    
+    Public InternalImage As Variant
+    Public InternalSelectedImage As Variant
+    
+    Public Property Get Image() As Variant
+        Return InternalImage
+    End Property
+    Public Property Let Image(Value As Variant)
+        CommonVerifyImage(Value, Me.ContainerTree.ImageList)
+        InternalImage = Value
+        Me.ContainerTree.Refresh()
+    End Property
+    
+    Public Property Get SelectedImage() As Variant
+        Return InternalSelectedImage
+    End Property
+    Public Property Let SelectedImage(Value As Variant)
+        CommonVerifyImage(Value, Me.ContainerTree.ImageList)
+        InternalSelectedImage = Value
+        Me.ContainerTree.Refresh()
+    End Property
 
-    Public Sub New(tv As TreeView, parent As Node, Index As Long, Key As String)
+    Public Sub New(tv As TreeView, parent As Node, Index As Long, Key As String, Image As Variant, SelectedImage As Variant)
     	Set Me.ContainerTree = tv
         Set Me.Parent = parent
         Me.CachedIndex = Index
         Me.CachedKey = Key
+        Me.InternalImage = Image
+        Me.InternalSelectedImage = SelectedImage
     End Sub
     
     Friend Sub ChangeIndexInternal(Value As Long)
         Me.CachedIndex = Value
     End Sub
 
-    [ Description ("The index of the node within the root treeview collection of nodes") ]
+    [Description("The index of the node within the root treeview collection of nodes")]
     Public Property Get Index() As Long
     	Return Me.CachedIndex
     End Property
     
-    [ Description ("The key of the node used in the root treeview collection of nodes") ]
+    [Description("The key of the node used in the root treeview collection of nodes")]
     Public Property Get Key() As String
     	Return Me.CachedKey
     End Property
+    
+    Friend Function InternalGetImageIndexRaw() As Long
+        If IsMissing(InternalImage) Then
+            Return -1
+        ElseIf VarType(InternalImage) = vbString Then
+            Return Me.ContainerTree.ImageList.ListImages(InternalImage).Index - 1
+        Else
+            Return CLng(InternalImage) - 1
+        End If
+    End Function
+    
+    Friend Function InternalGetSelectedImageIndexRaw() As Long
+        If IsMissing(InternalSelectedImage) Then
+            Return InternalGetImageIndexRaw()
+        ElseIf VarType(InternalSelectedImage) = vbString Then
+            Return Me.ContainerTree.ImageList.ListImages(InternalSelectedImage).Index - 1
+        Else
+            Return CLng(InternalSelectedImage) - 1
+        End If
+    End Function
 
-    [ Description ("The key of the node used in the root treeview collection of nodes") ]
+    [Description("The key of the node used in the root treeview collection of nodes")]
     Public Property Let Key(ByVal NewKey As String)
         Dim collection As Collection = Me.ContainerTree.Nodes.GetInternalCollection()
-        Dim Item As Node = collection(Me.Index)
+        Dim Item As Any = CType(Of Node)(collection(Me.Index))
         If NewKey = vbNullString Then
             collection.Add(Item, , Me.Index)
         Else
@@ -68,14 +111,14 @@ Class Node
         'Debug.Print "Node Class_Terminate"
     End Sub
 
-    [ Description ("The text (label) of the node that appears when the node is rendered") ]
+    [Description("The text (label) of the node that appears when the node is rendered")]
     Public Property Get Text() As String
         Dim tvItem As TVITEM
         Dim Buffer As String
         With tvItem
             .Mask = TreeViewConsts.Misc.TVIF_HANDLE Or TreeViewConsts.Misc.TVIF_TEXT
             .hItem = Me.Handle
-            Buffer = String(260, vbNullChar)
+            Buffer = String$(260, vbNullChar)
             .pszText = StrPtr(Buffer)
             .cchTextMax = 260
         End With
@@ -83,7 +126,7 @@ Class Node
         Return WinNativeFormsBASE.OLEAUT32_SysAllocString(tvItem.pszText)
     End Property
     
-    [ Description ("The text (label) of the node that appears when the node is rendered") ]
+    [Description("The text (label) of the node that appears when the node is rendered")]
     Public Property Let Text(ByVal Value As String)
         Dim tvItem As TVITEM
         With tvItem
@@ -95,39 +138,39 @@ Class Node
         WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_SETITEM, 0, VarPtr(tvItem))
     End Property
     
-    [ Description ("Returns the first child node of this tree node, or Nothing if there isn't one") ]
+    [Description("Returns the first child node of this tree node, or Nothing if there isn't one")]
     Public Property Get Child() As Node
         Dim hItem As LongPtr = WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_CHILD, Me.Handle)
         If hItem <> 0 Then
-            Return Me.ContainerTree.GetNodeFromHandle(hItem)
+            Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
         End If
     End Property
     
-    [ Description ("Returns the next sibling node of this tree node, or Nothing if there isn't one") ]
+    [Description("Returns the next sibling node of this tree node, or Nothing if there isn't one")]
     Public Property Get Next() As Node
         Dim hItem As LongPtr = WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_NEXT, Me.Handle)
         If hItem <> 0 Then
-            Return Me.ContainerTree.GetNodeFromHandle(hItem)
+            Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
         End If
     End Property
 
-    [ Description ("Returns the previous sibling node of this tree node, or Nothing if there isn't one") ]
+    [Description("Returns the previous sibling node of this tree node, or Nothing if there isn't one")]
     Public Property Get Previous() As Node
         Dim hItem As LongPtr = WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_PREVIOUS, Me.Handle)
         If hItem <> 0 Then
-            Return Me.ContainerTree.GetNodeFromHandle(hItem)
+            Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
         End If
     End Property
     
-    [ Description ("Returns the root node of the treeview") ]
+    [Description("Returns the root node of the treeview")]
     Public Property Get Root() As Node
         Dim hItem As LongPtr = WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_ROOT, Me.Handle)
         If hItem <> 0 Then
-            Return Me.ContainerTree.GetNodeFromHandle(hItem)
+            Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
         End If
     End Property
     
-    [ Description ("Returns the first child node of the parent tree node") ]
+    [Description("Returns the first child node of the parent tree node")]
     Public Property Get FirstSibling() As Node
     	Dim hItem As LongPtr = Me.Handle
         Do
@@ -137,10 +180,10 @@ Class Node
             hItem = Sibling_hItem
         Loop
         
-        Return Me.ContainerTree.GetNodeFromHandle(hItem)
+        Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
     End Property
 
-    [ Description ("Returns the last child node of the parent tree node") ]
+    [Description("Returns the last child node of the parent tree node")]
     Public Property Get LastSibling() As Node
     	Dim hItem As LongPtr = Me.Handle
         Do
@@ -150,10 +193,10 @@ Class Node
             hItem = Sibling_hItem
         Loop
         
-        Return Me.ContainerTree.GetNodeFromHandle(hItem)
+        Return CommonTreeViewGetNodeFromHandle(Me.ContainerTree, hItem)
     End Property
     
-    [ Description ("Returns the count of child nodes associated with this node") ]
+    [Description("Returns the count of child nodes associated with this node")]
     Public Property Get Children() As Long
         Dim ChildrenCount As Long
     	Dim hItem As LongPtr = WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_CHILD, Me.Handle)
@@ -191,15 +234,15 @@ Class Node
     End Function
     
     Private Sub SetItemStateFlag(ByVal StateFlag As Long, ByVal Value As Boolean)
-        SetItemStateFlags(StateFlag, If(Value, StateFlag, 0))
+        SetItemStateFlags(StateFlag, If(Value, StateFlag, 0&))
     End Sub
     
-    [ Description ("Returns/sets whether this node is in an expanded state, or collapsed") ]
+    [Description("Returns/sets whether this node is in an expanded state, or collapsed")]
     Public Property Get Expanded() As Boolean
         Return GetItemStateFlag(TreeViewConsts.Misc.TVIS_EXPANDED)
     End Property
 
-    [ Description ("Returns/sets whether this node is in an expanded state, or collapsed") ]
+    [Description("Returns/sets whether this node is in an expanded state, or collapsed")]
     Public Property Let Expanded(ByVal Value As Boolean)
         Dim tvHandle As LongPtr = Me.ContainerTree.hWnd
         Dim tvItem As TVITEM
@@ -214,7 +257,7 @@ Class Node
             
             If isExpanded <> Value Then
                 Dim Cancel As Boolean
-                Dim Node As Node = Me.ContainerTree.GetNodeFromHandle(Me.Handle)
+                Dim Node As Node = CommonTreeViewGetNodeFromHandle(Me.ContainerTree, Me.Handle)
                 If isExpandedOnce Then
                     Dim hasChildren As Boolean = WinNativeFormsBASE.USER32_SendMessageHandle(tvHandle, TreeViewConsts.Messages.TVM_GETNEXTITEM, TreeViewConsts.Misc.TVGN_CHILD, Me.Handle) <> 0
                     If hasChildren Then
@@ -245,12 +288,12 @@ Class Node
         End With
     End Property
     
-    [ Description ("This ensures the node is visible within the tree view, by scrolling the treeview if necessary") ]
+    [Description("This ensures the node is visible within the tree view, by scrolling the treeview if necessary")]
     Public Sub EnsureVisible()
     	WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_ENSUREVISIBLE, 0, Me.Handle)
     End Sub
     
-    [ Description ("This returns the hierarchical path string, starting at the root treeview node, using the TreeView.PathSeparator string as a delimiter") ]
+    [Description("This returns the hierarchical path string, starting at the root treeview node, using the TreeView.PathSeparator string as a delimiter")]
     Public Property Get FullPath() As String
     	FullPath = Me.Text
         Dim parentNode As Node = Me.Parent
@@ -260,22 +303,22 @@ Class Node
         Wend
     End Property
     
-    [ Description ("Determines if the tree node is rendered in a bold font") ]
+    [Description("Determines if the tree node is rendered in a bold font")]
     Public Property Get Bold() As Boolean
         Return GetItemStateFlag(TreeViewConsts.Misc.TVIS_BOLD)
     End Property
 
-    [ Description ("Determines if the tree node is rendered in a bold font") ]
+    [Description("Determines if the tree node is rendered in a bold font")]
     Public Property Let Bold(ByVal Value As Boolean)
         SetItemStateFlag(TreeViewConsts.Misc.TVIS_BOLD, Value)
     End Property
 
-    [ Description ("Returns/Sets whether the tree node is checked when TreeView.CheckBoxes = True") ]
+    [Description("Returns/Sets whether the tree node is checked when TreeView.CheckBoxes = True")]
     Public Property Get Checked() As Boolean
         Return StateImageMaskToIndex(GetItemStateFlags(TreeViewConsts.Misc.TVIS_STATEIMAGEMASK)) = IIL_CHECKED
     End Property
 
-    [ Description ("Returns/Sets whether the tree node is checked when TreeView.CheckBoxes = True") ]
+    [Description("Returns/Sets whether the tree node is checked when TreeView.CheckBoxes = True")]
     Public Property Let Checked(ByVal Value As Boolean)
         If Me.Checked <> Value Then
         	'Dim Ptr As Long
@@ -290,12 +333,12 @@ Class Node
         End If
     End Property
     
-    [ Description ("Returns/Sets whether the tree node is currently selected") ]
+    [Description("Returns/Sets whether the tree node is currently selected")]
     Public Property Get Selected() As Boolean
         Return GetItemStateFlag(TreeViewConsts.Misc.TVIS_SELECTED)
     End Property
 
-    [ Description ("Returns/Sets whether the tree node is currently selected") ]
+    [Description("Returns/Sets whether the tree node is currently selected")]
     Public Property Let Selected(ByVal Value As Boolean)
         If Value Then
             If WinNativeFormsBASE.USER32_SendMessageHandle(Me.ContainerTree.hWnd, TreeViewConsts.Messages.TVM_SELECTITEM, TreeViewConsts.Misc.TVGN_CARET, Me.Handle) <> 0 Then
@@ -306,7 +349,7 @@ Class Node
         End If
     End Property
     
-    [ Description ("Returns whether the tree node is currently visible") ]
+    [Description("Returns whether the tree node is currently visible")]
     Public Property Get Visible() As Boolean
         Dim RC As WinNativeFormsBASE.RECT
         StuffHandleIntoRECT(VarPtr(RC), Me.Handle)      ' Stupidly TVM_GETITEMRECT takes a LongPtr input, and RECT output. 
@@ -320,7 +363,7 @@ Class Node
     Private Sub ChangedSorted() _
             Handles Sorted.OnPropertyLet, SortOrder.OnPropertyLet, SortType.OnPropertyLet
         
-        If Me.Sorted Then Me.ContainerTree.SortNowInternal(Me.Handle, Me.SortType)
+        If Me.Sorted Then CType(Of TbTreeViewPrivate)(ContainerTree).SortNowInternal(Me.Handle, Me.SortType)
     End Sub
             
 End Class

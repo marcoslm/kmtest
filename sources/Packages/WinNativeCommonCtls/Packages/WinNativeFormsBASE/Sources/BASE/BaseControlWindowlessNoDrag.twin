@@ -1,123 +1,77 @@
-[ ClassId ("02EEE069-6238-46F6-B484-E542D719FB7C") ]
-[ InterfaceId ("8BEA69BB-ADD9-4D92-908D-3DB594FA3437") ]
-[ COMCreatable (False) ]
+[ClassId("02EEE069-6238-46F6-B484-E542D719FB7C")]
+[InterfaceId("8BEA69BB-ADD9-4D92-908D-3DB594FA3437")]
+[COMCreatable(False)]
 Private Class BaseControlWindowlessNoDrag
 
-    Implements BaseControlRect Via BaseControlRect
+    Implements BaseControlRectDockable Via BaseControlRectDockable
 
-    [ Serialize (False) ]
-        Private WithEvents RootWindowElementBase As WindowsControls.WindowElement
-    [ Description ("Determines how the sides of this control are anchored to its container") ]
-        Public ReadOnly Anchors As Anchors = New Anchors
-    [ Description ("Adjusts how the control is docked inside of its container") ]
-        Public ReadOnly Dock As VBRUN.DockModeConstants = VBRUN.DockModeConstants.vbDockNone
-    [ Description ("Indicates if the user can use the TAB key to focus on this control at runtime") ]
-        Public TabStop As Boolean = True
-        Attribute TabStop.VB_VarUserMemId = -854
-    [ Description ("Adjusts the TAB key order of this control at runtime") ]
-        Public TabIndex As Long
-    [ Description ("") ]
-        Public Visible As Boolean = True
+    [Description("Indicates if the user can use the TAB key to focus on this control at runtime")]
+    [Serialize(True, "TabStop")]
+        Private TabStopINIT As Boolean = True
+    [Description("Adjusts the TAB key order of this control at runtime")]
+    [Serialize(True, "TabIndex")]
+        Private TabIndexINIT As Long
+    [Description("")]
+    [Serialize(True, "Visible")]
+        Private VisibleINIT As Boolean = True
         
     Sub New(ByVal ControlType As ControlTypeConstants)
-        Set Me.BaseControlRect = New BaseControlRect(ControlType)
+        Set Me.BaseControlRectDockable = New BaseControlRectDockable(ControlType)
     End Sub
 
-    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown) As WindowElement
-        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
-        Set Me.RootWindowElementBase = Me.ControlContext.CreateWindowElement(vbNullString, vbNullString, 0, 0, False)
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                                ByRef InitData As WindowCreationData) As WindowElement
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .WindowlessVisible = Me.VisibleINIT
+            .TabStop = Me.TabStopINIT
+            .HasTabIndex = True
+            .TabIndex = Me.TabIndexINIT
+        End With
+        InitData.BaseControlInfoPtr = InternalBaseControlBeforeCreateRootWindow(InitData)
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.RootWindowElementBase = CType(Of WindowElement)(Me.ControlContext.CreateWindowElement(InitData))
         Return Me.RootWindowElementBase
     End Function
     
-    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
-        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
-    End Sub
-
-    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
-    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
-    End Function
-
-    [ DispId (-856) ]
-    Public Property Get Container() As Object
-        On Error Resume Next
-        Me.ControlContext.EnsureFormIsLoaded()
-    	Return Me.RootWindowElementBase.Container
-    End Property
-
-    Private Sub OnPropertyChanged_Visible() _
-            Handles Visible.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        Me.ControlContext.WindowlessRefresh()
-    End Sub
-
-    Private Sub OnTouchedFormProperties() _
-            Handles Anchors.OnPropertyGet, _
-                    Dock.OnPropertyGet, _
-                    TabStop.OnPropertyGet, _
-                    TabStop.OnPropertyLet, _
-                    TabIndex.OnPropertyGet, _
-                    TabIndex.OnPropertyLet, _
-                    Visible.OnPropertyGet
-                    
-        Me.ControlContext.EnsureFormIsLoaded()
-    End Sub
-    
-    Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
-        Me.ControlContext.EnsureFormIsLoaded()
-        If InternalMove(Me, Left, Top, Width, Height) Then
-        	Me.ControlContext.ChangedPosition()
-        End If
-    End Sub
-    
-    [ Serialize (False) ]
-    [ BindOnlyIfNoArguments ]
-    Public Property Get Left() As Double
-        Return Me.ControlContext.GetScaledLeft
-    End Property
-    
-    [ Serialize (False) ]
-    [ BindOnlyIfNoArguments ]
-    Public Property Let Left(ByVal Value As Double)
-        Me.ControlContext.SetScaledLeft(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Top() As Double
-        Return Me.ControlContext.GetScaledTop
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Top(ByVal Value As Double)
-        Me.ControlContext.SetScaledTop(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Width() As Double
-        Return Me.ControlContext.GetScaledWidth
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Width(ByVal Value As Double)
-        Me.ControlContext.SetScaledWidth(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Height() As Double
-        Return Me.ControlContext.GetScaledHeight
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Height(ByVal Value As Double)
-        Me.ControlContext.SetScaledHeight(Value)
-    End Property
-    
     Public Sub Refresh()
-        Me.ControlContext.WindowlessRefresh()
+        WindowlessRefresh()
     End Sub
     
-    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+    Public Sub ZOrder([TypeHint(ZOrderConstants)] Optional ByVal Position As Variant)
         CommonZOrderWindowless(Position, Me.ControlContext)
     End Sub
     
+    [Serialize(False)]
+    Property Get Visible() As Boolean
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible
+    End Property
+        
+    [Serialize(False)]
+    Property Let Visible(ByVal Value As Boolean)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible = Value
+        WindowlessRefresh()
+    End Property
+    
+    [Serialize(False)]
+    [DispId(-854)]
+    Public Property Get TabStop() As Boolean
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabStop
+    End Property
+    
+    [Serialize(False)]
+    [DispId(-854)]
+    Public Property Let TabStop(ByVal Value As Boolean)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabStop = Value
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get TabIndex() As Long
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabIndex
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let TabIndex(ByVal Value As Long)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).TabIndex = Value
+    End Property
+        
 End Class

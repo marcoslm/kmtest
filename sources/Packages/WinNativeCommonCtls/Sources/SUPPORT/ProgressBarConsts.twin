@@ -10,7 +10,7 @@ Private Module ProgressBarConsts
     Public Enum ProgressBarMessages
         PBM_SETRANGE = &H401
         PBM_SETPOS = &H402
-        PBM_DELTAPOS = &H403
+        PBM_DELTAPOS = &H403 
         PBM_SETSTEP = &H404
         PBM_STEPIT = &H405
         PBM_SETRANGE32 = &H406

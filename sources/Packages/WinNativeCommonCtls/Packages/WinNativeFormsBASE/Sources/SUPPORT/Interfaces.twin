@@ -1,10 +1,10 @@
-[ InterfaceId ("0c733a30-2a1c-11ce-ade5-00aa0044773d") ]
+[InterfaceId("0c733a30-2a1c-11ce-ade5-00aa0044773d")]
 Private Interface ISequentialStream Extends stdole.IUnknown
     Sub Read(ByVal pv As LongPtr, ByVal cb As Long, ByRef pcbRead As Long)
     Sub Write(ByVal pv As LongPtr, ByVal cb As Long, ByRef pcbWritten As Long)
 End Interface
-
-[ InterfaceId ("0000000c-0000-0000-C000-000000000046") ]
+ 
+[InterfaceId("0000000c-0000-0000-C000-000000000046")]
 Private Interface IStream Extends ISequentialStream
     Type STATSTG
         pwcsName As LongPtr
@@ -31,7 +31,7 @@ Private Interface IStream Extends ISequentialStream
     Sub Clone(ByRef ppstm As IStream)
 End Interface
     
-[ InterfaceId ("0000000d-0000-0000-C000-000000000046") ]
+[InterfaceId("0000000d-0000-0000-C000-000000000046")]
 Private Interface IEnumSTATSTG Extends stdole.IUnknown
     Sub Next(ByVal celt As Long, ByRef rgelt As STATSTG, ByRef pceltFetched As Long)
     Sub Skip(ByVal celt As Long)
@@ -39,7 +39,7 @@ Private Interface IEnumSTATSTG Extends stdole.IUnknown
     Sub Clone(ByRef ppenum As IEnumSTATSTG)
 End Interface
     
-[ InterfaceId ("0000000b-0000-0000-C000-000000000046") ]
+[InterfaceId("0000000b-0000-0000-C000-000000000046")]
 Private Interface IStorage Extends stdole.IUnknown
     Sub CreateStream(ByVal pwcsName As LongPtr, ByVal grfMode As Long, ByVal reserved1 As Long, ByVal reserved2 As Long, ByRef ppstm As IStream)
     Sub OpenStream(ByVal pwcsName As LongPtr, ByVal reserved1 As LongPtr, ByVal grfMode As Long, ByVal reserved2 As Long, ByRef ppstm As IStream)
@@ -58,13 +58,13 @@ Private Interface IStorage Extends stdole.IUnknown
     Sub Stat(ByRef pstatstg As STATSTG, ByVal grfStatFlag As Long)
 End Interface
 
-[ InterfaceId ("F090D785-19CB-4910-A6F0-7B70CE8F0570") ]
+[InterfaceId("F090D785-19CB-4910-A6F0-7B70CE8F0570")]
 Private Interface IScheduledCallback Extends stdole.IUnknown
 	Sub Execute()
 End Interface
 
 
-[ InterfaceId ("00000103-0000-0000-C000-000000000046") ]
+[InterfaceId("00000103-0000-0000-C000-000000000046")]
 Private Interface IEnumFORMATETC Extends stdole.IUnknown
 	Sub Next(ByVal celt As Long, ByRef rgelt As FORMATETC, ByRef pceltFetched As Long)
     Sub Skip(ByVal celt As Long)
@@ -72,7 +72,7 @@ Private Interface IEnumFORMATETC Extends stdole.IUnknown
     Sub Clone(ByRef ppenum As IEnumFORMATETC)
 End Interface
 
-[ InterfaceId ("0000010e-0000-0000-C000-000000000046") ]
+[InterfaceId("0000010e-0000-0000-C000-000000000046")]
 Private Interface IDataObject Extends stdole.IUnknown
     Enum TYMED
         TYMED_HGLOBAL = 1
@@ -108,7 +108,7 @@ Private Interface IDataObject Extends stdole.IUnknown
     Sub EnumDAdvise(ByRef ppenumAdvise As IEnumSTATDATA)
 End Interface
 
-[ InterfaceId ("00000122-0000-0000-C000-000000000046") ]
+[InterfaceId("00000122-0000-0000-C000-000000000046")]
 Private Interface IDropTarget Extends stdole.IUnknown
     Enum DROPEFFECT
         DROPEFFECT_NONE = 0
@@ -123,13 +123,13 @@ Private Interface IDropTarget Extends stdole.IUnknown
     Sub Drop(ByVal pDataObj As IDataObject, ByVal grfKeyState As Long, ByVal xy As LongLong, ByRef pdwEffect As DROPEFFECT)
 End Interface
 
-[ InterfaceId ("00000121-0000-0000-C000-000000000046") ]
+[InterfaceId("00000121-0000-0000-C000-000000000046")]
 Private Interface IDropSource Extends stdole.IUnknown
     Sub QueryContinueDrag(ByVal fEscapePressd As Long, ByVal grfKeyState As Long)
     Sub GiveFeedback(ByVal dwEffect As Long)
 End Interface
 
-[ InterfaceId ("0000010f-0000-0000-C000-000000000046") ]
+[InterfaceId("0000010f-0000-0000-C000-000000000046")]
 Private Interface IAdviseSink Extends stdole.IUnknown
     Sub OnDataChange(ByVal pFormatetc As LongPtr, ByVal pStgmed As LongPtr)
     Sub OnViewChange(ByVal dwAspect As Long, ByVal lindex As Long)
@@ -138,12 +138,12 @@ Private Interface IAdviseSink Extends stdole.IUnknown
     Sub OnClose()
 End Interface
 
-[ InterfaceId ("0000000f-0000-0000-C000-000000000046") ]
+[InterfaceId("0000000f-0000-0000-C000-000000000046")]
 Private Interface IMoniker Extends stdole.IUnknown
 	' Not yet supported
 End Interface
 
-[ InterfaceId ("00000105-0000-0000-C000-000000000046") ]
+[InterfaceId("00000105-0000-0000-C000-000000000046")]
 Private Interface IEnumSTATDATA Extends stdole.IUnknown
 	' Not yet supported	
 End Interface

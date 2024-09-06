@@ -1,0 +1,311 @@
+[InterfaceId("8DC4D542-8404-4990-9A94-BB78A2E79919")]
+Interface _WindowsControlTimer Extends stdole.IUnknown
+    Property Get Interval() As Long
+    Property Let Interval(ByVal Value As Long)
+    Property Get Enabled() As Boolean
+    Property Let Enabled(ByVal Value As Boolean)
+End Interface
+
+[InterfaceId("07A4CDBD-4B5B-4F5E-A7B7-9CCB2F35B953")]
+Interface _WindowsControlTimerEvents Extends stdole.IUnknown
+	Sub OnTimer()
+End Interface
+
+[CoClassId("BD21BA28-FF39-45E0-AA34-816ADE147910")]
+CoClass WindowsControlTimer
+    [Default] Interface _WindowsControlTimer
+    [Default, Source] Interface _WindowsControlTimerEvents
+End CoClass
+
+[InterfaceId("9C11D068-AA88-428E-84E8-EDECCBE33556")]
+Interface _WindowsControlContext Extends stdole.IUnknown
+    Function GetSerializer() As SerializationInfo
+    Sub Repaint()
+    Function CreateTimer() As stdole.IUnknown
+    Sub ChangeFocusedElement(ByVal ElementTabIndex As Long)
+    Function CreateWindowElement(ByRef InitData As Any) As stdole.IUnknown
+    Function SubClassWindowElement(ByVal HWND As LongPtr, Optional ByVal flags As EnumWindowElementFlags) As stdole.IUnknown
+    Sub ScheduleCallback(ByVal callback As LongPtr)
+    Function CreateDeferredDispatchWrapper(ByVal object As Object) As Object
+    Sub SetControlArrayIndex(ByVal ControlArrayIndex As Long)
+    Sub ChangedPosition()
+    Sub InitializeActiveX()
+    Sub EnsureContainerIsLoaded()
+    Function GetContainer() As stdole.IUnknown
+    Function GetForm() As stdole.IUnknown
+    Sub MousePointerChanged()
+    Function GetScaledLeft() As Double
+    Function GetScaledTop() As Double
+    Function GetScaledWidth() As Double
+    Function GetScaledHeight() As Double
+    Sub SetScaledLeft(ByVal Value As Double)
+    Sub SetScaledTop(ByVal Value As Double)
+    Sub SetScaledWidth(ByVal Value As Double)
+    Sub SetScaledHeight(ByVal Value As Double)
+    Function GetScaledX1() As Double
+    Function GetScaledY1() As Double
+    Function GetScaledX2() As Double
+    Function GetScaledY2() As Double
+    Sub SetScaledX1(ByVal Value As Double)
+    Sub SetScaledY1(ByVal Value As Double)
+    Sub SetScaledX2(ByVal Value As Double)
+    Sub SetScaledY2(ByVal Value As Double)
+    Function GetScaleModePixelsMultiplierX() As Double
+    Function GetScaleModePixelsMultiplierX_SELF() As Double
+    Function GetScaleModePixelsMultiplierY() As Double
+    Function GetScaleModePixelsMultiplierY_SELF() As Double
+    Function GetLightweightControlAtPosition(ByRef OffsetX As Long, ByRef OffsetY As Long) As Object
+    Sub WindowlessRefresh()
+    Function IsPlacedOnUserControl() As Boolean
+    Sub ChangeWindowlessZOrder(ByVal ZOrderType As Long)
+    Sub SetBaseControlInfoPtr(ByVal value As LongPtr)
+End Interface
+
+[CoClassId("D7B89850-1CA0-4F01-A326-1BD35A3BDE25")]
+CoClass WindowsControlContext
+    [Default] Interface _WindowsControlContext
+End CoClass
+
+[InterfaceId("66DE3AF9-4A35-44E8-9A0E-EEC0B241E281")]
+Interface _WindowsFormContext Extends _WindowsControlContext
+    Sub Show(ByVal Modal As Boolean, ByVal OwnerForm As Object)
+    Sub Close()
+End Interface
+
+[CoClassId("A66808AF-0A78-4EF2-93F1-11B015738EEF")]
+CoClass WindowsFormContext
+    [Default] Interface _WindowsFormContext
+End CoClass
+
+[InterfaceId("53A74536-2B67-4DCC-8CD6-669D63B73688")]
+Interface _SerializationInfo Extends stdole.IUnknown
+    Function Deserialize(ByVal object As stdole.IUnknown) As Boolean
+    Function GetRootCLSID() As String
+    Function GetRootClassDispatch() As Object
+    Function IsDesignMode() As Boolean
+    Function FormHWND() As LongPtr
+    Function IsTbDebugging() As Boolean
+    Function IsReportMode() As Boolean
+End Interface
+
+[CoClassId("C0F01246-5D1A-4439-B654-A6D69ABC8512")]
+CoClass SerializationInfo
+    [Default] Interface _SerializationInfo
+End CoClass
+
+[InterfaceId("E2C534EE-C150-4CE2-9156-A816B5270387")]
+Interface _Canvas Extends stdole.IUnknown
+    Sub AddElement(ByVal ElementDescriptor As Any)
+    Function Width() As Long
+    Function Height() As Long
+    Function DpiScaleFactor() As Double
+    Function Dpi() As Long
+End Interface
+
+[CoClassId("037A5A81-34BE-44BA-977C-19026B76AC68")]
+CoClass Canvas
+    [Default] Interface _Canvas 
+End CoClass
+
+[InterfaceId("5927C4A9-AB43-461D-927B-2C51D5BC893C")]
+Interface IWindowsFormBase Extends stdole.IUnknown
+    Enum EnumIWindowsControlFlags
+        VisibleAtInitialization = 1
+    End Enum
+    Property Get GetFlags() As EnumIWindowsControlFlags
+End Interface
+
+[InterfaceId("14C8D2F5-0581-4675-8C70-A6C0B2FB63AB")]
+Interface IWindowsControl Extends stdole.IUnknown
+	Sub Initialize(ByVal Context As WindowsControlContext)
+    Sub Destroy()
+End Interface
+
+[InterfaceId("9BB84908-0354-4B63-8E50-09D845005DA5")]
+Interface _WindowsControlsCollection
+    [DispId(1)] Property Get Count() As Long
+    [DispId(0)] Property Get Item(ByRef IndexOrName As Variant) As Object
+    [DispId(2)] Function Add(ByVal ProgId As String, ByVal ControlName As String, Optional ByVal Container As Object) As Object
+    [DispId(3)] Sub Remove(ByRef IndexOrName As Variant)
+    [DispId(-4), Hidden] Function _NewEnum() As stdole.IUnknown
+End Interface
+
+[CoClassId("E70E5F9E-CEBC-47B6-AF56-E85BA20DB486")]
+CoClass WindowsControlsCollection
+    [Default] Interface _WindowsControlsCollection
+End CoClass
+
+[InterfaceId("9A53EF95-9F2C-4525-83FF-F96D9366103D")]
+Interface IWindowsForm Extends stdole.IUnknown
+    Sub Initialize(ByVal Context As WindowsFormContext)
+    Sub Destroy()
+    Sub Paint(ByVal Canvas As Canvas)
+End Interface
+
+[InterfaceId("E3D40395-6280-4A7F-A507-9D2A56A0C134")]
+Interface _WindowElementEvents Extends stdole.IUnknown
+	Sub Command(ByVal NotificationCode As Long, ByVal Identifier As Integer)
+    Sub Create()
+    Sub DPIChange()
+    Sub GetColors(ByVal hdc As LongPtr, ByRef out As LongPtr, ByVal ControlType As Long)
+    Sub EraseBackground(ByVal hdc As LongPtr, ByRef Handled As Boolean)
+    Sub Scroll(ByVal ScrollType As Long, ByVal IsHorizontal As Boolean)
+    Sub KeyDown(ByRef KeyCode As Long, ByVal ShiftState As Long)
+    Sub KeyUp(ByRef KeyCode As Long, ByVal ShiftState As Long)
+    Sub KeyPress(ByRef KeyCode As Integer)
+    Sub GotFocus()
+    Sub LostFocus()
+    Sub EnterFocus()
+    Sub ExitFocus()
+    Sub PreMouseDown(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean)
+    Sub PreMouseUp(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single, ByRef SwallowMessage As Boolean)
+    Sub MouseDown(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single)
+    Sub MouseUp(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single)
+    Sub MouseMove(ByVal Button As Long, ByVal ShiftState As Long, ByVal X As Single, ByVal Y As Single)
+    Sub MouseDoubleClick(ByVal Button As Long, ByVal X As Single, ByVal Y As Single)
+    Sub Activate()
+    Sub Deactivate()
+    Sub Paint(ByRef Handled As Boolean)
+    Sub PaintMDIClient(ByVal hdc As LongPtr, ByRef rect As Any)
+    Sub MDIClientResized()
+    Sub PreResize()
+    Sub Resize()
+    Sub ResizeWindowless(ByVal oldLeft As Long, ByVal oldTop As Long, ByVal oldWidth As Long, ByVal oldHeight As Long, ByVal newLeft As Long, ByVal newTop As Long, ByVal newWidth As Long, ByVal newHeight As Long)
+    Sub MouseWheel(ByVal Delta As Integer, ByVal Horizontal As Boolean)
+    Sub PreProcessMessage(ByVal Message As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef MutedReturnValue As Variant, ByRef PostMessageCookie As Long)
+    Sub PostProcessMessage(ByVal Message As Long, ByVal wParam As LongPtr, ByVal lParam As LongPtr, ByRef returnValue As LongPtr, ByVal PostMessageCookie As Long)
+    Sub MeasureItem(ByVal Info As Any, ByRef Handled As Boolean)
+    Sub DrawItem(ByVal Info As Any, ByRef Handled As Boolean)
+    Sub FontChanged()
+    Sub CanClose(ByRef Cancel As Integer)
+    Sub Load()
+    Sub CapturedMessage(ByVal msg As Any)
+    Sub AfterPaint()
+    Sub CaptureChanged(ByVal newCaptureWnd As LongPtr, ByRef MutedReturnValue As Variant)
+    Sub Notify(ByVal Notification As Any, ByRef MutedReturnValue As Variant)
+    Sub MenuCommand(ByVal CommandID As Long, ByRef Handled As Boolean)
+    Sub PreLoadForm()
+    Sub DragOver(ByVal Source As Object, ByVal X As Double, ByVal y As Double, ByVal State As Long)
+    Sub ShowHelp(ByVal Object As Object)
+    Sub ShowMenuHelp(ByVal MenuId As Long)
+    Sub UnconsumedKeyboardMessage(ByVal msg As Any, ByRef Consumed As Boolean)
+    Sub Validate(ByRef Cancel As Boolean)
+    Sub ShowWindow()
+    Sub QueryUnload(ByRef Cancel As Integer, ByVal UnloadMode As Long)
+    Sub NotifyRuntimeMenuAdded(ByVal Control As Object)
+    Sub NotifyRuntimeMenuRemoved(ByVal Control As Object)
+    Sub ActivateMDIChild()
+    Sub DeactivateMDIChild()
+    Sub ChangedMDIActiveForm(ByVal ActiveChildForm As Object)
+    Sub PreLoadForm2()
+    Sub InvokeCancel()
+    Sub InvokeDefault()
+    Sub RevokeCancel()
+    Sub RevokeDefault()
+    Sub ImmediateGotFocus()
+    Sub SyncDefaultState(ByVal value As Boolean)
+End Interface
+
+[InterfaceId("CCA31F20-C97E-4AE4-AA8A-1F0FB0AA13C5")]
+Interface _WindowElement Extends stdole.IUnknown
+    Enum EnumWindowElementFlags
+        ForwardGotFocus = &H00000001
+        ForwardLostFocus = &H00000002
+        ForwardButtonClick = &H00000004
+        ForwardKeyDown = &H00000008
+        ForwardKeyUp = &H00000010
+        ForwardKeyPress = &H00000020
+        ForwardMouseMove = &H00000040
+        ForwardMouseDown = &H00000080
+        ForwardMouseUp = &H00000100
+        ForwardDragOver = &H00000200
+        ForwardValidate = &H00000400
+        ForwardDoubleClick = &H00000800
+        ForwardEnsureEnabled = &H00001000              ' this flag makes the runtime check the 'Enabled' property before forwarding certain events, such as ForwardButtonClick and ForwardDoubleClick
+        
+        HasExclusiveValueWithinContainer = &H80000000
+        RequiresWindowlessPaintingWithoutEvents = &H40000000
+        RequiresWindowlessPaintingWithEvents = &H20000000
+        NeedsPrePostMessages = &H10000000
+        NotRectangular = &H08000000
+        EnforceTabStopAfterCreation = &H04000000
+        IsUserControl = &H02000000
+        IsContainer = &H01000000
+        ManualMouseCapture = &H00800000
+        ScaleAdjustMouseEvents = &H00400000
+        PreventActivation = &H00200000
+        MuteSpecialKeyBeeps = &H00100000
+        IsMDIForm = &H00080000
+        IsMDIChild = &H00040000
+        HasExclusiveCancelProp = &H00020000
+        HasExclusiveDefaultProp = &H00010000
+        IsReportMode = &H00008000&
+        IsAngledControl = &H00004000&
+        IgnoreWmCommandButtonClicks = &H00002000&
+    End Enum
+    
+	Property Get Handle() As LongPtr
+    Property Get DPI() As Long
+    Property Get UnitPixelScale() As Double
+    Sub BeginPaint(ByVal ps As Any)
+    Sub EndPaint(ByVal ps As Any)
+    Property Get Container() As Object
+    Property Get CurrentLeft() As Long
+    Property Get CurrentTop() As Long
+    Property Get CurrentWidth() As Long
+    Property Get CurrentHeight() As Long
+    Property Get ContainerHWND() As LongPtr
+    Sub CaptureMessages(ByVal Value As Boolean)
+    Function OriginalWindowStyles() As Long
+    Sub EnforceTabStopAfterCreation()
+    Function CreateControlsEnumerator(ByVal dwOleContF As Long, ByVal dwWhich As Long) As stdole.IUnknown
+    Sub IsExclusiveValueWithinContainer()
+    Sub ResetExclusiveValuesInContainer()
+    Sub PaintContainedWindowlessElements(ByVal hdc As LongPtr)
+    Sub RequiresWindowlessPainting(ByVal HasEvents As Boolean)
+    Sub NotRectangular()
+    Property Get FormActiveControl() As stdole.IUnknown
+    Sub ToolTipChanged()
+    Sub ChangeChildScaleMode(ByVal ScaleMode As Long, ByVal FactorX As Double, ByVal FactorY As Double, ByVal OffsetX As Double, ByVal OffsetY As Double)
+    Function ScaleX(ByVal inValue As Double, ByVal ScaleFrom As Long, ByVal ScaleTo As Long) As Double
+    Function ScaleY(ByVal inValue As Double, ByVal ScaleFrom As Long, ByVal ScaleTo As Long) As Double
+    Sub StartDrag()
+    Sub EndDrag()
+    Sub CancelDrag()
+    Sub ChangeToUserControlMode()
+    Sub ActivatePrePostMessages(ByVal in As Boolean)
+    Sub StopTimers()
+    Sub DestroyHandle()
+    Sub Activate()
+    Sub DeactivateStart()
+    Sub DeactivateEnd()
+    Sub ActivateAX()
+    Sub CanGetFocus(ByVal Value As Boolean)
+    Sub OverrideCursor(ByVal Value As Long)
+    Sub RecreateWindow(ByVal Styles As Long)
+    Sub RemoveVisualStyles(ByVal windowHandle As LongPtr)
+    Function IsProcessingMouseWheelMessage() As Boolean
+    Sub HandleAxContainerMsgPre(ByVal hwnd As LongPtr, ByVal msg As Long, ByVal wp As LongPtr, ByVal lp As LongPtr, ByRef plResult As LongPtr)
+    Sub HandleAxContainerMsgPost(ByVal hwnd As LongPtr, ByVal msg As Long, ByVal wp As LongPtr, ByVal lp As LongPtr, ByRef plResult As LongPtr)
+    Sub SetFlags(ByVal flags As EnumWindowElementFlags)
+    Sub IsContainer()
+    Sub ControlHasBeenDisabled()
+    Sub MoveableChanged(ByVal NewValue As Boolean)
+    Sub SetMDIMenu(ByVal menu As LongPtr, ByVal menuWindowList As LongPtr)
+    Function MDIClientHandle() As LongPtr
+    Sub SetCancelControl(ByVal Value As Boolean)
+    Sub SetDefaultControl(ByVal Value As Boolean)
+    Sub HandleEscapeKey()
+    Sub HandleEnterKey()
+    Sub SetDrawingSectionId(ByVal SectionId As Long)
+    Function GetDrawingSectionId() As Long
+    Function IsIdeSnapshotting() As Boolean
+    Sub AngleChanged(ByVal IsAngledControl As Boolean)
+End Interface
+
+
+[CoClassId("65B28984-F4EB-494B-8081-887B22937FDB")]
+CoClass WindowElement
+    [Default] Interface _WindowElement
+    [Default, Source] Interface _WindowElementEvents
+End CoClass

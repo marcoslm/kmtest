@@ -1,148 +1,83 @@
-[ ClassId ("57858BD8-4A90-461A-94F2-6D6D5F855A36") ]
-[ InterfaceId ("629884A1-C2C5-4A32-AA4C-3733648E913D") ]
-[ COMCreatable (False) ]
+[ClassId("57858BD8-4A90-461A-94F2-6D6D5F855A36")]
+[InterfaceId("629884A1-C2C5-4A32-AA4C-3733648E913D")]
+[COMCreatable(False)]
 Private Class BaseControlWindowlessNoFocus
 
-    Implements BaseControlRect Via BaseControlRect
+    Implements BaseControlRectDockable Via BaseControlRectDockable
 
-    [ Serialize (False) ]
-        Private WithEvents RootWindowElementBase As WindowsControls.WindowElement
-    [ Description ("Determines how the sides of this control are anchored to its container") ]
-        Public ReadOnly Anchors As Anchors = New Anchors
-    [ Description ("Adjusts how the control is docked inside of its container") ]
-        Public ReadOnly Dock As VBRUN.DockModeConstants = VBRUN.DockModeConstants.vbDockNone
-    [ Description ("") ]
-        Public Visible As Boolean = True
+    [Description("")]
+    [Serialize(True, "Visible")]
+        Private VisibleINIT As Boolean = True
         
-    [ Serialize (True, "DragIcon") ]
-    [ CustomDesigner ("designer_PictureBytes") ]
-    [ Description ("") ]
+    [Serialize(True, "DragIcon")]
+    [CustomDesigner("designer_PictureBytes")]
+    [Description("")]
         Private ReadOnly DragIconINIT() As Byte
-    [ Serialize (False) ]
-    [ Description ("") ]
-        Public DragIcon As StdPicture
-        Public DragMode As VBRUN.DragModeConstants
-
+    [Serialize(True, "DragMode")]
+        Private DragModeINIT As VBRUN.DragModeConstants
+    
     Sub New(ByVal ControlType As ControlTypeConstants)
-        Set Me.BaseControlRect = New BaseControlRect(ControlType)
+        Set Me.BaseControlRectDockable = New BaseControlRectDockable(ControlType)
     End Sub
 
-    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown) As WindowElement
-        Set Me.ControlContext = _ControlContext ' FIXME passed as IUnknown to prevent COM exposure of type
-        Set Me.RootWindowElementBase = Me.ControlContext.CreateWindowElement(vbNullString, vbNullString, 0, 0, False)
-
-        If IsArrayInitialized(Me.DragIconINIT) AndAlso (UBound(Me.DragIconINIT) > -1) Then
-            ' LoadPicture can now be passed a byte-array containing an in-memory stream
-            On Error Resume Next
-            Set Me.DragIcon = [_HiddenModule].LoadPictureInternal(Me.DragIconINIT)
-        End If
-
+    Friend Function CreateRootWindowElement(ByVal _ControlContext As stdole.IUnknown, _
+                                                ByRef InitData As WindowCreationData) As WindowElement
+        With CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX)
+            .WindowlessVisible = Me.VisibleINIT
+            .DragMode = Me.DragModeINIT
+        End With
+        InitData.BaseControlInfoPtr = InternalBaseControlBeforeCreateRootWindow(InitData)
+        Set Me.ControlContext = CType(Of WindowsControlContext)(_ControlContext) ' FIXME passed as IUnknown to prevent COM exposure of type
+        Set Me.RootWindowElementBase = CType(Of WindowElement)(Me.ControlContext.CreateWindowElement(InitData))
+        CommonLoadPictureInit(CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragIcon, Me.DragIconINIT)
         Return Me.RootWindowElementBase
     End Function
-    
-    Public Sub ScheduleCallback(ByVal Callback As IScheduledCallback)
-        Me.ControlContext.ScheduleCallback(ObjPtr(Callback))
-    End Sub
-
-    Public Function CreateDeferredDispatchWrapper(ByRef Object As Object) As Object
-    	Return Me.ControlContext.CreateDeferredDispatchWrapper(Object)
-    End Function
-
-    [ DispId (-856) ]
-    Public Property Get Container() As Object
-        On Error Resume Next
-        Me.ControlContext.EnsureFormIsLoaded()
-    	Return Me.RootWindowElementBase.Container
-    End Property
-
-    Private Sub OnPropertyChanged_Visible() _
-            Handles Visible.OnPropertyLet
-
-        Me.ControlContext.EnsureFormIsLoaded()
-        Me.ControlContext.WindowlessRefresh()
-    End Sub
-
-    Private Sub OnTouchedFormProperties() _
-            Handles Anchors.OnPropertyGet, _
-                    Dock.OnPropertyGet, _
-                    Visible.OnPropertyGet
-                    
-        Me.ControlContext.EnsureFormIsLoaded()
-    End Sub
-    
-    Public Sub Move(ByVal Left As Single, Optional ByVal Top As Variant, Optional ByVal Width As Variant, Optional ByVal Height As Variant)
-        Me.ControlContext.EnsureFormIsLoaded()
-        If InternalMove(Me, Left, Top, Width, Height) Then
-        	Me.ControlContext.ChangedPosition()
-        End If
-    End Sub
-
-    [ Serialize (False) ]
-    [ BindOnlyIfNoArguments ]
-    Public Property Get Left() As Double
-        Return Me.ControlContext.GetScaledLeft
-    End Property
-    
-    [ Serialize (False) ]
-    [ BindOnlyIfNoArguments ]
-    Public Property Let Left(ByVal Value As Double)
-        Me.ControlContext.SetScaledLeft(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Top() As Double
-        Return Me.ControlContext.GetScaledTop
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Top(ByVal Value As Double)
-        Me.ControlContext.SetScaledTop(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Width() As Double
-        Return Me.ControlContext.GetScaledWidth
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Width(ByVal Value As Double)
-        Me.ControlContext.SetScaledWidth(Value)
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Get Height() As Double
-        Return Me.ControlContext.GetScaledHeight
-    End Property
-    
-    [ Serialize (False) ]
-    Public Property Let Height(ByVal Value As Double)
-        Me.ControlContext.SetScaledHeight(Value)
-    End Property
-    
-    Public Sub Drag([ TypeHint (DragConstants) ] Optional ByVal Action As Variant)
-    	If IsMissing(Action) Then Action = DragConstants.vbBeginDrag
-        Select Case Action
-        	Case DragConstants.vbBeginDrag
-                Me.RootWindowElementBase.StartDrag
-            Case DragConstants.vbCancel
-                Me.RootWindowElementBase.CancelDrag
-            Case DragConstants.vbEndDrag
-                Me.RootWindowElementBase.EndDrag
-            Case Else
-                Err.Raise 5
-        End Select
+            
+    Public Sub Drag([TypeHint(DragConstants)] Optional ByVal Action As Variant)
+        CommonDrag(Action)
     End Sub
 
     Public Sub Refresh()
-        Me.ControlContext.WindowlessRefresh()
+        WindowlessRefresh()
     End Sub
     
-    Public Sub ZOrder([ TypeHint (ZOrderConstants) ] Optional ByVal Position As Variant)
+    Public Sub ZOrder([TypeHint(ZOrderConstants)] Optional ByVal Position As Variant)
         CommonZOrderWindowless(Position, Me.ControlContext)
     End Sub
     
-    Public Sub InternalOLEDrag(ByVal RootThis As Object)
-        CommonOLEDrag(RootThis)
-    End Sub
+    [Serialize(False)]
+    Property Get Visible() As Boolean
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible
+    End Property
+        
+    [Serialize(False)]
+    Property Let Visible(ByVal Value As Boolean)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).WindowlessVisible = Value
+        WindowlessRefresh()
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get DragMode() As DragModeConstants
+        Return CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragMode
+    End Property
+    
+    [Serialize(False)]
+    Public Property Let DragMode(ByVal Value As DragModeConstants)
+        CType(Of WinNativeFormsBASE.BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragMode = Value
+    End Property
+    
+    [Serialize(False)]
+    Public Property Get DragIcon() As StdPicture
+        Return CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragIcon
+    End Property
 
+    [Serialize(False)]
+    Public Property Set DragIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragIcon = Value
+    End Property
+
+    [Serialize(False)]
+    Public Property Let DragIcon(Value As StdPicture)
+        Set CType(Of BaseControlInfo)(Me.InternalBaseControlInfoPtrX).DragIcon = Value
+    End Property
 End Class
