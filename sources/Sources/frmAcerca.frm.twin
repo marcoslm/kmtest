@@ -1,5 +1,5 @@
-[ FormDesignerId ("FA39E8DA-EC08-41E8-98AC-871383E6A51A") ]
-[ PredeclaredId ]
+[FormDesignerId("FA39E8DA-EC08-41E8-98AC-871383E6A51A")]
+[PredeclaredId]
 Class frmAcerca
     Attribute VB_Name = "frmAcerca"
     Attribute VB_GlobalNameSpace = False
@@ -35,7 +35,5 @@ Class frmAcerca
     Private Sub lblLink_MouseUp(Button As Integer, Shift As Integer, X As Single, Y As Single)
         lblLink.BackColor = &HC6853D
     End Sub
-    
-    
 
 End Class

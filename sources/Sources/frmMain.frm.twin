@@ -1,5 +1,5 @@
-[ FormDesignerId ("398256B6-1522-470C-87D3-1F5D403311DB") ]
-[ PredeclaredId ]
+[FormDesignerId("398256B6-1522-470C-87D3-1F5D403311DB")]
+[PredeclaredId]
 Class frmMain
     Attribute VB_Name = "frmMain"
     Attribute VB_GlobalNameSpace = False
@@ -8,12 +8,12 @@ Class frmMain
     Attribute VB_Exposed = False
     Option Explicit
     
-    Dim RedispararTemporizador As boolean = False
+    Dim RedispararTemporizador As Boolean = False
+    Dim BorrarIluminacionTeclas As Boolean = True
     Dim HookActivo As Boolean = False
     Const EVENTOS_MAXIMOS = 1000
     
     
-
 
     Sub EventoTecla(ByVal Tecla As String, ByVal Codigo As Long)
         On Error GoTo gestionerror
@@ -22,9 +22,9 @@ Class frmMain
             If Tecla = "" Then Exit Sub
             ' Escribimos la pulsación
             If Len(Tecla) = 1 Then
-                Texto = "[ " & UCase(Tecla) & " ]"
+                Texto = "TECLADO [ " & UCase(Tecla) & " ]"
             Else
-            	Texto = UCase(Tecla)
+            	Texto = "TECLADO " & UCase(Tecla)
             End If
             NuevoEvento EVENTO_TECLADO, Texto, True
             ' Teclas reservadas
@@ -55,25 +55,25 @@ Class frmMain
                     Resume Next
             End Select
     End Sub
-    
+        
     Sub EventoMouse(ByVal Boton As String, Optional X As Long, Optional Y As Long)
         If Boton = "" Then Exit Sub
         Select Case Boton
             Case "[MOUSE_LEFT_BTN_DOWN]"
                 imgMouseBtn(0).Visible = True
-                Boton = "MOUSE IZQ"
+                Boton = "MOUSE BOTÓN IZQUIERDO"
             Case "[MOUSE_LEFT_BTN_UP]"
                 imgMouseBtn(0).Visible = False
                 Boton = ""
             Case "[MOUSE_MID_BTN_DOWN]"
                 imgMouseBtn(1).Visible = True
-                Boton = "MOUSE MED"
+                Boton = "MOUSE BOTÓN MEDIO"
             Case "[MOUSE_MID_BTN_UP]"
                 imgMouseBtn(1).Visible = False
                 Boton = ""
             Case "[MOUSE_RIGHT_BTN_DOWN]"
                 imgMouseBtn(2).Visible = True
-                Boton = "MOUSE DER"
+                Boton = "MOUSE BOTÓN DERECHO"
             Case "[MOUSE_RIGHT_BTN_UP]"
                 imgMouseBtn(2).Visible = False
                 Boton = ""
@@ -92,11 +92,11 @@ Class frmMain
         End Select
         If Boton > "" Then NuevoEvento EVENTO_MOUSE, Boton, True
     End Sub
-    
+
     ' Añade texto de evento en el listbox que corresponda (evento de teclado o evento de mouse)
     Private Sub NuevoEvento(ByVal TipoEvento As eTipoEvento, ByVal Texto As String, ByRef InsertarTiempo As Boolean)
         If InsertarTiempo Then Texto = Time & " " & Texto
-        With lstOut(TipoEvento)
+        With lstOut(0) 'lstOut(TipoEvento)
             .Visible = False
             If .ListCount > EVENTOS_MAXIMOS Then
                 .RemoveItem (0)
@@ -106,7 +106,7 @@ Class frmMain
             .Visible = True
         End With
     End Sub
-    
+
     ' Comprueba el estado de las teclas para establecer los LEDs
     Private Sub CompruebaLEDs()
         If GetKeyState(VK_CAPITAL) = 0 Then
@@ -139,21 +139,29 @@ Class frmMain
             Set Nodo = .Nodes.Add(, , "t", "Teclado")
             Nodo.Bold = True
             'Nodo.Expanded = True
-            Set Nodo = .Nodes.Add(, , "1", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
-            Set Nodo = .Nodes.Add(, , "2", "Nº botones: " & InfoPerifericos.Mouse_Botones)
-            Set Nodo = .Nodes.Add(, , "3", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
-            Set Nodo = .Nodes.Add(, , "4", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
-        End With
-        With treeMouse
+            Set Nodo = .Nodes.Add(, , "1", InfoPerifericos.Keyboard_Caption)
+            Set Nodo = .Nodes.Add(, , "2", InfoPerifericos.Keyboard_Description)
+            Set Nodo = .Nodes.Add(, , "3", "Estado: " & InfoPerifericos.Keyboard_Status)
+            ' Mouse
             Set Nodo = .Nodes.Add(, , "m", "Mouse")
             Nodo.Bold = True
             'Nodo.Expanded = True
             'Set Nodo = .Nodes.Add("m", tvwChild, , "Mouse presente: " & InfoPerifericos.Mouse_Presente)
-            Set Nodo = .Nodes.Add(, , "1", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
-            Set Nodo = .Nodes.Add(, , "2", "Nº botones: " & InfoPerifericos.Mouse_Botones)
-            Set Nodo = .Nodes.Add(, , "3", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
-            Set Nodo = .Nodes.Add(, , "4", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
+            Set Nodo = .Nodes.Add(, , "4", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+            Set Nodo = .Nodes.Add(, , "5", "Nº botones: " & InfoPerifericos.Mouse_Botones)
+            Set Nodo = .Nodes.Add(, , "6", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
+            Set Nodo = .Nodes.Add(, , "7", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
         End With
+        'With treeMouse
+        '    Set Nodo = .Nodes.Add(, , "m", "Mouse")
+        '    Nodo.Bold = True
+        '    'Nodo.Expanded = True
+        '    'Set Nodo = .Nodes.Add("m", tvwChild, , "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+        '    Set Nodo = .Nodes.Add(, , "1", "Mouse presente: " & InfoPerifericos.Mouse_Presente)
+        '    Set Nodo = .Nodes.Add(, , "2", "Nº botones: " & InfoPerifericos.Mouse_Botones)
+        '    Set Nodo = .Nodes.Add(, , "3", "Rueda vertical: " & InfoPerifericos.Mouse_RuedaVertical)
+        '    Set Nodo = .Nodes.Add(, , "4", "Rueda horizontal: " & InfoPerifericos.Mouse_RuedaHorizontal)
+        'End With
        ' Habilitamos el timer para refrescar LEDs y demás
        TimerCLS(0).Enabled = True
     End Sub
@@ -193,6 +201,10 @@ Class frmMain
     Private Sub TimerCLS_Timer(Index As Integer)
         On Error Resume Next
         Dim cnt As Integer
+        
+        If Not BorrarIluminacionTeclas Then
+            Exit Sub
+        End If
         ' Ocultar indicador rueda de mouse
         imgMouseWhl.Visible = False
         ' Ocultamos indicador de movimiento del mouse
@@ -223,13 +235,25 @@ Class frmMain
     Private Sub Temporizadorfijoparaapagado_Click()
         Temporizadorfijoparaapagado.Checked = True
         Redisparartemporizadoraldetectarpulsacin.Checked = False
+        Iluminacinpermanente.Checked = False
         RedispararTemporizador = False
+        BorrarIluminacionTeclas = True
     End Sub
     
     Private Sub Redisparartemporizadoraldetectarpulsacin_Click()
         Redisparartemporizadoraldetectarpulsacin.Checked = True
         Temporizadorfijoparaapagado.Checked = False
+        Iluminacinpermanente.Checked = False
         RedispararTemporizador = True
+        BorrarIluminacionTeclas = True
+    End Sub
+    
+    Private Sub Iluminacinpermanente_Click()
+        Temporizadorfijoparaapagado.Checked = False
+        Redisparartemporizadoraldetectarpulsacin.Checked = False
+        Iluminacinpermanente.Checked = True
+        RedispararTemporizador = False
+        BorrarIluminacionTeclas = False
     End Sub
     
     Private Sub cmdOnOff_Click()
@@ -243,13 +267,5 @@ Class frmMain
             cmdOnOff.Caption = "DETENER"
         End If
     End Sub
-    
-    
-    
-
-    
-
-   
-    
 
 End Class
