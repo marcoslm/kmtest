@@ -8,7 +8,7 @@ KM-Test es una aplicación sencilla y eficaz para probar el funcionamiento de te
 
 La aplicación permite capturar todos los eventos generados por el teclado y el ratón. Las pulsaciones del teclado se muestran visualmente iluminando en rojo las teclas correspondientes en el teclado ilustrado en la interfaz de la aplicación. También se visualiza el estado de los LEDs del teclado (Bloqueo Numérico, Mayúsculas y Desplazamiento). Además, registra las pulsaciones de los botones del ratón, el desplazamiento de las ruedas y las coordenadas de movimiento del cursor en la pantalla.
 
-Este proyecto lo desarrollé hace muchos años en VB6 y recientemente lo porté a **TwinBASIC**, que es un lenguaje/IDE 100% compatible con VB6/VBA pero con mejoras. Puedes conocer más sobre este lenguaje y su desarrollo en su [repositorio oficial de GitHub](https://github.com/twinbasic/twinbasic).
+Este proyecto lo desarrollé hace muchos años en VB6 y recientemente lo porté a **TwinBASIC**, que es un lenguaje/IDE 100% compatible con VB6/VBA pero con mejoras. Puedes conocer más sobre este lenguaje y su desarrollo en su [repositorio oficial de GitHub](https://github.com/twinbasic/twinbasic) o en [la web de twinBASIC](https://twinbasic.com/).
 
 ## Características
 
