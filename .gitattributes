@@ -1,0 +1,13 @@
+# Forzar el reconocimiento de archivos twinBASIC como Visual Basic
+*.twin linguist-language=VisualBasic
+*.tbform linguist-language=VisualBasic
+
+# Reconocimiento adecuado de archivos estándar de Visual Basic y VBA
+*.bas linguist-language=VisualBasic
+*.cls linguist-language=VisualBasic
+*.frm linguist-language=VisualBasic
+*.vba linguist-language=VisualBasic
+
+# Ignorar otros archivos que no sean relevantes para la detección de lenguajes
+*.bin linguist-vendored
+*.res linguist-vendored
