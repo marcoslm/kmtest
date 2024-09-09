@@ -1,6 +1,6 @@
 # Forzar el reconocimiento de archivos twinBASIC como Visual Basic
-*.twin linguist-language=VisualBasic
-*.tbform linguist-language=VisualBasic
+*.twin linguist-language=VBA
+*.tbform linguist-language=VBA
 
 # Ignorar otros archivos que no sean relevantes para la detección de lenguajes
 *.bin linguist-vendored
